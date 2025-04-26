@@ -1,0 +1,24 @@
+/* עיצוב בסיסי ל־chart-container */
+#chart-container {
+    width: 100%; /* יתפוס את כל רוחב המסך */
+    height: 90vh; /* יתפוס 80% מגובה החלון */
+    position: relative;
+    overflow: hidden; /* לא לאפשר גלילה פנימית */
+    background-color: #ffffff; /* צבע רקע ברירת מחדל (למצב אור) */
+}
+
+/* תמיכה ב-dark theme אם רוצים בעתיד */
+@media (prefers-color-scheme: dark) {
+    #chart-container {
+        background-color: #1e1e1e; /* צבע כהה יותר לגרפים כהים */
+    }
+}
+
+/* אופציה נוספת: הוספת ריכוך קצוות */
+canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    height: 100%;
+    width: 100%;
+}
