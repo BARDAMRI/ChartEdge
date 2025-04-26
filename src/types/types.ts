@@ -1,9 +1,16 @@
-export type ChartType = 'line' | 'candlestick';
+import {ChartStyleOptions} from "./chartStyleOptions";
+
+// Enum for Axis position
+export enum AxesPosition {
+    left = 'left',
+    right = 'right',
+}
 
 // Base chart options
 interface BaseChartOptions {
     theme?: 'light' | 'dark' | 'grey' | string;
     showOverlayLine?: boolean;
+    style?: Partial<ChartStyleOptions>;
 }
 
 // Line chart data point

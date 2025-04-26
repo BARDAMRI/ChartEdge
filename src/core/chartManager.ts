@@ -1,4 +1,4 @@
-import {ChartOptions, LineData, CandleData, CandleDataCompact} from '../types/types';
+import {ChartOptions, LineData, CandleData, CandleDataCompact} from '../types/types.ts';
 import {LineRenderer} from '../renderer/lineRenderer';
 import {CandlestickRenderer} from '../renderer/candlestickRenderer';
 import {GridRenderer} from '../renderer/gridRenderer';
@@ -14,6 +14,12 @@ export class ChartManager {
     private candlestickRenderer: CandlestickRenderer;
     private gridRenderer: GridRenderer;
     private axisRenderer: AxisRenderer;
+    private padding = { top: 10, bottom: 30, left: 50, right: 50 };
+
+    private drawableWidth: number = 0;
+    private drawableHeight: number = 0;
+    private drawableOriginX: number = 0;
+    private drawableOriginY: number = 0;
 
     constructor(container: HTMLElement, options: ChartOptions) {
         this.options = options;
@@ -49,85 +55,140 @@ export class ChartManager {
         this.drawInitial();
     }
 
-    // Adjust the canvas size to match its container's dimensions
+    /**
+     * Adjust the canvas size to match its container's dimensions.
+     */
     private resizeCanvas() {
         const rect = this.canvas.getBoundingClientRect();
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
+
+        this.drawableOriginX = this.padding.left + 5; // 5px safe edge
+        this.drawableOriginY = this.padding.top;
+        this.drawableWidth = this.canvas.width - this.padding.left - this.padding.right - 10; // 5px each side
+        this.drawableHeight = this.canvas.height - this.padding.top - this.padding.bottom;
     }
 
-    // Draws a simple demo line to verify that everything works correctly
+    /**
+     * Draws the initial background and triggers data drawing.
+     * Uses backgroundColor from style options or defaults to white.
+     */
     private drawInitial() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.ctx.fillStyle = '#f0f0f0';
+        this.ctx.fillStyle = this.options?.style?.backgroundColor ?? '#ffffff';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         this.drawData();
     }
 
 
-// Draw the data provided in ChartOptions
+    /**
+     * Draws the chart data (line or candlestick) according to options and styles.
+     * Applies style defaults for grid, axes, candles, and overlay line.
+     */
     private drawData() {
-        if (!this.options.data || this.options.data.length === 0) {
+        if (!this.options?.data || this.options.data.length === 0) {
             console.warn('No data provided to ChartEdge.');
             return;
         }
 
-        if (this.options.type === 'line') {
-            // מצב קו רגיל
-            const lineData = this.options.data as LineData[];
+        const edgeSpacingPx = 5;
+
+        const type = this.options?.type ?? 'line';
+
+        if (type === 'line') {
+            // Normal line chart mode
+            const lineData = this.options?.data as LineData[];
 
             const minTime = Math.min(...lineData.map(d => d.time));
             const maxTime = Math.max(...lineData.map(d => d.time));
 
+            const chartWidth = this.drawableWidth;
+            const chartHeight = this.drawableHeight;
+
             const points = lineData.map((item) => {
                 return {
-                    x: ((item.time - minTime) / (maxTime - minTime)) * this.canvas.width,
-                    y: this.canvas.height - (item.value / 100) * this.canvas.height, // נניח שהערכים 0-100
+                    x: this.drawableOriginX + ((item.time - minTime) / (maxTime - minTime)) * chartWidth,
+                    y: this.drawableOriginY + (chartHeight - ((item.value / 100) * chartHeight)), // assuming values 0-100
                 };
             });
 
             this.lineRenderer.draw(points, {
-                color: '#007bff', // כחול
-                lineWidth: 2,
+                color: this.options?.style?.lineOverlay?.color ?? '#007bff',
+                lineWidth: this.options?.style?.lineOverlay?.lineWidth ?? 2,
             });
 
-        } else if (this.options.type === 'candlestick') {
-            const candleData = this.options.data as (CandleData | CandleDataCompact)[];
+        } else if (type === 'candlestick') {
+            const candleData = this.options?.data as (CandleData | CandleDataCompact)[];
             const isCompact = 'o' in candleData[0];
 
             const minTime = Math.min(...candleData.map(d => isCompact ? (d as CandleDataCompact).t : (d as CandleData).time));
             const maxTime = Math.max(...candleData.map(d => isCompact ? (d as CandleDataCompact).t : (d as CandleData).time));
 
-            // חשב min ו-max אמיתיים של מחירים
+            const timeRange = maxTime - minTime;
+            const timePadding = timeRange * 0.02;
+            const extendedMinTime = minTime - timePadding;
+            const extendedMaxTime = maxTime + timePadding;
+
             const minPrice = Math.min(...candleData.map(d => isCompact ? (d as CandleDataCompact).l : (d as CandleData).low));
             const maxPrice = Math.max(...candleData.map(d => isCompact ? (d as CandleDataCompact).h : (d as CandleData).high));
 
-            // הוסף padding של 2% לבטיחות
-            const padding = (maxPrice - minPrice) * 0.02;
-            const scaledMin = minPrice - padding;
-            const scaledMax = maxPrice + padding;
+            const priceRange = maxPrice - minPrice;
+            const pricePadding = priceRange * 0.02;
+            const extendedMinPrice = minPrice - pricePadding;
+            const extendedMaxPrice = maxPrice + pricePadding;
 
-            // drawing the grid net
+            const chartWidth = this.drawableWidth;
+            const chartHeight = this.drawableHeight;
+
+            const spacingFactor = this.options?.style?.candles?.spacingFactor ?? 0.3;
+            const totalUnits = candleData.length + (candleData.length - 1) * spacingFactor;
+            const unitWidth = chartWidth / totalUnits;
+            const candleBodyWidth = unitWidth;
+            const spacingWidth = unitWidth * spacingFactor;
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.drawableOriginX, this.drawableOriginY + chartHeight);
+            this.ctx.lineTo(this.drawableOriginX + chartWidth, this.drawableOriginY + chartHeight);
+            this.ctx.strokeStyle = 'black';
+            this.ctx.lineWidth = 1;
+            this.ctx.stroke();
+
             this.gridRenderer.drawGrid(
-                minTime,
-                maxTime,
-                scaledMin,
-                scaledMax,
-                this.canvas.width,
-                this.canvas.height
+                extendedMinTime,
+                extendedMaxTime,
+                extendedMinPrice,
+                extendedMaxPrice,
+                chartWidth,
+                chartHeight,
+                this.drawableOriginX,
+                this.drawableOriginY,
+                this.options?.style?.grid?.gridSpacing ?? 80,
+                this.options?.style?.grid?.lineWidth ?? 1,
+                this.options?.style?.grid?.lineColor ?? 'rgba(200,200,200,0.5)',
+                this.options?.style?.grid?.lineDash ?? []
             );
 
-            // drawing the x and y-axis
             this.axisRenderer.drawAxes(
-                minTime,
-                maxTime,
-                scaledMin,
-                scaledMax,
-                this.canvas.width,
-                this.canvas.height
+                extendedMinTime,
+                extendedMaxTime,
+                extendedMinPrice,
+                extendedMaxPrice,
+                chartWidth,
+                chartHeight,
+                this.drawableOriginX,
+                this.drawableOriginY,
+                this.options?.style?.grid?.gridSpacing ?? 80,
+                this.options?.style?.axes?.textColor ?? '#131722',
+                this.options?.style?.axes?.font ?? '10px Arial',
+                this.options?.style?.axes?.lineColor ?? '#131722',
+                this.options?.style?.axes?.lineWidth ?? 1.5,
+                this.options?.style?.axes?.axisPosition ?? 'right',
+                this.options?.style?.axes?.numberLocale ?? 'en-US',
+                this.options?.style?.axes?.dateLocale ?? 'en-US'
             );
+
             const candles = candleData.map((item: any) => {
                 const time = isCompact ? item.t : item.time;
                 const open = isCompact ? item.o : item.open;
@@ -135,35 +196,51 @@ export class ChartManager {
                 const low = isCompact ? item.l : item.low;
                 const close = isCompact ? item.c : item.close;
 
+                // חישוב מיקום X לפי זמן
+                const xPos = this.drawableOriginX + ((time - extendedMinTime) / (extendedMaxTime - extendedMinTime)) * chartWidth;
+
+                // חישוב רוחב נר מתוך chartWidth חלקי מספר נרות
+                const totalUnits = candleData.length + (candleData.length - 1) * (this.options?.style?.candles?.spacingFactor ?? 0.3);
+                const unitWidth = chartWidth / totalUnits;
+                const candleBodyWidth = unitWidth;
+
                 return {
-                    x: ((time - minTime) / (maxTime - minTime)) * this.canvas.width,
-                    openY: this.canvas.height - ((open - scaledMin) / (scaledMax - scaledMin)) * this.canvas.height,
-                    closeY: this.canvas.height - ((close - scaledMin) / (scaledMax - scaledMin)) * this.canvas.height,
-                    highY: this.canvas.height - ((high - scaledMin) / (scaledMax - scaledMin)) * this.canvas.height,
-                    lowY: this.canvas.height - ((low - scaledMin) / (scaledMax - scaledMin)) * this.canvas.height,
+                    x: xPos,
+                    openY: this.drawableOriginY + (chartHeight - ((open - extendedMinPrice) / (extendedMaxPrice - extendedMinPrice)) * chartHeight),
+                    closeY: this.drawableOriginY + (chartHeight - ((close - extendedMinPrice) / (extendedMaxPrice - extendedMinPrice)) * chartHeight),
+                    highY: this.drawableOriginY + (chartHeight - ((high - extendedMinPrice) / (extendedMaxPrice - extendedMinPrice)) * chartHeight),
+                    lowY: this.drawableOriginY + (chartHeight - ((low - extendedMinPrice) / (extendedMaxPrice - extendedMinPrice)) * chartHeight),
+                    bodyWidth: candleBodyWidth,
+                    offsetX: candleBodyWidth / 2,
                 };
             });
+
             this.candlestickRenderer.draw(candles, {
-                upColor: '#26a69a', // ירוק
-                downColor: '#ef5350', // אדום
-                lineWidth: 1,
+                upColor: this.options?.style?.candles?.upColor ?? '#26a69a',
+                downColor: this.options?.style?.candles?.downColor ?? '#ef5350',
+                borderColor: this.options?.style?.candles?.borderColor ?? '#000000',
+                borderWidth: this.options?.style?.candles?.borderWidth ?? 1,
+                bodyWidthFactor: this.options?.style?.candles?.bodyWidthFactor ?? 0.7,
+                xOffset: undefined,
             });
 
-            // ציור קו overlay אם מוגדר
-            if (this.options.showOverlayLine) {
+            if (this.options?.showOverlayLine) {
                 const overlayPoints = candleData.map((item: any) => {
                     const time = isCompact ? item.t : item.time;
                     const close = isCompact ? item.c : item.close;
 
+                    const xPos = this.drawableOriginX + ((time - extendedMinTime) / (extendedMaxTime - extendedMinTime)) * chartWidth;
+
                     return {
-                        x: ((time - minTime) / (maxTime - minTime)) * this.canvas.width,
-                        y: this.canvas.height - ((close - scaledMin) / (scaledMax - scaledMin)) * this.canvas.height,
+                        x: xPos,
+                        y: this.drawableOriginY + (chartHeight - ((close - extendedMinPrice) / (extendedMaxPrice - extendedMinPrice)) * chartHeight),
                     };
                 });
 
                 this.lineRenderer.draw(overlayPoints, {
-                    color: '#007bff',
-                    lineWidth: 1,
+                    color: this.options?.style?.lineOverlay?.color ?? '#007bff',
+                    lineWidth: this.options?.style?.lineOverlay?.lineWidth ?? 1,
+                    dashed: this.options?.style?.lineOverlay?.dashed ?? false,
                 });
             }
         }

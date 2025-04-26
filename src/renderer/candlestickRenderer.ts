@@ -20,9 +20,15 @@ export class CandlestickRenderer {
     }
 
     draw(candles: Candle[], options?: CandleRendererOptions) {
-        const upColor = options?.upColor || '#26a69a';    // ירוק לעלייה
-        const downColor = options?.downColor || '#ef5350'; // אדום לירידה
+        const upColor = options?.upColor || '#049981';    // ירוק לעלייה
+        const downColor = options?.downColor || '#f23645'; // אדום לירידה
         const lineWidth = options?.lineWidth || 1;
+
+        const numberOfCandles = candles.length;
+        const candleSpacing = 0.2; // Slight spacing between candles
+        const totalSpacing = (numberOfCandles + 1) * candleSpacing;
+        const candleWidth = (this.ctx.canvas.width - totalSpacing) / numberOfCandles;
+        const halfCandleWidth = candleWidth / 2;
 
         candles.forEach(candle => {
             const isUp = candle.closeY < candle.openY;
@@ -40,11 +46,6 @@ export class CandlestickRenderer {
             // Draw the body (מלבן בין open ל-close)
             const bodyTop = Math.min(candle.openY, candle.closeY);
             const bodyHeight = Math.abs(candle.openY - candle.closeY);
-
-            const numberOfCandles = candles.length;
-            const candleSpacing = 0.3;
-            const candleWidth = (this.ctx.canvas.width / numberOfCandles) * (1 - candleSpacing);
-            const halfCandleWidth = candleWidth / 2;
 
             this.ctx.fillRect(candle.x - halfCandleWidth, bodyTop, candleWidth, bodyHeight);
         });

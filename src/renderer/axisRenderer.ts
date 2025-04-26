@@ -1,24 +1,33 @@
-// AxisRenderer אחראי לציור סימונים של צירי Y ו-X על הקנבס
+// AxisRenderer is responsible for rendering the Y and X axes labels and axis lines
+
+import {AxesPosition} from "../types/types.ts";
+
 export class AxisRenderer {
     private ctx: CanvasRenderingContext2D;
-    private font: string = '10px Arial'; // פונט ברירת מחדל לטקסט
-    private textColor: string = '#999'; // צבע טקסט עדין
 
-    // קונסטרקטור שמקבל את הקונטקסט של הקנבס
+    // Constructor receives the canvas rendering context
     constructor(ctx: CanvasRenderingContext2D) {
         this.ctx = ctx;
     }
 
     /**
-     * מצייר את הצירים (Y ו-X) על הקנבס
-     * @param minTime - הזמן המינימלי (כמספר מילישניות)
-     * @param maxTime - הזמן המקסימלי
-     * @param scaledMin - המחיר המינימלי אחרי התאמה
-     * @param scaledMax - המחיר המקסימלי אחרי התאמה
-     * @param canvasWidth - רוחב הקנבס
-     * @param canvasHeight - גובה הקנבס
-     * @param horizontalLines - מספר קווי גריד אופקיים (ברירת מחדל 5)
-     * @param verticalLines - מספר קווי גריד אנכיים (ברירת מחדל 5)
+     * Draws the axes (Y and X) on the canvas.
+     * @param minTime - Minimum time (in milliseconds)
+     * @param maxTime - Maximum time (in milliseconds)
+     * @param scaledMin - Minimum scaled price
+     * @param scaledMax - Maximum scaled price
+     * @param canvasWidth - Width of the canvas
+     * @param canvasHeight - Height of the canvas
+     * @param originX - X coordinate of the origin
+     * @param originY - Y coordinate of the origin
+     * @param gridSpacing - Spacing between grid lines (in pixels)
+     * @param textColor - Color of the axis text
+     * @param font - Font used for axis labels
+     * @param lineColor - Color of the axis lines
+     * @param lineWidth - Width of the axis lines
+     * @param axisPosition - Position of Y axis ('left' or 'right')
+     * @param numberLocale - Locale string for number formatting (e.g., 'en-US')
+     * @param dateLocale - Locale string for date formatting (e.g., 'en-GB')
      */
     drawAxes(
         minTime: number,
@@ -27,57 +36,88 @@ export class AxisRenderer {
         scaledMax: number,
         canvasWidth: number,
         canvasHeight: number,
-        horizontalLines: number = 5,
-        verticalLines: number = 5
+        originX: number,
+        originY: number,
+        gridSpacing: number = 80,
+        textColor: string = '#131722',
+        font: string = '10px Arial',
+        lineColor: string = '#131722',
+        lineWidth: number = 1.5,
+        axisPosition: AxesPosition = AxesPosition.right,
+        numberLocale: string = 'en-US',
+        dateLocale: string = 'en-US'
     ): void {
-        this.ctx.save(); // שמירת מצב קנבס
+        this.ctx.save(); // Save the current canvas state
 
-        // הגדרות טקסט
-        this.ctx.font = this.font;
-        this.ctx.fillStyle = this.textColor;
-        this.ctx.textAlign = 'right'; // טקסט צמוד לימין (לציר Y)
-        this.ctx.textBaseline = 'middle'; // טקסט ממורכז לגובה השורה
+        // Set text styles
+        this.ctx.font = font;
+        this.ctx.fillStyle = textColor;
+        this.ctx.textBaseline = 'middle'; // Center text vertically
 
-        // ציור ערכים על ציר Y
-        for (let i = 0; i <= horizontalLines; i++) {
-            const y = (canvasHeight / horizontalLines) * i; // חישוב מיקום Y
-            const value = scaledMax - ((scaledMax - scaledMin) / horizontalLines) * i; // חישוב ערך המחיר
-            const formattedValue = value.toFixed(2); // פורמט לשני ספרות אחרי הנקודה
+        const horizontalLines = Math.floor(canvasHeight / gridSpacing);
+        const verticalLines = Math.floor(canvasWidth / gridSpacing);
 
-            this.ctx.fillText(formattedValue, canvasWidth - 5, y); // צייר את הערך (קצת לפני הקצה הימני)
+        const axisPadding = 5;
+        const axisOffset = 5;
+
+        const numberFormatter = new Intl.NumberFormat(numberLocale, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+
+        const dateFormatter = new Intl.DateTimeFormat(dateLocale, {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+
+        // Y Axis: adjust alignment and position
+        if (axisPosition == AxesPosition.right) {
+            this.ctx.textAlign = 'left';
+        } else {
+            this.ctx.textAlign = 'right';
         }
 
-        // ציור ערכים על ציר X
-        this.ctx.textAlign = 'center'; // טקסט ממורכז (לציר X)
-        this.ctx.textBaseline = 'top'; // טקסט מתחיל מלמעלה
+        for (let i = 0; i <= horizontalLines; i++) {
+            const y = originY + gridSpacing * i;
+            const value = scaledMax - ((scaledMax - scaledMin) / horizontalLines) * i;
+            const formattedValue = numberFormatter.format(value);
+
+            const xPosition = axisPosition == AxesPosition.right
+                ? originX + canvasWidth + axisOffset + axisPadding
+                : originX - axisOffset - axisPadding;
+            this.ctx.fillText(formattedValue, xPosition, y);
+        }
+
+        // X Axis: draw below the chart
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'top';
 
         for (let i = 0; i <= verticalLines; i++) {
-            const x = (canvasWidth / verticalLines) * i; // חישוב מיקום X
-            const timestamp = minTime + ((maxTime - minTime) / verticalLines) * i; // חישוב זמן
+            const x = originX + gridSpacing * i;
+            const timestamp = minTime + ((maxTime - minTime) / verticalLines) * i;
             const date = new Date(timestamp);
-            const hours = date.getHours().toString().padStart(2, '0');
-            const minutes = date.getMinutes().toString().padStart(2, '0');
-            const label = `${hours}:${minutes}`; // פורמט שעה:דקה
+            const label = dateFormatter.format(date);
 
-            this.ctx.fillText(label, x, canvasHeight - 15); // צייר את הזמן מעל תחתית הקנבס
+            this.ctx.fillText(label, x, originY + canvasHeight + axisPadding);
         }
 
-        // ציור קווים מודגשים של הצירים עצמם
-        this.ctx.strokeStyle = '#666'; // צבע כהה יותר
-        this.ctx.lineWidth = 1.5;
+        // Draw axis lines
+        this.ctx.strokeStyle = lineColor;
+        this.ctx.lineWidth = lineWidth;
 
-        // קו ציר Y (אנכי) בצד ימין
+        // Y axis line
         this.ctx.beginPath();
-        this.ctx.moveTo(canvasWidth, 0);
-        this.ctx.lineTo(canvasWidth, canvasHeight);
+        const yAxisX = axisPosition == AxesPosition.right ? originX + canvasWidth : originX;
+        this.ctx.moveTo(yAxisX, originY);
+        this.ctx.lineTo(yAxisX, originY + canvasHeight);
         this.ctx.stroke();
 
-        // קו ציר X (אופקי) בתחתית
+        // X axis line (bottom)
         this.ctx.beginPath();
-        this.ctx.moveTo(0, canvasHeight);
-        this.ctx.lineTo(canvasWidth, canvasHeight);
+        this.ctx.moveTo(originX, originY + canvasHeight);
+        this.ctx.lineTo(originX + canvasWidth, originY + canvasHeight);
         this.ctx.stroke();
 
-        this.ctx.restore(); // החזרת מצב הקנבס המקורי
+        this.ctx.restore(); // Restore canvas state
     }
 }
