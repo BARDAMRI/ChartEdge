@@ -20,11 +20,9 @@ export class ChartManager {
     private drawableHeight: number = 0;
     private drawableOriginX: number = 0;
     private drawableOriginY: number = 0;
-    private container: HTMLElement;
 
     constructor(container: HTMLElement, options: ChartOptions) {
         this.options = options;
-        this.container = container;
 
         // Create and append a full-size canvas inside the given container
         this.canvas = document.createElement('canvas');
@@ -65,7 +63,7 @@ export class ChartManager {
      * Adjust the canvas size to match its container's dimensions.
      */
     private resizeCanvas() {
-        const rect = this.container.getBoundingClientRect();
+        const rect = this.canvas.getBoundingClientRect();
         const pixelRatio = window.devicePixelRatio || 1;
 
         // קובע את הגודל הפיזי של הקנבס לפי רזולוציית המסך
