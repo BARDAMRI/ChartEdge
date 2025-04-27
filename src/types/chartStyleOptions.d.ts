@@ -1,6 +1,8 @@
 // chartStyleOptions.ts
 
 // Candles style
+import {AxesPosition, LineChartOptions} from "./types.ts";
+
 export interface CandleStyleOptions {
     upColor?: string;
     downColor?: string;
@@ -28,11 +30,17 @@ export interface AxesStyleOptions {
     numberLocale?: string;
     dateLocale?: string;
 }
-
+export interface LineOverlayOptions{
+    color?: string;
+    lineWidth?: number;
+    dashed?: boolean;
+}
 // Main Chart style options
 export interface ChartStyleOptions {
     candles?: CandleStyleOptions;
     grid?: GridStyleOptions;
     axes?: AxesStyleOptions;
+    lineOverlay?:LineOverlayOptions;
+    backgroundColor?:string;
     // אפשר להוסיף פה עוד (למשל lineOverlay וכו')
 }
