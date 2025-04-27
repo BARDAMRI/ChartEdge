@@ -1,24 +1,42 @@
-/* עיצוב בסיסי ל־chart-container */
+/* בסיס */
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff; /* ברירת מחדל */
+}
+
+/* קונטיינר לגרף */
 #chart-container {
-    width: 100%; /* יתפוס את כל רוחב המסך */
-    height: 90vh; /* יתפוס 80% מגובה החלון */
+    width: 100%;
+    height: 100%;
     position: relative;
-    overflow: hidden; /* לא לאפשר גלילה פנימית */
-    background-color: #ffffff; /* צבע רקע ברירת מחדל (למצב אור) */
+    overflow: hidden;
+    background-color: var(--background-color);
 }
 
-/* תמיכה ב-dark theme אם רוצים בעתיד */
-@media (prefers-color-scheme: dark) {
-    #chart-container {
-        background-color: #1e1e1e; /* צבע כהה יותר לגרפים כהים */
-    }
-}
-
-/* אופציה נוספת: הוספת ריכוך קצוות */
+/* קנבס */
 canvas {
     display: block;
+    width: 100%;
+    height: 100%;
     max-width: 100%;
     max-height: 100%;
-    height: 100%;
-    width: 100%;
+}
+
+/* משתני צבע דיפולטיים */
+:root {
+    --background-color: #ffffff;
+    --text-color: #131722;
+    --grid-line-color: rgba(200, 200, 200, 0.5);
+}
+
+/* מצב כהה לפי הגדרת מערכת */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background-color: #1e1e1e;
+        --text-color: #f0f0f0;
+        --grid-line-color: rgba(80, 80, 80, 0.7);
+    }
 }

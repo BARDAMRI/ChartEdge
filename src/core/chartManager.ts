@@ -20,9 +20,11 @@ export class ChartManager {
     private drawableHeight: number = 0;
     private drawableOriginX: number = 0;
     private drawableOriginY: number = 0;
+    private container: HTMLElement;
 
     constructor(container: HTMLElement, options: ChartOptions) {
         this.options = options;
+        this.container = container;
 
         // Create and append a full-size canvas inside the given container
         this.canvas = document.createElement('canvas');
@@ -43,12 +45,16 @@ export class ChartManager {
         this.gridRenderer = new GridRenderer(ctx);
         this.axisRenderer = new AxisRenderer(ctx);
 
-        // Set up automatic canvas resizing
+        // Set up automatic canvas resizing with debounce
         this.resizeCanvas();
-        // Re-Draw the canvas.
+        // Re-Draw the canvas on resize, debounced
+        let resizeTimeout: any;
         window.addEventListener('resize', () => {
-            this.resizeCanvas();
-            this.drawInitial();
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                this.resizeCanvas();
+                this.drawInitial();
+            }, 100);
         });
 
         // Initial drawing when chart is created
@@ -59,7 +65,7 @@ export class ChartManager {
      * Adjust the canvas size to match its container's dimensions.
      */
     private resizeCanvas() {
-        const rect = this.canvas.getBoundingClientRect();
+        const rect = this.container.getBoundingClientRect();
         const pixelRatio = window.devicePixelRatio || 1;
 
         // קובע את הגודל הפיזי של הקנבס לפי רזולוציית המסך
@@ -84,14 +90,25 @@ export class ChartManager {
      * Draws the initial background and triggers data drawing.
      * Uses backgroundColor from style options or defaults to white.
      */
+    /**
+     * Draws the initial background and triggers data drawing.
+     * Uses backgroundColor from style options or detects light/dark mode.
+     */
     private drawInitial() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.ctx.fillStyle = this.options?.style?.backgroundColor ?? '#ffffff';
+        let backgroundColor = this.options?.style?.backgroundColor;
+
+        // Detect light/dark mode if not explicitly set
+        if (!backgroundColor) {
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            backgroundColor = prefersDark ? '#1e1e1e' : '#ffffff';  // Dark grey or White
+        }
+
+        this.ctx.fillStyle = backgroundColor;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         this.drawData();
-
         // // 🛠️ הוספת ציור סימונים
         // this.drawDebugMarkers();
     }

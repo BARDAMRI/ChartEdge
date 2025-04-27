@@ -8,7 +8,7 @@ if (container) {
     const startTime = 1714150800000; // זמן התחלתי כלשהו
     let lastClose = 100; // נתחיל מ-100
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 200; i++) {
         const open = lastClose + (Math.random() - 0.5) * 2;
         const close = open + (Math.random() - 0.5) * 2;
         const high = Math.max(open, close) + Math.random() * 1.5;
