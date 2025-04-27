@@ -21,6 +21,13 @@ export class ChartManager {
     private drawableOriginX: number = 0;
     private drawableOriginY: number = 0;
 
+    // Zoom and Pan State
+    private currentMinTime: number | null = null;
+    private currentMaxTime: number | null = null;
+    private isPanning: boolean = false;
+    private lastPanX: number | null = null;
+    private isMouseDown: boolean = false;
+
     constructor(container: HTMLElement, options: ChartOptions) {
         this.options = options;
 
@@ -54,6 +61,12 @@ export class ChartManager {
                 this.drawInitial();
             }, 100);
         });
+
+        // Zoom and Pan event listeners
+        this.canvas.addEventListener('wheel', (event) => this.handleWheel(event));
+        this.canvas.addEventListener('mousedown', (event) => this.handleMouseDown(event));
+        window.addEventListener('mousemove', (event) => this.handleMouseMove(event));
+        window.addEventListener('mouseup', () => this.handleMouseUp());
 
         // Initial drawing when chart is created
         this.drawInitial();
@@ -131,7 +144,8 @@ export class ChartManager {
     }
 
     private drawLineChart() {
-        const lineData = this.options.data as LineData[];
+        const fullLineData = this.options.data as LineData[];
+        const lineData = this.getVisibleData(fullLineData);
         const minTime = Math.min(...lineData.map(d => d.time));
         const maxTime = Math.max(...lineData.map(d => d.time));
         const chartWidth = this.drawableWidth;
@@ -149,7 +163,8 @@ export class ChartManager {
     }
 
     private drawCandlestickChart() {
-        const candleData = this.options.data as (CandleData | CandleDataCompact)[];
+        const fullCandleData = this.options.data as (CandleData | CandleDataCompact)[];
+        const candleData = this.getVisibleData(fullCandleData);
         const isCompact = 'o' in candleData[0];
 
         const {extendedMinTime, extendedMaxTime} = this.calculateTimeRange(candleData, isCompact);
@@ -401,14 +416,23 @@ export class ChartManager {
         chartHeight: number,
         isCompact: boolean
     ) {
+        const edgeSpacingPx = 5;
+        const spacingWidth = Math.max(1, 5 - Math.floor(candleData.length / 100));
+
+        const availableWidth = this.drawableWidth - (2 * edgeSpacingPx);
+        const candleBodyWidth = (availableWidth - (spacingWidth * (candleData.length - 1))) / candleData.length;
+
+        let currentX = this.drawableOriginX + edgeSpacingPx;
+
         const overlayPoints = candleData.map((item: any) => {
-            const time = isCompact ? item.t : item.time;
             const close = isCompact ? item.c : item.close;
-            const xPos = this.drawableOriginX + ((time - extendedMinTime) / (extendedMaxTime - extendedMinTime)) * chartWidth;
-            return {
-                x: xPos,
-                y: this.drawableOriginY + (chartHeight - ((close - extendedMinPrice) / (extendedMaxPrice - extendedMinPrice)) * chartHeight),
-            };
+
+            const xPos = currentX + candleBodyWidth / 2; // Place overlay in center of each candle
+            const yPos = this.drawableOriginY + (chartHeight - ((close - extendedMinPrice) / (extendedMaxPrice - extendedMinPrice)) * chartHeight);
+
+            currentX += candleBodyWidth + spacingWidth;
+
+            return { x: xPos, y: yPos };
         });
 
         this.lineRenderer.draw(overlayPoints, {
@@ -417,9 +441,163 @@ export class ChartManager {
             dashed: this.options?.style?.lineOverlay?.dashed ?? false,
         });
     }
+
+    /**
+     * Handles mouse wheel for zooming and panning with limits.
+     */
+    private handleWheel(event: WheelEvent) {
+        if (event.ctrlKey) {
+            // Ctrl + Wheel = Zoom
+            this.performZoom(event);
+        } else if (this.isMouseDown) {
+            // MouseDown + Wheel = Pan
+            this.performPanByWheel(event);
+        } else {
+            // Allow normal scrolling
+            return;
+        }
+        event.preventDefault();
+    }
+
+    /**
+     * Handles mouse down to start panning.
+     */
+    private handleMouseDown(event: MouseEvent) {
+        this.isPanning = true;
+        this.isMouseDown = true;
+        this.lastPanX = event.clientX;
+    }
+
+    /**
+     * Handles mouse move to update panning.
+     */
+    private handleMouseMove(event: MouseEvent) {
+        if (!this.isPanning || this.lastPanX === null) return;
+
+        const dx = event.clientX - this.lastPanX;
+        this.lastPanX = event.clientX;
+
+        const fullMinTime = Math.min(...(this.options.data as any[]).map(d => d.time ?? d.t));
+        const fullMaxTime = Math.max(...(this.options.data as any[]).map(d => d.time ?? d.t));
+
+        const currentMin = this.currentMinTime ?? fullMinTime;
+        const currentMax = this.currentMaxTime ?? fullMaxTime;
+        const timeRange = currentMax - currentMin;
+
+        const timePerPixel = timeRange / this.drawableWidth;
+        const timeShift = -dx * timePerPixel;
+
+        let newMinTime = currentMin + timeShift;
+        let newMaxTime = currentMax + timeShift;
+
+        // Clamp to data range
+        if (newMinTime < fullMinTime) {
+            newMinTime = fullMinTime;
+            newMaxTime = fullMinTime + timeRange;
+        }
+        if (newMaxTime > fullMaxTime) {
+            newMaxTime = fullMaxTime;
+            newMinTime = fullMaxTime - timeRange;
+        }
+
+        this.currentMinTime = newMinTime;
+        this.currentMaxTime = newMaxTime;
+
+        this.drawInitial();
+    }
+
+    /**
+     * Handles mouse up to stop panning.
+     */
+    private handleMouseUp() {
+        this.isPanning = false;
+        this.isMouseDown = false;
+        this.lastPanX = null;
+    }
+
+    /**
+     * Helper for zooming with mouse wheel.
+     */
+    private performZoom(event: WheelEvent) {
+        const zoomIntensity = 0.05;
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = event.clientX - rect.left;
+        const zoomCenterRatio = (mouseX - this.drawableOriginX) / this.drawableWidth;
+
+        const data = this.options.data as any[];
+        const fullMinTime = Math.min(...data.map(d => d.time ?? d.t));
+        const fullMaxTime = Math.max(...data.map(d => d.time ?? d.t));
+        const fullRange = fullMaxTime - fullMinTime;
+
+        const averageInterval = fullRange / (data.length - 1);
+        const minAllowedRange = averageInterval * 4;
+
+        const currentMin = this.currentMinTime ?? fullMinTime;
+        const currentMax = this.currentMaxTime ?? fullMaxTime;
+        const timeRange = currentMax - currentMin;
+        const zoomAmount = timeRange * zoomIntensity * (event.deltaY > 0 ? 1 : -1);
+
+        let newTimeRange = timeRange + zoomAmount;
+        if (newTimeRange < minAllowedRange) newTimeRange = minAllowedRange;
+        if (newTimeRange > fullRange) newTimeRange = fullRange;
+
+        const centerTime = currentMin + timeRange * zoomCenterRatio;
+
+        let newMinTime = centerTime - newTimeRange * zoomCenterRatio;
+        let newMaxTime = centerTime + newTimeRange * (1 - zoomCenterRatio);
+
+        if (newMinTime < fullMinTime) {
+            newMinTime = fullMinTime;
+            newMaxTime = fullMinTime + newTimeRange;
+        }
+        if (newMaxTime > fullMaxTime) {
+            newMaxTime = fullMaxTime;
+            newMinTime = fullMaxTime - newTimeRange;
+        }
+
+        this.currentMinTime = newMinTime;
+        this.currentMaxTime = newMaxTime;
+
+        this.drawInitial();
+    }
+
+    /**
+     * Helper for panning with mouse wheel while mouse is down.
+     */
+    private performPanByWheel(event: WheelEvent) {
+        const dx = event.deltaY; // Using deltaY for wheel pan vertically
+
+        const data = this.options.data as any[];
+        const fullMinTime = Math.min(...data.map(d => d.time ?? d.t));
+        const fullMaxTime = Math.max(...data.map(d => d.time ?? d.t));
+        const currentRange = (this.currentMaxTime ?? fullMaxTime) - (this.currentMinTime ?? fullMinTime);
+
+        const timePerPixel = currentRange / this.drawableWidth;
+        const timeShift = dx * timePerPixel * 5; // Faster shift for wheel
+
+        this.currentMinTime = (this.currentMinTime ?? fullMinTime) + timeShift;
+        this.currentMaxTime = (this.currentMaxTime ?? fullMaxTime) + timeShift;
+
+        this.drawInitial();
+    }
+
+    /**
+     * Returns the data points that are within the current visible time range.
+     */
+    private getVisibleData<T extends { time?: number; t?: number }>(data: T[]): T[] {
+        if (this.currentMinTime === null || this.currentMaxTime === null) {
+            return data;
+        }
+        return data.filter(d => {
+            const time = d.time ?? d.t;
+            return time >= this.currentMinTime! && time <= this.currentMaxTime!;
+        });
+    }
 }
 
 // Public API function to create a chart instance
 export function createChart(container: HTMLElement, options: ChartOptions) {
     return new ChartManager(container, options);
 }
+
+
