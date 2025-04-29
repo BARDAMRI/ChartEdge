@@ -3,6 +3,10 @@ import {LineRenderer} from '../renderer/lineRenderer';
 import {CandlestickRenderer} from '../renderer/candlestickRenderer';
 import {GridRenderer} from '../renderer/gridRenderer';
 import {AxisRenderer} from '../renderer/axisRenderer';
+import { ModeManager } from './managers/modeManager';
+import { ToolbarManager } from './managers/toolbarManager';
+import {CircleDrawing, Drawing, DrawingType, FreeLineDrawing, LineDrawing, RectangleDrawing} from './drawings/drawings';
+import { EditingPanelManager } from './managers/editingPanelManager';
 
 
 // 2D canvas manager for ChartEdge: handles canvas creation, resizing, and rendering.
@@ -28,6 +32,15 @@ export class ChartManager {
     private lastPanX: number | null = null;
     private isMouseDown: boolean = false;
 
+    // Drawing mode state
+    private drawings: Drawing[] = [];
+    private currentDrawing: Drawing | null = null;
+    private selectedDrawing: Drawing | null = null;
+
+    private modeManager: ModeManager;
+    private toolbarManager: ToolbarManager;
+    private editingPanelManager: EditingPanelManager;
+
     constructor(container: HTMLElement, options: ChartOptions) {
         this.options = options;
 
@@ -50,6 +63,30 @@ export class ChartManager {
         this.gridRenderer = new GridRenderer(ctx);
         this.axisRenderer = new AxisRenderer(ctx);
 
+        this.modeManager = new ModeManager();
+        this.toolbarManager = new ToolbarManager(this.ctx, this.modeManager);
+
+        // Create a container for the editing panel
+        const editingPanelContainer = document.createElement('div');
+        editingPanelContainer.style.position = 'absolute';
+        editingPanelContainer.style.top = '0';
+        editingPanelContainer.style.left = '0';
+        editingPanelContainer.style.zIndex = '1000';
+        container.appendChild(editingPanelContainer);
+
+        this.editingPanelManager = new EditingPanelManager(editingPanelContainer, () => this.drawInitial());
+
+        // Example: Add initial toolbar buttons
+        this.toolbarManager.addButton({
+            label: '✏️',
+            tooltip: 'ציור',
+            subActions: [
+                { label: 'קו ישר', mode: 'draw-line' },
+                { label: 'קו חופשי', mode: 'draw-free' },
+                { label: 'מלבן', mode: 'draw-rectangle' },
+            ],
+        });
+
         // Set up automatic canvas resizing with debounce
         this.resizeCanvas();
         // Re-Draw the canvas on resize, debounced
@@ -62,11 +99,11 @@ export class ChartManager {
             }, 100);
         });
 
-        // Zoom and Pan event listeners
-        this.canvas.addEventListener('wheel', (event) => this.handleWheel(event));
+        // Event listeners (single set, as required)
         this.canvas.addEventListener('mousedown', (event) => this.handleMouseDown(event));
-        window.addEventListener('mousemove', (event) => this.handleMouseMove(event));
-        window.addEventListener('mouseup', () => this.handleMouseUp());
+        this.canvas.addEventListener('mousemove', (event) => this.handleMouseMove(event));
+        this.canvas.addEventListener('mouseup', (event) => this.handleMouseUp(event));
+        this.canvas.addEventListener('wheel', (event) => this.handleWheel(event));
 
         // Initial drawing when chart is created
         this.drawInitial();
@@ -120,8 +157,166 @@ export class ChartManager {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         this.drawData();
+        this.drawAllDrawings();
+        this.toolbarManager.draw();
         // // 🛠️ הוספת ציור סימונים
         // this.drawDebugMarkers();
+    }
+    // Drawing mode methods
+    private startDrawing(event: MouseEvent) {
+        const mode = this.modeManager.getMode();
+        const rect = this.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        const baseProps = {
+            color: '#ff9900',
+            lineWidth: 2,
+            lineStyle: 'solid' as const,
+        };
+
+        if (mode === 'draw-line') {
+            this.currentDrawing = {
+                ...baseProps,
+                type: 'line',
+                startX: x,
+                startY: y,
+                endX: x,
+                endY: y,
+            } as LineDrawing;
+        } else if (mode === 'draw-free') {
+            this.currentDrawing = {
+                ...baseProps,
+                type: 'free',
+                points: [{ x, y }],
+            } as FreeLineDrawing;
+        } else if (mode === 'draw-rectangle') {
+            this.currentDrawing = {
+                ...baseProps,
+                type: 'rectangle',
+                startX: x,
+                startY: y,
+                endX: x,
+                endY: y,
+            } as RectangleDrawing;
+        } else if (mode === 'draw-square') {
+            this.currentDrawing = {
+                ...baseProps,
+                type: 'square',
+                startX: x,
+                startY: y,
+                endX: x,
+                endY: y,
+            } as RectangleDrawing;
+        } else if (mode === 'draw-circle') {
+            this.currentDrawing = {
+                ...baseProps,
+                type: 'circle',
+                centerX: x,
+                centerY: y,
+                radius: 0,
+            } as CircleDrawing;
+        }
+    }
+
+    private updateDrawing(event: MouseEvent) {
+        if (!this.currentDrawing) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        if (this.currentDrawing.type === 'line' || this.currentDrawing.type === 'rectangle' || this.currentDrawing.type === 'square') {
+            this.currentDrawing.endX = x;
+            this.currentDrawing.endY = y;
+        } else if (this.currentDrawing.type === 'free') {
+            this.currentDrawing.points.push({ x, y });
+        } else if (this.currentDrawing.type === 'circle') {
+            const dx = x - this.currentDrawing.centerX;
+            const dy = y - this.currentDrawing.centerY;
+            this.currentDrawing.radius = Math.sqrt(dx * dx + dy * dy);
+        }
+
+        this.drawInitial();
+        this.drawAllDrawings();
+        this.drawCurrentDrawing();
+    }
+
+    private finishDrawing(event: MouseEvent) {
+        if (!this.currentDrawing) return;
+
+        this.drawings.push(this.currentDrawing);
+
+        // Show editing panel for the new drawing
+        this.editingPanelManager.showForDrawing(this.currentDrawing);
+
+        this.currentDrawing = null;
+
+        this.drawInitial();
+    }
+
+    private drawCurrentDrawing() {
+        if (!this.currentDrawing) return;
+        this.drawSingleDrawing(this.currentDrawing);
+    }
+
+    private drawAllDrawings() {
+        for (const drawing of this.drawings) {
+            this.drawSingleDrawing(drawing);
+        }
+    }
+
+    private drawSingleDrawing(drawing: Drawing) {
+        this.ctx.save();
+        this.ctx.strokeStyle = drawing.color;
+        this.ctx.lineWidth = drawing.lineWidth;
+
+        if (drawing.lineStyle === 'dashed') {
+            this.ctx.setLineDash([10, 5]);
+        } else if (drawing.lineStyle === 'dotted') {
+            this.ctx.setLineDash([2, 5]);
+        } else {
+            this.ctx.setLineDash([]);
+        }
+
+        this.ctx.beginPath();
+        if (drawing.type === 'line') {
+            this.ctx.moveTo(drawing.startX, drawing.startY);
+            this.ctx.lineTo(drawing.endX, drawing.endY);
+        } else if (drawing.type === 'free') {
+            const points = drawing.points;
+            if (points.length > 0) {
+                this.ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    this.ctx.lineTo(points[i].x, points[i].y);
+                }
+            }
+        } else if (drawing.type === 'rectangle' || drawing.type === 'square') {
+            const width = drawing.endX - drawing.startX;
+            const height = drawing.endY - drawing.startY;
+
+            if (drawing.type === 'square') {
+                const size = Math.max(Math.abs(width), Math.abs(height));
+                this.ctx.strokeRect(
+                    drawing.startX,
+                    drawing.startY,
+                    width < 0 ? -size : size,
+                    height < 0 ? -size : size
+                );
+            } else {
+                this.ctx.strokeRect(
+                    drawing.startX,
+                    drawing.startY,
+                    width,
+                    height
+                );
+            }
+        } else if (drawing.type === 'circle') {
+            this.ctx.arc(drawing.centerX, drawing.centerY, drawing.radius, 0, 2 * Math.PI);
+        }
+
+        this.ctx.stroke();
+        this.ctx.restore();
     }
 
 
@@ -252,7 +447,8 @@ export class ChartManager {
             this.options?.style?.axes?.lineWidth ?? 1.5,
             this.options?.style?.axes?.axisPosition ?? AxesPosition.right,
             this.options?.style?.axes?.numberLocale ?? 'en-US',
-            this.options?.style?.axes?.dateLocale ?? 'en-US'
+            this.options?.style?.axes?.dateLocale ?? 'en-US',
+            this.options?.style?.axes?.numberFractionDigits ?? 2
         );
     }
 
@@ -460,37 +656,86 @@ export class ChartManager {
     }
 
     /**
-     * Handles mouse down to start panning.
+     * Handles mouse down to start drawing or panning.
      */
     private handleMouseDown(event: MouseEvent) {
+        if (this.isClickInsideEditingPanel(event)) {
+            // Ignore clicks inside the editing panel
+            return;
+        }
+
+        const rect = this.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        const clickedToolbar = this.toolbarManager.handleMouseClick(x, y);
+        if (clickedToolbar) {
+            return;
+        }
+
         this.isPanning = true;
         this.isMouseDown = true;
         this.lastPanX = event.clientX;
+
+        this.startDrawing(event);
     }
 
     /**
-     * Handles mouse move to update panning.
+     * Returns true if the click event happened inside the editing panel.
+     */
+    private isClickInsideEditingPanel(event: MouseEvent): boolean {
+        const editingPanel = document.getElementById('editing-panel');
+        if (!editingPanel) return false;
+        return editingPanel.contains(event.target as Node);
+    }
+
+    /**
+     * Handles mouse move to update drawing or panning.
      */
     private handleMouseMove(event: MouseEvent) {
-        if (!this.isPanning || this.lastPanX === null) return;
+        const rect = this.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
 
-        const dx = event.clientX - this.lastPanX;
-        this.lastPanX = event.clientX;
+        if (this.isPanning && this.lastPanX !== null) {
+            const dx = event.clientX - this.lastPanX;
+            this.lastPanX = event.clientX;
 
-        const fullMinTime = Math.min(...(this.options.data as any[]).map(d => d.time ?? d.t));
-        const fullMaxTime = Math.max(...(this.options.data as any[]).map(d => d.time ?? d.t));
+            this.panChartByPixels(dx);
+        }
 
+        this.updateDrawing(event);
+
+        this.toolbarManager.handleMouseMove(x, y);
+    }
+
+    /**
+     * Handles mouse up to finish drawing or panning.
+     */
+    private handleMouseUp(event: MouseEvent) {
+        this.isPanning = false;
+        this.isMouseDown = false;
+        this.lastPanX = null;
+
+        this.finishDrawing(event);
+    }
+
+    /**
+     * Helper for panning by a given number of pixels.
+     */
+    private panChartByPixels(dx: number) {
+        const data = this.options.data as any[];
+        const fullMinTime = Math.min(...data.map(d => d.time ?? d.t));
+        const fullMaxTime = Math.max(...data.map(d => d.time ?? d.t));
         const currentMin = this.currentMinTime ?? fullMinTime;
         const currentMax = this.currentMaxTime ?? fullMaxTime;
         const timeRange = currentMax - currentMin;
-
         const timePerPixel = timeRange / this.drawableWidth;
         const timeShift = -dx * timePerPixel;
 
         let newMinTime = currentMin + timeShift;
         let newMaxTime = currentMax + timeShift;
 
-        // Clamp to data range
         if (newMinTime < fullMinTime) {
             newMinTime = fullMinTime;
             newMaxTime = fullMinTime + timeRange;
@@ -504,15 +749,6 @@ export class ChartManager {
         this.currentMaxTime = newMaxTime;
 
         this.drawInitial();
-    }
-
-    /**
-     * Handles mouse up to stop panning.
-     */
-    private handleMouseUp() {
-        this.isPanning = false;
-        this.isMouseDown = false;
-        this.lastPanX = null;
     }
 
     /**
@@ -582,7 +818,9 @@ export class ChartManager {
     }
 
     /**
-     * Returns the data points that are within the current visible time range.
+     * Filters and returns only the data points that are within the currently visible time range.
+     * If no zoom/pan has been applied yet (currentMinTime or currentMaxTime are null),
+     * returns the full dataset.
      */
     private getVisibleData<T extends { time?: number; t?: number }>(data: T[]): T[] {
         if (this.currentMinTime === null || this.currentMaxTime === null) {

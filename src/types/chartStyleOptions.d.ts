@@ -29,6 +29,7 @@ export interface AxesStyleOptions {
     lineWidth?: number;
     numberLocale?: string;
     dateLocale?: string;
+    numberFractionDigits?: number; // Number of decimal places to format axis values
 }
 export interface LineOverlayOptions{
     color?: string;
