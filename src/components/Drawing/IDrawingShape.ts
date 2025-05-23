@@ -1,0 +1,3 @@
+export interface IDrawingShape {
+    draw(ctx:CanvasRenderingContext2D): void;
+}
