@@ -24,4 +24,14 @@ export class CustomSymbolShape implements IDrawingShape {
         ctx.fillText(this.symbol, this.x, this.y);
     }
 
+    isHit(x: number, y: number): boolean {
+        const halfSize = this.size / 2;
+        return (
+            x >= this.x - halfSize &&
+            x <= this.x + halfSize &&
+            y >= this.y - halfSize &&
+            y <= this.y + halfSize
+        );
+    }
+
 }

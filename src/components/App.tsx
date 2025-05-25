@@ -1,5 +1,5 @@
 import React from 'react';
-import {ChartCanvas} from './ChartCanvas';
+import {ChartCanvas} from './canvas/ChartCanvas.tsx';
 import {Toolbar} from './Toolbar';
 import {SettingsToolbar} from './SettingsToolbar';
 import '../styles/App.scss';

@@ -6,7 +6,9 @@ export enum Mode {
     drawRectangle,
     drawCircle,
     drawTriangle,
-    drawAngle
+    drawAngle,
+    select,
+    editShape
 }
 
 interface ModeContextProps {
@@ -17,7 +19,11 @@ interface ModeContextProps {
 const ModeContext = createContext<ModeContextProps | undefined>(undefined);
 
 export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({children}) => {
-    const [mode, setMode] = useState<Mode>(Mode.none);
+    const [mode, setModeState] = useState<Mode>(Mode.none);
+
+    const setMode = (newMode: Mode) => {
+        setModeState(prev => (prev === newMode ? Mode.none : newMode));
+    };
 
     return (
         <ModeContext.Provider value={{mode, setMode}}>

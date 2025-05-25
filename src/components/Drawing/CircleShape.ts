@@ -23,4 +23,10 @@ export class CircleShape implements IDrawingShape {
         ctx.beginPath();
         ctx.arc(this.centerX, this.centerY, this.radius, 0, Math.PI * 2);
     }
+
+    isHit(x: number, y: number): boolean {
+        const dx = x - this.centerX;
+        const dy = y - this.centerY;
+        return Math.sqrt(dx * dx + dy * dy) <= this.radius + this.lineWidth / 2;
+    }
 }
