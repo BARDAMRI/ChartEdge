@@ -7,6 +7,7 @@ import {drawAxes} from './utils/drawAxes';
 import {drawCandlesticks} from './utils/drawCandlesticks';
 import {drawDrawings} from './utils/drawDrawings';
 import {drawOverlay} from './utils/drawOverlay';
+import {useChartStore} from '../../store/useChartStore';
 
 interface ChartCanvasProps {
     candles: Candle[];
@@ -17,19 +18,26 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             candles,
                                                             visibleRange: initialVisibleRange,
                                                         }) => {
-    const {mode} = useMode();
-    const [isDrawing, setIsDrawing] = useState(false);
-    const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
-    const [currentPoint, setCurrentPoint] = useState<{ x: number; y: number } | null>(null);
-    const [drawings, setDrawings] = useState<Drawing[]>([]);
-    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-    const [timeFormat, setTimeFormat] = useState<string>('YYYY/MM/DD');
+    const mode = useMode().mode;
+    const isDrawing = useChartStore(state => state.isDrawing);
+    const setIsDrawing = useChartStore(state => state.setIsDrawing);
+    const startPoint = useChartStore(state => state.startPoint);
+    const setStartPoint = useChartStore(state => state.setStartPoint);
+    const currentPoint = useChartStore(state => state.currentPoint);
+    const setCurrentPoint = useChartStore(state => state.setCurrentPoint);
+    const drawings = useChartStore(state => state.drawings);
+    const setDrawings = useChartStore(state => state.setDrawings);
+    const selectedIndex = useChartStore(state => state.selectedIndex);
+    const setSelectedIndex = useChartStore(state => state.setSelectedIndex);
+    const timeFormat = useChartStore(state => state.timeFormat);
+    const visibleRange = useChartStore(state => state.visibleRange);
+    const setVisibleRange = useChartStore(state => state.setVisibleRange);
 
     const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
     const [dimensions, setDimensions] = useState({width: 0, height: 0});
-    const padding = 40;
+    const padding = 50;
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -55,11 +63,15 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         end: now,
     };
 
-    const [visibleRange, setVisibleRange] = useState<TimeRange>(
-        (initialVisibleRange && candles && candles.length)
-            ? initialVisibleRange
-            : defaultVisibleRange
-    );
+    // Initialize visibleRange in store if not set and initialVisibleRange is provided
+    useEffect(() => {
+        if (initialVisibleRange && candles && candles.length && !visibleRange) {
+            setVisibleRange(initialVisibleRange);
+        } else if (!visibleRange) {
+            setVisibleRange(defaultVisibleRange);
+        }
+    }, [initialVisibleRange, candles, visibleRange, setVisibleRange]);
+
     const safeCandles = candles || [];
     const visibleCandles = safeCandles.filter(
         c => visibleRange && c.t >= visibleRange.start && c.t <= visibleRange.end
@@ -127,66 +139,56 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         const rect = canvasRef.current!.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-
         setDrawings(prev => {
-            if (mode === Mode.drawLine) {
-                return [
-                    ...prev,
-                    {
-                        mode: Mode.drawLine,
-                        args: {
-                            startX: startPoint.x,
-                            startY: startPoint.y,
-                            endX: x,
-                            endY: y,
-                        },
+            const newDrawing = {
+                [Mode.drawLine]: () => ({
+                    mode: Mode.drawLine,
+                    args: {
+                        startX: startPoint.x,
+                        startY: startPoint.y,
+                        endX: x,
+                        endY: y,
                     },
-                ];
-            } else if (mode === Mode.drawRectangle) {
-                return [
-                    ...prev,
-                    {
-                        mode: Mode.drawRectangle,
-                        args: {
-                            x: startPoint.x,
-                            y: startPoint.y,
-                            width: x - startPoint.x,
-                            height: y - startPoint.y,
-                        },
+                }),
+                [Mode.drawRectangle]: () => ({
+                    mode: Mode.drawRectangle,
+                    args: {
+                        x: startPoint.x,
+                        y: startPoint.y,
+                        width: x - startPoint.x,
+                        height: y - startPoint.y,
                     },
-                ];
-            } else if (mode === Mode.drawCircle) {
-                const dx = x - startPoint.x;
-                const dy = y - startPoint.y;
-                const radius = Math.sqrt(dx * dx + dy * dy);
-                return [
-                    ...prev,
-                    {
+                }),
+                [Mode.drawCircle]: () => {
+                    const dx = x - startPoint.x;
+                    const dy = y - startPoint.y;
+                    const radius = Math.sqrt(dx * dx + dy * dy);
+                    return {
                         mode: Mode.drawCircle,
                         args: {
                             centerX: startPoint.x,
                             centerY: startPoint.y,
                             radius,
                         },
-                    },
-                ];
-            }
-            return prev;
-        });
+                    };
+                }
+            }[mode];
 
+            return newDrawing ? [...prev, newDrawing()] : prev;
+        });
         setIsDrawing(false);
         setStartPoint(null);
         setCurrentPoint(null);
     };
 
     function formatUnixTime(unixTime: number): string {
-      const date = new Date(unixTime);
-      const options: Intl.DateTimeFormatOptions = {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      };
-      return new Intl.DateTimeFormat('he-IL', options).format(date);
+        const date = new Date(unixTime);
+        const options: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        };
+        return new Intl.DateTimeFormat('he-IL', options).format(date);
     }
 
     useEffect(() => {
@@ -209,16 +211,11 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
         drawGrid(ctx, dimensions.width, dimensions.height, padding);
         drawAxes(
-          ctx,
-          candlesToUse,
-          visibleRange,
-          dimensions.width,
-          dimensions.height,
-          padding,
-          minPrice,
-          maxPrice,
-          'left',
-          formatUnixTime
+            ctx,
+            candlesToUse,
+            dimensions.width,
+            dimensions.height,
+            padding
         );
         drawCandlesticks(ctx, candlesToUse, visibleRange, dimensions.width, dimensions.height, padding, minPrice, maxPrice);
         drawDrawings(ctx, drawings, selectedIndex);

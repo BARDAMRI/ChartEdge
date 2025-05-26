@@ -1,12 +1,13 @@
+import { useChartStore } from '../../../store/useChartStore';
+
 export function drawGrid(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   padding: number,
-  stepX: number = 50,
-  stepY: number = 50,
-  strokeStyle: string = '#eee'
 ) {
+  const { stepX, stepY, strokeStyle } = useChartStore.getState?.();
+
   ctx.strokeStyle = strokeStyle;
   ctx.lineWidth = 1;
 
