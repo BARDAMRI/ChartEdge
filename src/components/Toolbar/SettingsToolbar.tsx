@@ -1,8 +1,8 @@
 import React from 'react';
-import '../styles/SettingsToolbar.scss';
+import '../../styles/SettingsToolbar.scss';
 export const SettingsToolbar: React.FC = () => {
     const handleDownload = () => {
-        const canvas = document.querySelector('canvas');
+        const canvas = document.querySelector('Canvas');
         if (!canvas) return;
         const link = document.createElement('a');
         link.download = 'chart-snapshot.png';

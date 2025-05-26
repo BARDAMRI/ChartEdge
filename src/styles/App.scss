@@ -1,15 +1,31 @@
-
-#root {
-  display: block;
-  width: 100vw;
-  height: 100vh;
+//make the html file to cover the whole screen
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+    overflow: hidden; /* למנוע גלילה מיותרת */
 }
 
+#root {
+  height: calc(100% - 4px); /* להוריד גובה של ה-toolbar */
+  width: calc(100% - 4px); /* להוריד רוחב של ה-toolbar */
+  margin: 2px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* למנוע גלילה מיותרת */
+}
+
+// make the app container to cover the whole screen
 .main-app-window {
   display: flex;
   flex-direction: column;
+  position: relative;
   height: 100%;
   width: 100%;
+  padding: 2px;
+  box-sizing: border-box;
+  overflow: hidden; /* למנוע גלילה מיותרת */
 }
 
 .settings-area {
@@ -24,4 +40,19 @@
   width: 100%;
   display: flex;
   flex-direction: row;
+  overflow: hidden; /* למנוע גלילה אופקית */
+}
+
+// במידה ולא קיימות בקובץ אחר, הוסף כאן:
+.chart-canvas-container {
+  flex-grow: 1;
+  width: calc(100% - 40px); /* להוריד רוחב של ה-toolbar */
+  height: 100%;
+  position: relative;
+}
+
+.toolbar-container {
+  width: 40px; /* רוחב סרגל הכלים */
+  height: 100%;
+  flex-shrink: 0; /* למנוע כיווץ */
 }

@@ -1,7 +1,7 @@
 import React from 'react';
-import {ChartCanvas} from './canvas/ChartCanvas.tsx';
-import {Toolbar} from './Toolbar';
-import {SettingsToolbar} from './SettingsToolbar';
+import {ChartCanvas} from './Canvas/ChartCanvas.tsx';
+import {Toolbar} from './Toolbar/Toolbar.tsx';
+import {SettingsToolbar} from './Toolbar/SettingsToolbar.tsx';
 import '../styles/App.scss';
 
 export const App: React.FC = () => {

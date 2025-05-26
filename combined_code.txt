@@ -1,0 +1,1419 @@
+// File: src/components/App.tsx
+import React from 'react';
+import {ChartCanvas} from './Canvas/ChartCanvas.tsx';
+import {Toolbar} from './Toolbar/Toolbar.tsx';
+import {SettingsToolbar} from './Toolbar/SettingsToolbar.tsx';
+import '../styles/App.scss';
+
+export const App: React.FC = () => {
+    return (
+        <div className={'main-app-window'}>
+            <div className={'settings-area'}>
+                <SettingsToolbar/>
+            </div>
+            <div className={'lower-container'}>
+                <ChartCanvas/>
+                <Toolbar/>
+            </div>
+        </div>
+    );
+};
+
+// File: src/components/Canvas/ChartCanvas.tsx
+import React, {useEffect, useRef, useState} from 'react';
+import {Mode, useMode} from '../../contexts/ModeContext.tsx';
+import '../../styles/ChartCanves.scss';
+import {LineShape, LineShapeArgs} from "../Drawing/LineShape.ts";
+import {TriangleShapeArgs} from "../Drawing/TriangleShape.ts";
+import {RectangleShape, RectangleShapeArgs} from "../Drawing/RectangleShape.ts";
+import {CircleShape, CircleShapeArgs} from "../Drawing/CircleShape.ts";
+import {AngleShapeArgs} from "../Drawing/Angleshape.ts";
+import {CustomSymbolShapeArgs} from "../Drawing/CustomSymbolShape.ts";
+import {PolylineShapeArgs} from "../Drawing/Polyline.ts";
+import {ArrowShapeArgs} from "../Drawing/ArrowShape.ts";
+import {drawCandlesticks} from './utils/drawCandlesticks.ts';
+
+type Drawing = {
+    mode: Mode,
+    args: LineShapeArgs
+        | TriangleShapeArgs
+        | RectangleShapeArgs
+        | CircleShapeArgs
+        | AngleShapeArgs
+        | CustomSymbolShapeArgs
+        | PolylineShapeArgs
+        | ArrowShapeArgs
+}
+
+
+type Candle = {
+    time: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+};
+
+export const ChartCanvas: React.FC = () => {
+    const backgroundRef = useRef<HTMLCanvasElement | null>(null);
+    const overlayRef = useRef<HTMLCanvasElement | null>(null);
+    const axesRef = useRef<HTMLCanvasElement | null>(null);
+    const {mode} = useMode();
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
+    const [drawings, setDrawings] = useState<Drawing[]>([]);
+    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+    const [candles] = useState<Candle[]>(() => {
+        const now = Date.now();
+        const generated: Candle[] = [];
+        let lastClose = 100;
+        for (let i = 0; i < 50; i++) {
+            const open = lastClose;
+            const change = (Math.random() - 0.5) * 10;
+            const close = open + change;
+            const high = Math.max(open, close) + Math.random() * 5;
+            const low = Math.min(open, close) - Math.random() * 5;
+            generated.push({
+                time: now + i * 60000,
+                open,
+                high,
+                low,
+                close,
+            });
+            lastClose = close;
+        }
+        return generated;
+    });
+
+    const [visibleRange, setVisibleRange] = useState<{ start: number, end: number }>({ start: 0, end: candles.length });
+
+    useEffect(() => {
+        const backgroundCanvas = backgroundRef.current;
+        const overlayCanvas = overlayRef.current;
+        const axesCanvas = axesRef.current;
+        if (!backgroundCanvas || !overlayCanvas || !axesCanvas) return;
+        const overlayCtx = overlayCanvas.getContext('2d');
+        const backgroundCtx = backgroundCanvas.getContext('2d');
+        const axesCtx = axesCanvas.getContext('2d');
+        if (!overlayCtx || !backgroundCtx || !axesCtx) return;
+
+        const drawBackground = () => {
+            backgroundCtx.fillStyle = '#ffffff';
+            backgroundCtx.fillRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+
+            backgroundCtx.strokeStyle = 'black';
+            backgroundCtx.lineWidth = 2;
+            drawings.forEach(d => {
+                backgroundCtx.beginPath();
+
+                if (d.mode === Mode.drawLine) {
+                    const args = d.args as LineShapeArgs;
+                    const lineDrawer = new LineShape(args.startX, args.startY, args.endX, args.endY);
+                    lineDrawer.draw(backgroundCtx);
+                } else if (d.mode === Mode.drawRectangle) {
+                    const args = d.args as RectangleShapeArgs;
+                    const rectDrawer = new RectangleShape(args.x, args.y, args.width, args.height);
+                    rectDrawer.draw(backgroundCtx);
+                } else if (d.mode === Mode.drawCircle) {
+                    const args = d.args as CircleShapeArgs;
+                    const circDrawer = new CircleShape(args.centerX, args.centerY, args.radius);
+                    circDrawer.draw(backgroundCtx);
+                }
+                backgroundCtx.stroke();
+            });
+
+            if (selectedIndex !== null && drawings[selectedIndex]) {
+                const d = drawings[selectedIndex];
+                let shape = null;
+                if (d.mode === Mode.drawLine) {
+                    const args = d.args as LineShapeArgs;
+                    shape = new LineShape(args.startX, args.startY, args.endX, args.endY);
+                } else if (d.mode === Mode.drawRectangle) {
+                    const args = d.args as RectangleShapeArgs;
+                    shape = new RectangleShape(args.x, args.y, args.width, args.height);
+                } else if (d.mode === Mode.drawCircle) {
+                    const args = d.args as CircleShapeArgs;
+                    shape = new CircleShape(args.centerX, args.centerY, args.radius);
+                }
+                if (shape) {
+                    backgroundCtx.strokeStyle = 'red';
+                    backgroundCtx.lineWidth = 2;
+                    shape.draw(backgroundCtx);
+                }
+            }
+
+            const visibleCandles = candles.slice(visibleRange.start, visibleRange.end);
+            drawCandlesticks(backgroundCtx, visibleCandles, backgroundCanvas);
+
+            // Draw axes
+            axesCtx.clearRect(0, 0, axesCanvas.width, axesCanvas.height);
+            axesCtx.strokeStyle = '#888';
+            axesCtx.lineWidth = 1;
+            axesCtx.font = '10px Arial';
+            axesCtx.fillStyle = '#000';
+
+            const priceStep = 20;
+            const timeStep = Math.floor(visibleCandles.length / 5);
+
+            const max = Math.max(...visibleCandles.map(c => c.high));
+            const min = Math.min(...visibleCandles.map(c => c.low));
+            const range = max - min;
+            const dpr = window.devicePixelRatio || 1;
+            const canvasHeight = axesCanvas.height / dpr;
+            const canvasWidth = axesCanvas.width / dpr;
+
+            for (let i = 0; i <= 5; i++) {
+              const price = min + (range * i / 5);
+              const y = canvasHeight - (i * canvasHeight / 5);
+              axesCtx.fillText(price.toFixed(2), 2, y);
+              axesCtx.beginPath();
+              axesCtx.moveTo(0, y);
+              axesCtx.lineTo(5, y);
+              axesCtx.stroke();
+            }
+
+            for (let i = 0; i <= 5; i++) {
+              const index = visibleRange.start + Math.floor(i * visibleCandles.length / 5);
+              if (candles[index]) {
+                const x = (i * canvasWidth / 5);
+                const date = new Date(candles[index].time);
+                const label = `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                axesCtx.fillText(label, x, canvasHeight - 2);
+                axesCtx.beginPath();
+                axesCtx.moveTo(x, canvasHeight);
+                axesCtx.lineTo(x, canvasHeight - 5);
+                axesCtx.stroke();
+              }
+            }
+        };
+
+        const resizeCanvas = () => {
+            const container = backgroundCanvas.parentElement;
+            if (!container) return;
+
+            const rect = container.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+
+            const canvases = [backgroundCanvas, axesCanvas, overlayCanvas];
+            canvases.forEach(canvas => {
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                canvas.style.width = `${rect.width}px`;
+                canvas.style.height = `${rect.height}px`;
+            });
+            overlayCtx.setTransform(1, 0, 0, 1, 0, 0);
+            overlayCtx.scale(dpr, dpr);
+            backgroundCtx.setTransform(1, 0, 0, 1, 0, 0);
+            backgroundCtx.scale(dpr, dpr);
+            axesCtx.setTransform(1, 0, 0, 1, 0, 0);
+            axesCtx.scale(dpr, dpr);
+
+            drawBackground();
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        };
+
+        const handleMouseDown = (e: MouseEvent) => {
+            if (mode === Mode.select) {
+                const rect = overlayCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                for (let i = 0; i < drawings.length; i++) {
+                    const d = drawings[i];
+                    let shape = null;
+                    if (d.mode === Mode.drawLine) {
+                        const args = d.args as LineShapeArgs;
+                        shape = new LineShape(args.startX, args.startY, args.endX, args.endY);
+                    } else if (d.mode === Mode.drawRectangle) {
+                        const args = d.args as RectangleShapeArgs;
+                        shape = new RectangleShape(args.x, args.y, args.width, args.height);
+                    } else if (d.mode === Mode.drawCircle) {
+                        const args = d.args as CircleShapeArgs;
+                        shape = new CircleShape(args.centerX, args.centerY, args.radius);
+                    }
+                    if (shape?.isHit(x, y)) {
+                        setSelectedIndex(i);
+                        break;
+                    }
+                }
+                return;
+            }
+            if (mode !== Mode.none) {
+                const rect = overlayCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                setStartPoint({x, y});
+                setIsDrawing(true);
+            }
+        };
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDrawing || !startPoint || (mode === Mode.none)) return;
+            const rect = overlayCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            overlayCtx.beginPath();
+            if (mode === Mode.drawLine) {
+                const lineDrawer = new LineShape(startPoint.x, startPoint.y, x, y);
+                lineDrawer.draw(overlayCtx);
+            } else if (mode === 'draw-rectangle') {
+                overlayCtx.rect(startPoint.x, startPoint.y, x - startPoint.x, y - startPoint.y);
+            } else if (mode === 'draw-circle') {
+                const dx = x - startPoint.x;
+                const dy = y - startPoint.y;
+                const radius = Math.sqrt(dx * dx + dy * dy);
+                overlayCtx.arc(startPoint.x, startPoint.y, radius, 0, Math.PI * 2);
+            }
+            overlayCtx.stroke();
+        };
+
+        const handleMouseUp = (e: MouseEvent) => {
+            if (!isDrawing || !startPoint || (mode === Mode.none)) return;
+            const rect = overlayCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            setDrawings(prev => {
+                if (mode === Mode.drawLine) {
+                    return [...prev, {
+                        mode: Mode.drawLine,
+                        args: {
+                            startX: startPoint.x,
+                            startY: startPoint.y,
+                            endX: x,
+                            endY: y
+                        } as LineShapeArgs
+                    }];
+                } else if (mode === Mode.drawRectangle) {
+                    return [...prev, {
+                        mode: Mode.drawRectangle,
+                        args: {
+                            startX: startPoint.x,
+                            startY: startPoint.y,
+                            endX: x,
+                            endY: y
+                        } as RectangleShapeArgs
+                    }];
+                } else if (mode === Mode.drawCircle) {
+                    const dx = x - startPoint.x;
+                    const dy = y - startPoint.y;
+                    const radius = Math.sqrt(dx * dx + dy * dy);
+                    return [...prev,
+                        {
+                            mode: Mode.drawCircle,
+                            args: {
+                                centerX: startPoint.x,
+                                centerY: startPoint.y,
+                                radius
+                            } as CircleShapeArgs
+                        }];
+                }
+                return prev;
+            });
+            setIsDrawing(false);
+            setStartPoint(null);
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        };
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+
+            const rect = overlayCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const dpr = window.devicePixelRatio || 1;
+            const logicalWidth = overlayCanvas.width / dpr;
+
+            const rangeSize = visibleRange.end - visibleRange.start;
+
+            if (e.ctrlKey) {
+                // Zooming
+                const zoomCenterRatio = mouseX / logicalWidth;
+                // Smooth proportional zoom: scroll up (deltaY < 0) zooms in (fewer candles), scroll down zooms out
+                const zoomFactor = 1 + (e.deltaY > 0 ? 0.1 : -0.1); // > 0 is zoom out
+                const newLength = Math.max(10, Math.floor(rangeSize * zoomFactor));
+                const centerIndex = visibleRange.start + Math.floor(rangeSize * zoomCenterRatio);
+                const half = Math.floor(newLength / 2);
+                let start = Math.max(0, centerIndex - half);
+                let end = Math.min(candles.length, centerIndex + half);
+                // Ensure at least newLength candles in the visible range if possible
+                if (end - start < newLength) {
+                    if (start === 0) {
+                        end = Math.min(candles.length, start + newLength);
+                    } else if (end === candles.length) {
+                        start = Math.max(0, end - newLength);
+                    }
+                }
+                setVisibleRange({ start, end });
+            } else {
+                // Panning
+                const shift = e.deltaY > 0 ? 1 : -1;
+                let start = Math.max(0, visibleRange.start + shift);
+                let end = Math.min(candles.length, start + rangeSize);
+                if (end - start < rangeSize) {
+                    start = candles.length - rangeSize;
+                    end = candles.length;
+                }
+                setVisibleRange({ start, end });
+            }
+        };
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        overlayCanvas.addEventListener('mousedown', handleMouseDown);
+        overlayCanvas.addEventListener('mousemove', handleMouseMove);
+        overlayCanvas.addEventListener('mouseup', handleMouseUp);
+        overlayCanvas.addEventListener('wheel', handleWheel, { passive: false });
+
+        return () => {
+            window.removeEventListener('resize', resizeCanvas);
+            overlayCanvas.removeEventListener('mousedown', handleMouseDown);
+            overlayCanvas.removeEventListener('mousemove', handleMouseMove);
+            overlayCanvas.removeEventListener('mouseup', handleMouseUp);
+            overlayCanvas.removeEventListener('wheel', handleWheel);
+        };
+    }, [mode, isDrawing, startPoint, drawings, candles, selectedIndex, visibleRange]);
+
+    useEffect(() => {
+        const backgroundCanvas = backgroundRef.current;
+        const backgroundCtx = backgroundCanvas?.getContext('2d');
+        if (backgroundCanvas && backgroundCtx) {
+            backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+            const drawBackground = () => {
+                backgroundCtx.fillStyle = '#ffffff';
+                backgroundCtx.fillRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+
+                backgroundCtx.strokeStyle = 'black';
+                backgroundCtx.lineWidth = 2;
+                drawings.forEach(d => {
+                    backgroundCtx.beginPath();
+
+                    if (d.mode === Mode.drawLine) {
+                        const args = d.args as LineShapeArgs;
+                        const lineDrawer = new LineShape(args.startX, args.startY, args.endX, args.endY);
+                        lineDrawer.draw(backgroundCtx);
+                    } else if (d.mode === Mode.drawRectangle) {
+                        const args = d.args as RectangleShapeArgs;
+                        const rectDrawer = new RectangleShape(args.x, args.y, args.width, args.height);
+                        rectDrawer.draw(backgroundCtx);
+                    } else if (d.mode === Mode.drawCircle) {
+                        const args = d.args as CircleShapeArgs;
+                        const circDrawer = new CircleShape(args.centerX, args.centerY, args.radius);
+                        circDrawer.draw(backgroundCtx);
+                    }
+                    backgroundCtx.stroke();
+                });
+
+                if (selectedIndex !== null && drawings[selectedIndex]) {
+                    const d = drawings[selectedIndex];
+                    let shape = null;
+                    if (d.mode === Mode.drawLine) {
+                        const args = d.args as LineShapeArgs;
+                        shape = new LineShape(args.startX, args.startY, args.endX, args.endY);
+                    } else if (d.mode === Mode.drawRectangle) {
+                        const args = d.args as RectangleShapeArgs;
+                        shape = new RectangleShape(args.x, args.y, args.width, args.height);
+                    } else if (d.mode === Mode.drawCircle) {
+                        const args = d.args as CircleShapeArgs;
+                        shape = new CircleShape(args.centerX, args.centerY, args.radius);
+                    }
+                    if (shape) {
+                        backgroundCtx.strokeStyle = 'red';
+                        backgroundCtx.lineWidth = 2;
+                        shape.draw(backgroundCtx);
+                    }
+                }
+
+                const visibleCandles = candles.slice(visibleRange.start, visibleRange.end);
+                drawCandlesticks(backgroundCtx, visibleCandles, backgroundCanvas);
+            };
+            drawBackground();
+        }
+    }, [visibleRange]);
+
+    return (
+        <div className="chart-canvas-container" style={{position: 'relative', width: '100%', height: '100%'}}>
+            <canvas ref={backgroundRef} style={{position: 'absolute', top: 0, left: 0, zIndex: 0}}/>
+            <canvas ref={axesRef} style={{position: 'absolute', top: 0, left: 0, zIndex: 1}}/>
+            <canvas ref={overlayRef} style={{position: 'absolute', top: 0, left: 0, zIndex: 2}}/>
+        </div>
+    );
+};
+
+// File: src/components/Canvas/utils/drawCandlesticks.ts
+import { Candle } from '../../../types/Candle.ts';
+
+export function drawCandlesticks(
+  backgroundCtx: CanvasRenderingContext2D,
+  candles: Candle[],
+  canvas: HTMLCanvasElement
+): void {
+  const dpr = window.devicePixelRatio || 1;
+  const paddingLeft = 40;
+  const paddingRight = 20;
+  const drawableWidth = canvas.width / dpr - paddingLeft - paddingRight;
+  const candleSpacing = drawableWidth / candles.length;
+  const candleWidth = candleSpacing * 0.6;
+
+  const max = Math.max(...candles.map(c => c.high));
+  const min = Math.min(...candles.map(c => c.low));
+  const priceRange = max - min;
+
+  const priceToY = (price: number) => {
+    const logicalHeight = canvas.height / dpr;
+    return logicalHeight - ((price - min) / priceRange) * logicalHeight;
+  };
+
+  candles.forEach((candle, i) => {
+    const x = paddingLeft + i * candleSpacing;
+    const highY = priceToY(candle.high);
+    const lowY = priceToY(candle.low);
+    const openY = priceToY(candle.open);
+    const closeY = priceToY(candle.close);
+
+    const isUp = candle.close >= candle.open;
+    backgroundCtx.strokeStyle = isUp ? 'green' : 'red';
+    backgroundCtx.lineWidth = 1;
+
+    // Wick
+    backgroundCtx.beginPath();
+    backgroundCtx.moveTo(x + candleWidth / 2, highY);
+    backgroundCtx.lineTo(x + candleWidth / 2, lowY);
+    backgroundCtx.stroke();
+
+    // Body
+    backgroundCtx.fillStyle = isUp ? 'green' : 'red';
+    const bodyY = Math.min(openY, closeY);
+    const bodyHeight = Math.abs(openY - closeY);
+    backgroundCtx.fillRect(x, bodyY, candleWidth, bodyHeight);
+  });
+}
+
+
+
+// File: src/components/Drawing/Angleshape.ts
+import {IDrawingShape} from "./IDrawingShape.ts";
+
+export interface AngleShapeArgs {
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    color?: string,
+    lineWidth?: number
+}
+
+
+export class AngleShape implements IDrawingShape {
+
+    constructor(
+        public x0: number,
+        public y0: number,
+        public x1: number,
+        public y1: number,
+        public x2: number,
+        public y2: number,
+        public color: string = 'teal',
+        public lineWidth: number = 2) {
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(this.x0, this.y0);
+        ctx.lineTo(this.x1, this.y1);
+        ctx.moveTo(this.x0, this.y0);
+        ctx.lineTo(this.x2, this.y2);
+        ctx.stroke();
+        const angleDeg = this.calculateAngle();
+    }
+
+    isHit(x: number, y: number): boolean {
+        const tolerance = 6;
+        return this.isPointNearLine(x, y, this.x0, this.y0, this.x1, this.y1, tolerance) ||
+            this.isPointNearLine(x, y, this.x0, this.y0, this.x2, this.y2, tolerance);
+    }
+
+    private isPointNearLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number, tolerance: number): boolean {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const len_sq = C * C + D * D;
+        let param = -1;
+        if (len_sq !== 0) param = dot / len_sq;
+
+        let xx, yy;
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+        return (dx * dx + dy * dy) <= tolerance * tolerance;
+    }
+
+    private calculateAngle(): number {
+        const v1 = {x: this.x1 - this.x0, y: this.y1 - this.y0};
+        const v2 = {x: this.x2 - this.x0, y: this.y2 - this.y0};
+        const dot = v1.x * v2.x + v1.y * v2.y;
+        const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+        const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+        const cos = dot / (mag1 * mag2);
+        return Math.acos(cos) * (100 / Math.PI);
+    }
+}
+
+// File: src/components/Drawing/ArrowShape.ts
+import {IDrawingShape} from "./IDrawingShape.ts";
+
+export interface ArrowShapeArgs {
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    color?: string,
+    lineWidth?: number
+}
+
+export class ArrowShape implements IDrawingShape {
+
+    constructor(
+        public fromX: number,
+        public fromY: number,
+        public toX: number,
+        public toY: number,
+        public color: string = 'black',
+        public lineWidth: number = 2
+    ) {
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        const headLength = 10;
+        const dx = this.toX - this.fromX;
+        const dy = this.toY - this.fromY;
+        const angle = Math.atan2(dy, dx);
+
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(this.fromX, this.fromY);
+        ctx.lineTo(this.toX, this.toY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(this.toX, this.toY);
+        ctx.lineTo(this.toX - headLength * Math.cos(angle - Math.PI / 6), this.toY - headLength * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(this.toX - headLength * Math.cos(angle + Math.PI / 6), this.toY - headLength * Math.sin(angle + Math.PI / 6));
+        ctx.lineTo(this.toX, this.toY);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+
+    }
+
+    isHit(x: number, y: number): boolean {
+        const tolerance = 6;
+        return this.isPointNearLine(x, y, this.fromX, this.fromY, this.toX, this.toY, tolerance);
+    }
+
+    private isPointNearLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number, tolerance: number): boolean {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const len_sq = C * C + D * D;
+        let param = -1;
+        if (len_sq !== 0) param = dot / len_sq;
+
+        let xx, yy;
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+        return (dx * dx + dy * dy) <= tolerance * tolerance;
+    }
+
+}
+
+// File: src/components/Drawing/CircleShape.ts
+import {IDrawingShape} from "./IDrawingShape.ts";
+
+export interface CircleShapeArgs {
+    centerX: number,
+    centerY: number,
+    radius: number,
+    color?: string,
+    lineWidth?: number
+}
+
+export class CircleShape implements IDrawingShape {
+    constructor(
+        public centerX: number,
+        public centerY: number,
+        public radius: number,
+        public color: string = 'black',
+        public lineWidth: number = 2) {
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.lineWidth;
+        ctx.beginPath();
+        ctx.arc(this.centerX, this.centerY, this.radius, 0, Math.PI * 2);
+    }
+
+    isHit(x: number, y: number): boolean {
+        const dx = x - this.centerX;
+        const dy = y - this.centerY;
+        return Math.sqrt(dx * dx + dy * dy) <= this.radius + this.lineWidth / 2;
+    }
+}
+
+// File: src/components/Drawing/CustomSymbolShape.ts
+import {IDrawingShape} from "./IDrawingShape.ts";
+
+export interface CustomSymbolShapeArgs {
+    x: number,
+    y: number,
+    symbol: string,
+    size: number,
+    color: string
+}
+
+export class CustomSymbolShape implements IDrawingShape {
+
+    constructor(
+        public x: number,
+        public y: number,
+        public symbol: string = '*',
+        public size: number = 24,
+        public color: string = 'black') {
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.fillStyle = this.color;
+        ctx.font = `${this.size}px Arial`;
+        ctx.fillText(this.symbol, this.x, this.y);
+    }
+
+    isHit(x: number, y: number): boolean {
+        const halfSize = this.size / 2;
+        return (
+            x >= this.x - halfSize &&
+            x <= this.x + halfSize &&
+            y >= this.y - halfSize &&
+            y <= this.y + halfSize
+        );
+    }
+
+}
+
+// File: src/components/Drawing/IDrawingShape.ts
+export interface IDrawingShape {
+    draw(ctx: CanvasRenderingContext2D): void;
+    isHit(x: number, y: number): boolean;
+}
+
+// File: src/components/Drawing/LineShape.ts
+import {IDrawingShape} from "./IDrawingShape.ts";
+
+export interface LineShapeArgs {
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    color?: string,
+    lineWidth?: number
+}
+
+export class LineShape implements IDrawingShape {
+    constructor(
+        public startX: number,
+        public startY: number,
+        public endX: number,
+        public endY: number,
+        public color: string = 'black',
+        public lineWidth: number = 2) {
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(this.startX, this.startY);
+        ctx.lineTo(this.endX, this.endY);
+        ctx.stroke();
+    }
+
+    isHit(x: number, y: number): boolean {
+        const tolerance = 6;
+        return this.isPointNearLine(x, y, this.startX, this.startY, this.endX, this.endY, tolerance);
+    }
+
+    private isPointNearLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number, tolerance: number): boolean {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const len_sq = C * C + D * D;
+        let param = -1;
+        if (len_sq !== 0) param = dot / len_sq;
+
+        let xx, yy;
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+        return (dx * dx + dy * dy) <= tolerance * tolerance;
+    }
+}
+
+// File: src/components/Drawing/Polyline.ts
+import {IDrawingShape} from "./IDrawingShape.ts";
+
+interface Point {
+    x: number,
+    y: number
+}
+
+export interface PolylineShapeArgs {
+    points: Point[],
+    color?: string,
+    lineWidth?: number
+}
+
+
+export class Polyline implements IDrawingShape {
+
+    constructor(
+        public points: Point[],
+        public color: string = 'navy',
+        public lineWidth: number = 2
+    ) {
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        if (this.points?.length < 2) return;
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(this.points[0].x, this.points[0].y);
+        this.points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+    }
+
+    isHit(x: number, y: number): boolean {
+        const tolerance = 6;
+        for (let i = 0; i < this.points.length - 1; i++) {
+            const p1 = this.points[i];
+            const p2 = this.points[i + 1];
+            if (this.isPointNearLine(x, y, p1.x, p1.y, p2.x, p2.y, tolerance)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private isPointNearLine(
+        px: number, py: number,
+        x1: number, y1: number,
+        x2: number, y2: number,
+        tolerance: number
+    ): boolean {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const len_sq = C * C + D * D;
+        let param = -1;
+        if (len_sq !== 0) param = dot / len_sq;
+
+        let xx, yy;
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+        return (dx * dx + dy * dy) <= tolerance * tolerance;
+    }
+}
+
+// File: src/components/Drawing/RectangleShape.ts
+import {IDrawingShape} from "./IDrawingShape.ts";
+
+export interface RectangleShapeArgs {
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    color?: string,
+    lineWidth?: number
+}
+
+
+export class RectangleShape implements IDrawingShape {
+    constructor(
+        public x: number,
+        public y: number,
+        public width: number,
+        public height: number,
+        public color: string = 'blue',
+        public lineWidth: number = 2) {
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.lineWidth;
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+    }
+
+    isHit(x: number, y: number): boolean {
+        return (
+            x >= this.x &&
+            x <= this.x + this.width &&
+            y >= this.y &&
+            y <= this.y + this.height
+        );
+    }
+}
+
+// File: src/components/Drawing/TriangleShape.ts
+import {IDrawingShape} from "./IDrawingShape.ts";
+
+export interface TriangleShapeArgs {
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    x3: number,
+    y3: number,
+    color?: string,
+    lineWidth?: number
+}
+
+
+export class TriangleShape implements IDrawingShape {
+
+    constructor(
+        public x1: number,
+        public y1: number,
+        public x2: number,
+        public y2: number,
+        public x3: number,
+        public y3: number,
+        public color: string = 'black',
+        public lineWidth: number = 2) {
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(this.x1, this.y1);
+        ctx.lineTo(this.x2, this.y2);
+        ctx.lineTo(this.x3, this.y3);
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    isHit(x: number, y: number): boolean {
+        const tolerance = 6;
+        return (
+            this.isPointNearLine(x, y, this.x1, this.y1, this.x2, this.y2, tolerance) ||
+            this.isPointNearLine(x, y, this.x2, this.y2, this.x3, this.y3, tolerance) ||
+            this.isPointNearLine(x, y, this.x3, this.y3, this.x1, this.y1, tolerance)
+        );
+    }
+
+    private isPointNearLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number, tolerance: number): boolean {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const len_sq = C * C + D * D;
+        let param = -1;
+        if (len_sq !== 0) param = dot / len_sq;
+
+        let xx, yy;
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+        return (dx * dx + dy * dy) <= tolerance * tolerance;
+    }
+}
+
+// File: src/components/Toolbar/ModeButton.tsx
+
+
+import React from 'react';
+import { Mode } from '../../contexts/ModeContext';
+
+interface ModeButtonProps {
+  mode: Mode;
+  currentMode: Mode;
+  onClick: (mode: Mode) => void;
+  label: string;
+}
+
+const ModeButton: React.FC<ModeButtonProps> = ({ mode, currentMode, onClick, label }) => {
+  const selected = mode === currentMode;
+  return (
+    <button
+      className={selected ? 'selected' : ''}
+      onClick={() => onClick(mode)}
+    >
+      {label}
+    </button>
+  );
+};
+
+export default ModeButton;
+
+// File: src/components/Toolbar/SettingsToolbar.tsx
+import React from 'react';
+import '../../styles/SettingsToolbar.scss';
+export const SettingsToolbar: React.FC = () => {
+    const handleDownload = () => {
+        const canvas = document.querySelector('Canvas');
+        if (!canvas) return;
+        const link = document.createElement('a');
+        link.download = 'chart-snapshot.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    };
+
+    return (
+        <div className={'settings-toolbar'}>
+            <input type="text" placeholder="Symbol"/>
+            <select>
+                <option value="1m">1 Min</option>
+                <option value="5m">5 Min</option>
+                <option value="1h">1 Hour</option>
+                <option value="1d">1 Day</option>
+            </select>
+            <select>
+                <option value="50">50 Bars</option>
+                <option value="100">100 Bars</option>
+                <option value="200">200 Bars</option>
+            </select>
+            <select>
+                <option value="candlestick">Candlestick</option>
+                <option value="line">Line</option>
+            </select>
+            <button onClick={handleDownload}>📸 Snapshot</button>
+            <button>⚙️ Settings</button>
+        </div>
+    );
+};
+
+// File: src/components/Toolbar/Toolbar.tsx
+import React from 'react';
+import { Mode, useMode } from '../../contexts/ModeContext';
+import ModeButton from './ModeButton';
+import '../../styles/Toolbar.scss';
+
+export const Toolbar: React.FC = () => {
+  const { mode, setMode } = useMode();
+
+  return (
+    <div className={'toolbar-container'}>
+      <div className={'toolbar'}>
+        <ModeButton mode={Mode.drawLine} currentMode={mode} onClick={setMode} label="D Line" />
+        <ModeButton mode={Mode.drawRectangle} currentMode={mode} onClick={setMode} label="D Rect" />
+        <ModeButton mode={Mode.drawCircle} currentMode={mode} onClick={setMode} label="D Cir" />
+        <ModeButton mode={Mode.drawTriangle} currentMode={mode} onClick={setMode} label="D Triangle" />
+        <ModeButton mode={Mode.drawAngle} currentMode={mode} onClick={setMode} label="D Angle" />
+        <ModeButton mode={Mode.select} currentMode={mode} onClick={setMode} label="Select" />
+        <ModeButton mode={Mode.editShape} currentMode={mode} onClick={setMode} label="Edit" />
+      </div>
+    </div>
+  );
+};
+
+// File: src/contexts/ModeContext.tsx
+import React, {createContext, useContext, useState} from 'react';
+
+export enum Mode {
+    none,
+    drawLine,
+    drawRectangle,
+    drawCircle,
+    drawTriangle,
+    drawAngle,
+    select,
+    editShape
+}
+
+interface ModeContextProps {
+    mode: Mode;
+    setMode: (mode: Mode) => void;
+}
+
+const ModeContext = createContext<ModeContextProps | undefined>(undefined);
+
+export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({children}) => {
+    const [mode, setModeState] = useState<Mode>(Mode.none);
+
+    const setMode = (newMode: Mode) => {
+        setModeState(prev => (prev === newMode ? Mode.none : newMode));
+    };
+
+    return (
+        <ModeContext.Provider value={{mode, setMode}}>
+            {children}
+        </ModeContext.Provider>
+    );
+};
+
+export const useMode = (): ModeContextProps => {
+    const context = useContext(ModeContext);
+    if (!context) {
+        throw new Error('useMode must be used within a ModeProvider');
+    }
+    return context;
+};
+
+// File: src/main.tsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import {App} from './components/App';
+import {ModeProvider} from './contexts/ModeContext';
+
+const root = document.getElementById('root') as HTMLElement;
+
+ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+        <ModeProvider>
+            <App/>
+        </ModeProvider>
+    </React.StrictMode>
+);
+
+// File: src/styles/App.scss
+//make the html file to cover the whole screen
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+    overflow: hidden; /* למנוע גלילה מיותרת */
+}
+
+#root {
+  height: calc(100% - 4px); /* להוריד גובה של ה-toolbar */
+  width: calc(100% - 4px); /* להוריד רוחב של ה-toolbar */
+  margin: 2px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* למנוע גלילה מיותרת */
+}
+
+// make the app container to cover the whole screen
+.main-app-window {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: 100%;
+  width: 100%;
+  padding: 2px;
+  box-sizing: border-box;
+  overflow: hidden; /* למנוע גלילה מיותרת */
+}
+
+.settings-area {
+  display: flex;
+  flex-direction: row;
+  height: 30px;
+  width: 100%;
+}
+
+.lower-container {
+  height: calc(100% - 40px);
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden; /* למנוע גלילה אופקית */
+}
+
+// במידה ולא קיימות בקובץ אחר, הוסף כאן:
+.chart-canvas-container {
+  flex-grow: 1;
+  width: calc(100% - 40px); /* להוריד רוחב של ה-toolbar */
+  height: 100%;
+  position: relative;
+}
+
+.toolbar-container {
+  width: 40px; /* רוחב סרגל הכלים */
+  height: 100%;
+  flex-shrink: 0; /* למנוע כיווץ */
+}
+
+// File: src/styles/Canvas/Axes.scss
+
+
+// File: src/styles/Canvas/Grid.scss
+
+
+// File: src/styles/ChartCanves.scss
+.chart-canvas-container {
+  flex-grow: 1;
+  width: calc(100% - 40px); /* להוריד רוחב של ה-toolbar */
+  height: 100%;
+  position: relative;
+  display: block;
+  max-height: 100%;
+}
+
+// File: src/styles/Drawing.scss
+
+
+// File: src/styles/Overlays.scss
+
+
+// File: src/styles/SettingsToolbar.scss
+
+.settings-toolbar {
+  background: #ddd;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  justify-content: start;
+  align-content: center;
+  align-items: center;
+
+  input, select, button {
+    height: 100%;
+    border-radius: 3px;
+    border-width: 1px;
+    width: fit-content;
+    font-size: 11px;
+    padding: 0 5px;
+  }
+
+  input {
+    height: calc(100% - 2px);
+    width: 100px;
+  }
+
+}
+
+// File: src/styles/Toolbar.scss
+@use '../styles/variables' as v;
+
+.toolbar-container {
+  display: flex;
+  flex-grow: 0;
+  flex-shrink: 0;
+  width: v.$toolbar-width;
+  background-color: #ddd;
+  height: 100%;
+}
+
+.toolbar {
+  width: v.$toolbar-width;
+  height: 100%;
+  display: grid;
+  grid-column: 1;
+  grid-auto-flow: row;
+  grid-template-rows: auto;
+  grid-template-columns: auto;
+  align-content: start;
+
+  button {
+    display: flex;
+    min-height: v.$toolbar-width;
+    width: 100%;
+    flex-grow: 1;
+    padding: 0;
+    overflow: hidden;
+    text-align: center;
+    font-size: 10px;
+
+    &.selected {
+      background-color: #333;
+      color: #fff;
+      border-left: 3px solid #007bff;
+    }
+  }
+}
+
+// File: src/styles/_variables.scss
+
+$toolbar-width: 40px;
+
+// File: src/types/Candle.ts
+export interface Candle {
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+}
+
+// File: src/types/chartStyleOptions.d.ts
+// chartStyleOptions.ts
+
+// Candles style
+import {AxesPosition} from "./types.ts";
+
+export interface CandleStyleOptions {
+    upColor?: string;
+    downColor?: string;
+    borderColor?: string;
+    borderWidth?: number;
+    bodyWidthFactor?: number;
+    spacingFactor?: number;
+}
+
+// Grid style
+export interface GridStyleOptions {
+    gridSpacing?: number;
+    lineColor?: string;
+    lineWidth?: number;
+    lineDash?: number[];
+}
+
+// Axes style
+export interface AxesStyleOptions {
+    axisPosition?: AxesPosition;
+    textColor?: string;
+    font?: string;
+    lineColor?: string;
+    lineWidth?: number;
+    numberLocale?: string;
+    dateLocale?: string;
+    numberFractionDigits?: number; // Number of decimal places to format axis values
+}
+export interface LineOverlayOptions{
+    color?: string;
+    lineWidth?: number;
+    dashed?: boolean;
+}
+// Main Chart style options
+export interface ChartStyleOptions {
+    candles?: CandleStyleOptions;
+    grid?: GridStyleOptions;
+    axes?: AxesStyleOptions;
+    lineOverlay?:LineOverlayOptions;
+    backgroundColor?:string;
+    // אפשר להוסיף פה עוד (למשל lineOverlay וכו')
+}
+
+// File: src/types/types.ts
+import {ChartStyleOptions} from "./chartStyleOptions";
+
+// Enum for Axis position
+export enum AxesPosition {
+    left = 'left',
+    right = 'right',
+}
+
+// Base chart options
+interface BaseChartOptions {
+    theme?: 'light' | 'dark' | 'grey' | string;
+    showOverlayLine?: boolean;
+    style?: Partial<ChartStyleOptions>;
+}
+
+// Line chart data point
+export interface LineData {
+    time: number;
+    value: number;
+}
+
+// Candlestick chart data point (full)
+export interface CandleData {
+    time: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+}
+
+// Candlestick chart data point (compact)
+export interface CandleDataCompact {
+    t: number;
+    o: number;
+    h: number;
+    l: number;
+    c: number;
+}
+
+// Line chart options
+export interface LineChartOptions extends BaseChartOptions {
+    type: 'line';
+    data: LineData[];
+}
+
+// Candlestick chart options
+export interface CandleChartOptions extends BaseChartOptions {
+    type: 'candlestick';
+    data: (CandleData | CandleDataCompact)[];
+}
+
+// Unified ChartOptions type
+export type ChartOptions = LineChartOptions | CandleChartOptions;
+
+// File: src/vite-env.d.ts
+/// <reference types="vite/client" />
+
+

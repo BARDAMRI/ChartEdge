@@ -2,8 +2,11 @@
 
 .toolbar-container {
   display: flex;
-  flex-grow: 1;
+  flex-grow: 0;
+  flex-shrink: 0;
+  width: v.$toolbar-width;
   background-color: #ddd;
+  height: 100%;
 }
 
 .toolbar {

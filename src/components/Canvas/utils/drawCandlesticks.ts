@@ -1,4 +1,4 @@
-import { Candle } from '../types/Candle';
+import { Candle } from '../../../types/Candle.ts';
 
 export function drawCandlesticks(
   backgroundCtx: CanvasRenderingContext2D,

@@ -9,7 +9,7 @@ import {AngleShapeArgs} from "../Drawing/Angleshape.ts";
 import {CustomSymbolShapeArgs} from "../Drawing/CustomSymbolShape.ts";
 import {PolylineShapeArgs} from "../Drawing/Polyline.ts";
 import {ArrowShapeArgs} from "../Drawing/ArrowShape.ts";
-import {drawCandlesticks} from '../canvasUtils/drawCandlesticks';
+import {drawCandlesticks} from './utils/drawCandlesticks.ts';
 
 type Drawing = {
     mode: Mode,

@@ -1,7 +1,7 @@
 // chartStyleOptions.ts
 
 // Candles style
-import {AxesPosition, LineChartOptions} from "./types.ts";
+import {AxesPosition} from "./types.ts";
 
 export interface CandleStyleOptions {
     upColor?: string;
