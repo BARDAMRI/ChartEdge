@@ -1,0 +1,28 @@
+export function drawGrid(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  padding: number,
+  stepX: number = 50,
+  stepY: number = 50,
+  strokeStyle: string = '#eee'
+) {
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineWidth = 1;
+
+  // קווים אנכיים
+  for (let x = padding; x <= width - padding; x += stepX) {
+    ctx.beginPath();
+    ctx.moveTo(x, padding);
+    ctx.lineTo(x, height - padding);
+    ctx.stroke();
+  }
+
+  // קווים אופקיים
+  for (let y = padding; y <= height - padding; y += stepY) {
+    ctx.beginPath();
+    ctx.moveTo(padding, y);
+    ctx.lineTo(width - padding, y);
+    ctx.stroke();
+  }
+}

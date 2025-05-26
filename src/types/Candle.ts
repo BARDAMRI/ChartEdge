@@ -1,6 +1,17 @@
+// טיפוס Candle עם שדות t, o, c, l, h
 export interface Candle {
-    open: number;
-    high: number;
-    low: number;
-    close: number;
+    t: number; // timestamp
+    o: number; // open
+    c: number; // close
+    l: number; // low
+    h: number; // high
+}
+
+export interface CandleWithIndex extends Candle {
+    index: number; // index in the original array
+}
+
+export interface TimeRange {
+    start: number; // timestamp התחלה
+    end: number;   // timestamp סיום
 }

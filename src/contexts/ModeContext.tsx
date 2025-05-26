@@ -8,7 +8,11 @@ export enum Mode {
     drawTriangle,
     drawAngle,
     select,
-    editShape
+    editShape,
+    drawPolyline,
+    drawArrow,
+    drawCustomSymbol,
+    drawText
 }
 
 interface ModeContextProps {
