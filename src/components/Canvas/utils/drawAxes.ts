@@ -1,11 +1,11 @@
+// ייבוא או הגדרת generateTimeTicks
+import { generateTimeTicks } from './generateTimeTicks';
 import {Candle} from "../../../types/Candle.ts";
 import {useChartStore} from '../../../store/useChartStore';
 
 export function drawAxes(
     ctx: CanvasRenderingContext2D,
     candles: Candle[],
-    width: number,
-    height: number,
 ) {
     const {
         padding,
@@ -17,7 +17,20 @@ export function drawAxes(
         numberOfXTicks,
         timeFormat,
         priceDecimalPlaces,
+        timeDetailLevel,
+        canvasWidth,
+        canvasHeight,
     } = useChartStore.getState?.();
+
+    const chartWidth = canvasWidth - 2 * padding;
+    const chartHeight = canvasHeight - 2 * padding;
+
+    const xStart = padding;
+    const xEnd = canvasWidth - padding;
+    const yStart = padding;
+    const yEnd = canvasHeight - padding;
+
+    const yAxisX = yAxisPosition === 'left' ? padding : canvasWidth - padding;
 
     function formatUnixTime(unixTime: number): string {
         const date = new Date(unixTime);
@@ -31,12 +44,10 @@ export function drawAxes(
     ctx.font = '12px Arial';
     ctx.textBaseline = 'middle';
 
-    const yAxisX = yAxisPosition === 'left' ? padding : width - padding;
-
     // ציור קו ציר Y
     ctx.beginPath();
-    ctx.moveTo(yAxisX, padding);
-    ctx.lineTo(yAxisX, height - (padding - 7));
+    ctx.moveTo(yAxisX, yStart);
+    ctx.lineTo(yAxisX, yEnd);
     ctx.stroke();
 
     ctx.textBaseline = 'top';
@@ -44,8 +55,8 @@ export function drawAxes(
 
     // ציור קו ציר X
     ctx.beginPath();
-    ctx.moveTo(padding, height - padding);
-    ctx.lineTo(width - padding, height - padding);
+    ctx.moveTo(xStart, yEnd);
+    ctx.lineTo(xEnd, yEnd);
     ctx.stroke();
 
     // ציור ערכי ביניים בציר Y
@@ -53,7 +64,7 @@ export function drawAxes(
 
     for (let i = 0; i < numberOfYTicks; i++) {
         const value = minPrice + i * step;
-        const y = height - padding - (i * (height - 2 * padding) / (numberOfYTicks - 1));
+        const y = yEnd - (i * chartHeight / (numberOfYTicks - 1));
 
         const formattedValue = value.toFixed(priceDecimalPlaces);
         const offset = (formattedValue.length) * 5;
@@ -68,36 +79,25 @@ export function drawAxes(
 
     }
 
-    // ציור ערכי ביניים בציר X עם שימוש בפונקציה formatUnixTime
+    // ציור ערכי ביניים בציר X עם שימוש ב-generateTimeTicks
     const timeRange = visibleRange.end - visibleRange.start;
     if (timeRange <= 0) return;
 
     ctx.textAlign = 'center';
 
-    const xPositions = [
+    const ticks = generateTimeTicks(
         visibleRange.start,
-        visibleRange.end
-    ];
-    // הוספת ערכי בינתיים על ידי מספר ticks ל-x
-    const stepX = (visibleRange.end - visibleRange.start) / (numberOfXTicks - 1);
-    for (let i = 1; i < numberOfXTicks - 1; i++) {
-        xPositions.push(visibleRange.start + i * stepX);
-    }
+        visibleRange.end,
+        chartWidth,
+        timeDetailLevel
+    );
 
-    // מיון הערכים כדי להבטיח סדר כרונולוגי
-    xPositions.sort((a, b) => a - b);
-
-
-    // ציור הערכים בציר X
-    xPositions.forEach(time => {
-        // הוספת קו באורך 10 מעל לטקסט
-        const x = padding + ((time - visibleRange.start) / timeRange) * (width - 2 * padding);
+    ticks.forEach(({ time, label }) => {
+        const x = xStart + ((time - visibleRange.start) / (visibleRange.end - visibleRange.start)) * chartWidth;
         ctx.beginPath();
-        ctx.moveTo(x, height - padding);
-        ctx.lineTo(x, height - padding + 7);
+        ctx.moveTo(x, yEnd);
+        ctx.lineTo(x, yEnd + 7);
         ctx.stroke();
-        // הוספת טקסט מתחת לקו
-        const label = formatUnixTime(time);
-        ctx.fillText(label, x, height - padding + 10);
+        ctx.fillText(label, x, yEnd + 10);
     });
 }

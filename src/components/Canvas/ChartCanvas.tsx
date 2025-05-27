@@ -207,10 +207,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         drawGrid(ctx, canvas.width, canvasHeight, padding);
         drawAxes(
             ctx,
-            candlesToUse,
-            canvas.width,
-            canvasHeight,
-            padding
+            candlesToUse
         );
         drawCandlesticks(ctx, candlesToUse, visibleRange, padding, minPrice, maxPrice);
         drawDrawings(ctx, drawings, selectedIndex);

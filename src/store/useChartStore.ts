@@ -5,6 +5,7 @@ interface ChartState {
     numberOfXTicks: number;
     numberOfYTicks: number;
     timeFormat: string;
+    timeFormat12h: boolean;
     visibleRange: { start: number; end: number };
     canvasWidth: number;
     canvasHeight: number;
@@ -13,6 +14,7 @@ interface ChartState {
     setNumberOfXTicks: (n: number) => void;
     setNumberOfYTicks: (n: number) => void;
     setTimeFormat: (format: string) => void;
+    setTimeFormat12h: (value: boolean) => void;
     setVisibleRange: (range: { start: number; end: number }) => void;
 
     // Drawing state
@@ -72,12 +74,16 @@ interface ChartState {
     visibleCandles: Candle[];
     candlesToUse: Candle[];
     setCandlesAndVisibleRange: (candles: Candle[], visibleRange: { start: number; end: number }) => void;
+
+    timeDetailLevel: 'auto' | 'low' | 'medium' | 'high';
+    setTimeDetailLevel: (level: 'auto' | 'low' | 'medium' | 'high') => void;
 }
 
 export const useChartStore = create<ChartState>((set) => ({
     numberOfXTicks: 5,
     numberOfYTicks: 5,
     timeFormat: 'YYYY/MM/DD',
+    timeFormat12h: false, // false = 24 שעות, true = 12 שעות AM/PM
     visibleRange: {start: Date.now() - 365 * 24 * 60 * 60 * 1000, end: Date.now()},
     canvasWidth: 800,
     canvasHeight: 600,
@@ -90,6 +96,7 @@ export const useChartStore = create<ChartState>((set) => ({
     setNumberOfXTicks: (n) => set({numberOfXTicks: n}),
     setNumberOfYTicks: (n) => set({numberOfYTicks: n}),
     setTimeFormat: (format) => set({timeFormat: format}),
+    setTimeFormat12h: (value) => set({ timeFormat12h: value }),
     setVisibleRange: (range) => set({visibleRange: range}),
 
     drawings: [],
@@ -161,4 +168,7 @@ export const useChartStore = create<ChartState>((set) => ({
             maxPrice
         };
     }),
+
+    timeDetailLevel: 'auto',
+    setTimeDetailLevel: (level) => set({ timeDetailLevel: level }),
 }));
