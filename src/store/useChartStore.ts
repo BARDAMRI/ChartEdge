@@ -1,10 +1,15 @@
 import {create} from 'zustand';
+import type {Candle} from '../types/Candle.ts';
 
 interface ChartState {
     numberOfXTicks: number;
     numberOfYTicks: number;
     timeFormat: string;
     visibleRange: { start: number; end: number };
+    canvasWidth: number;
+    canvasHeight: number;
+    setCanvasWidth: (width: number) => void;
+    setCanvasHeight: (height: number) => void;
     setNumberOfXTicks: (n: number) => void;
     setNumberOfYTicks: (n: number) => void;
     setTimeFormat: (format: string) => void;
@@ -34,15 +39,11 @@ interface ChartState {
     stepY: number;
     strokeStyle: string;
     padding: number;
-    width: number;
-    height: number;
 
     setStepX: (value: number) => void;
     setStepY: (value: number) => void;
     setStrokeStyle: (value: string) => void;
     setPadding: (value: number) => void;
-    setWidth: (value: number) => void;
-    setHeight: (value: number) => void;
 
     minPrice: number;
     maxPrice: number;
@@ -66,6 +67,11 @@ interface ChartState {
 
     currencySymbolPosition: 'before' | 'after';
     setCurrencySymbolPosition: (value: 'before' | 'after') => void;
+
+    safeCandles: Candle[];
+    visibleCandles: Candle[];
+    candlesToUse: Candle[];
+    setCandlesAndVisibleRange: (candles: Candle[], visibleRange: { start: number; end: number }) => void;
 }
 
 export const useChartStore = create<ChartState>((set) => ({
@@ -73,6 +79,14 @@ export const useChartStore = create<ChartState>((set) => ({
     numberOfYTicks: 5,
     timeFormat: 'YYYY/MM/DD',
     visibleRange: {start: Date.now() - 365 * 24 * 60 * 60 * 1000, end: Date.now()},
+    canvasWidth: 800,
+    canvasHeight: 600,
+    stepX: 50,
+    stepY: 50,
+    strokeStyle: '#eee',
+    padding: 50,
+    setCanvasWidth: (width) => set({canvasWidth: width}),
+    setCanvasHeight: (height) => set({canvasHeight: height}),
     setNumberOfXTicks: (n) => set({numberOfXTicks: n}),
     setNumberOfYTicks: (n) => set({numberOfYTicks: n}),
     setTimeFormat: (format) => set({timeFormat: format}),
@@ -97,19 +111,10 @@ export const useChartStore = create<ChartState>((set) => ({
     currentPoint: null,
     setCurrentPoint: (point) => set({currentPoint: point}),
 
-    stepX: 50,
-    stepY: 50,
-    strokeStyle: '#eee',
-    padding: 20,
-    width: 800,
-    height: 600,
-
     setStepX: (value) => set({stepX: value}),
     setStepY: (value) => set({stepY: value}),
     setStrokeStyle: (value) => set({strokeStyle: value}),
     setPadding: (value) => set({padding: value}),
-    setWidth: (value) => set({width: value}),
-    setHeight: (value) => set({height: value}),
 
     minPrice: 0,
     maxPrice: 100,
@@ -120,17 +125,40 @@ export const useChartStore = create<ChartState>((set) => ({
     setYAxisPosition: (position) => set({yAxisPosition: position}),
 
     priceDecimalPlaces: 2,
-    setPriceDecimalPlaces: (value) => set({ priceDecimalPlaces: value }),
+    setPriceDecimalPlaces: (value) => set({priceDecimalPlaces: value}),
 
     decimalSeparator: '.',
-    setDecimalSeparator: (value) => set({ decimalSeparator: value }),
+    setDecimalSeparator: (value) => set({decimalSeparator: value}),
 
     thousandSeparator: ',',
-    setThousandSeparator: (value) => set({ thousandSeparator: value }),
+    setThousandSeparator: (value) => set({thousandSeparator: value}),
 
     currencySymbol: '$',
-    setCurrencySymbol: (value) => set({ currencySymbol: value }),
+    setCurrencySymbol: (value) => set({currencySymbol: value}),
 
     currencySymbolPosition: 'before',
-    setCurrencySymbolPosition: (value) => set({ currencySymbolPosition: value }),
+    setCurrencySymbolPosition: (value) => set({currencySymbolPosition: value}),
+
+    safeCandles: [],
+    visibleCandles: [],
+    candlesToUse: [],
+    setCandlesAndVisibleRange: (candles, visibleRange) => set(state => {
+        const safeCandles = candles || [];
+        const visibleCandles = safeCandles.filter(
+            c => visibleRange && c.t >= visibleRange.start && c.t <= visibleRange.end
+        );
+        const candlesToUse = visibleCandles.length > 0 ? visibleCandles : safeCandles;
+        const prices = candlesToUse.length > 0
+            ? candlesToUse.flatMap(c => [c.h, c.l])
+            : [];
+        const maxPrice = prices.length > 0 ? Math.max(...prices) : 1;
+        const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+        return {
+            safeCandles,
+            visibleCandles,
+            candlesToUse,
+            minPrice,
+            maxPrice
+        };
+    }),
 }));

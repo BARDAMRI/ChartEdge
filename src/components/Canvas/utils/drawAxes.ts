@@ -1,28 +1,28 @@
 import {Candle} from "../../../types/Candle.ts";
-import { useChartStore } from '../../../store/useChartStore';
+import {useChartStore} from '../../../store/useChartStore';
 
 export function drawAxes(
     ctx: CanvasRenderingContext2D,
     candles: Candle[],
     width: number,
     height: number,
-    padding: number,
 ) {
     const {
-      visibleRange,
-      minPrice,
-      maxPrice,
-      yAxisPosition,
-      numberOfYTicks,
-      numberOfXTicks,
-      timeFormat,
-      priceDecimalPlaces,
+        padding,
+        visibleRange,
+        minPrice,
+        maxPrice,
+        yAxisPosition,
+        numberOfYTicks,
+        numberOfXTicks,
+        timeFormat,
+        priceDecimalPlaces,
     } = useChartStore.getState?.();
 
     function formatUnixTime(unixTime: number): string {
-      const date = new Date(unixTime);
-      const options: Intl.DateTimeFormatOptions = timeFormat;
-      return new Intl.DateTimeFormat('default', options).format(date);
+        const date = new Date(unixTime);
+        const options: Intl.DateTimeFormatOptions = timeFormat;
+        return new Intl.DateTimeFormat('default', options).format(date);
     }
 
     ctx.strokeStyle = '#333';
@@ -56,14 +56,14 @@ export function drawAxes(
         const y = height - padding - (i * (height - 2 * padding) / (numberOfYTicks - 1));
 
         const formattedValue = value.toFixed(priceDecimalPlaces);
-        const offset = (formattedValue.length ) * 5;
+        const offset = (formattedValue.length) * 5;
         const xPos = yAxisPosition === 'left' ? yAxisX - offset : yAxisX + offset;
 
         ctx.fillText(formattedValue, xPos, y - 5);
 
         ctx.beginPath();
         ctx.moveTo(yAxisX - (yAxisPosition === 'left' ? 5 : -5), y);
-        ctx.lineTo(yAxisX , y);
+        ctx.lineTo(yAxisX, y);
         ctx.stroke();
 
     }

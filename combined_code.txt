@@ -19,454 +19,416 @@ export const App: React.FC = () => {
     );
 };
 
-// File: src/components/Canvas/BackgroundLayer.tsx
-import React, {useEffect, useRef} from 'react';
-import {Mode} from '../../contexts/ModeContext';
-import {Drawing} from '../Drawing/types'; // נניח שיש טיפוס Drawing במקום מתאים
-import {Candle} from '../../types/Candle';
-import {LineShape} from '../Drawing/LineShape';
-import {RectangleShape} from '../Drawing/RectangleShape';
-import {CircleShape} from '../Drawing/CircleShape';
-import {drawCandlesticks} from './utils/drawCandlesticks.ts';
+// File: src/components/Canvas/ChartCanvas.tsx
+import React, {useRef, useEffect} from 'react';
+import {Mode, useMode} from '../../contexts/ModeContext';
+import {Candle, TimeRange} from '../../types/Candle';
+import {drawGrid} from './utils/drawGrid';
+import {drawAxes} from './utils/drawAxes';
+import {drawCandlesticks} from './utils/drawCandlesticks';
+import {drawDrawings} from './utils/drawDrawings';
+import {drawOverlay} from './utils/drawOverlay';
+import {useChartStore} from '../../store/useChartStore';
 
-interface BackgroundLayerProps {
-    drawings: Drawing[];
-    selectedIndex: number | null;
+interface ChartCanvasProps {
     candles: Candle[];
-    visibleRange: { start: number; end: number };
-    width: number;
-    height: number;
+    visibleRange?: TimeRange | null;
 }
 
-export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
-                                                                    drawings,
-                                                                    selectedIndex,
-                                                                    candles,
-                                                                    visibleRange,
-                                                                    width,
-                                                                    height,
-                                                                }) => {
+export const ChartCanvas: React.FC<ChartCanvasProps> = ({
+                                                            candles,
+                                                            visibleRange: initialVisibleRange,
+                                                        }) => {
+    const mode = useMode().mode;
+    const isDrawing = useChartStore(state => state.isDrawing);
+    const setIsDrawing = useChartStore(state => state.setIsDrawing);
+    const startPoint = useChartStore(state => state.startPoint);
+    const setStartPoint = useChartStore(state => state.setStartPoint);
+    const currentPoint = useChartStore(state => state.currentPoint);
+    const setCurrentPoint = useChartStore(state => state.setCurrentPoint);
+    const drawings = useChartStore(state => state.drawings);
+    const setDrawings = useChartStore(state => state.setDrawings);
+    const selectedIndex = useChartStore(state => state.selectedIndex);
+    const setSelectedIndex = useChartStore(state => state.setSelectedIndex);
+    const visibleRange = useChartStore(state => state.visibleRange);
+    const setVisibleRange = useChartStore(state => state.setVisibleRange);
+    const canvasWidth = useChartStore(state => state.canvasWidth);
+    const setCanvasWidth = useChartStore(state => state.setCanvasWidth);
+    const canvasHeight = useChartStore(state => state.canvasHeight);
+    const setCanvasHeight = useChartStore(state => state.setCanvasHeight);
+
+    const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    const padding = useChartStore(state => state.padding);
+
+    const candlesToUse = useChartStore(state => state.candlesToUse);
+    const minPrice = useChartStore(state => state.minPrice);
+    const maxPrice = useChartStore(state => state.maxPrice);
+    const setCandlesAndVisibleRange = useChartStore(state => state.setCandlesAndVisibleRange);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const container = containerRef.current!;
+        const observer = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                setCanvasWidth(entry.contentRect.width);
+                setCanvasHeight(entry.contentRect.height);
+            }
+        });
+        observer.observe(container);
+        return () => {
+            observer.disconnect();
+        };
+    }, []);
+
+    const now = Date.now();
+    const oneYearAgo = now - 365 * 24 * 60 * 60 * 1000;
+    const defaultVisibleRange: TimeRange = {
+        start: oneYearAgo,
+        end: now,
+    };
+
+    // Initialize visibleRange in store if not set and initialVisibleRange is provided
+    useEffect(() => {
+        if (initialVisibleRange && candles && candles.length && !visibleRange) {
+            setVisibleRange(initialVisibleRange);
+        } else if (!visibleRange) {
+            setVisibleRange(defaultVisibleRange);
+        }
+    }, [initialVisibleRange, candles, visibleRange, setVisibleRange]);
+
+    // useEffect for setting candles and visible range in store
+    useEffect(() => {
+        setCandlesAndVisibleRange(candles, visibleRange || { start: 0, end: Date.now() });
+    }, [candles, visibleRange, setCandlesAndVisibleRange]);
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (!canvasRef.current) return;
+        const rect = canvasRef.current!.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (mode === Mode.select) {
+            for (let i = 0; i < drawings.length; i++) {
+                const d = drawings[i];
+                let shape = null;
+                if (d.mode === Mode.drawLine) {
+                    // @ts-ignore
+                    shape = new LineShape(d.args.startX, d.args.startY, d.args.endX, d.args.endY);
+                } else if (d.mode === Mode.drawRectangle) {
+                    // @ts-ignore
+                    shape = new RectangleShape(d.args.x, d.args.y, d.args.width, d.args.height);
+                } else if (d.mode === Mode.drawCircle) {
+                    // @ts-ignore
+                    shape = new CircleShape(d.args.centerX, d.args.centerY, d.args.radius);
+                }
+                if (shape && shape.isHit(x, y)) {
+                    setSelectedIndex(i);
+                    return;
+                }
+            }
+            setSelectedIndex(null);
+            return;
+        }
+
+        if (mode !== Mode.none) {
+            setStartPoint({x, y});
+            setIsDrawing(true);
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (!isDrawing || !startPoint || mode === Mode.none) return;
+        if (!canvasRef.current) return;
+
+        const rect = canvasRef.current!.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        setCurrentPoint({x, y});
+    };
+
+    const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (!isDrawing || !startPoint || mode === Mode.none) return;
+        if (!canvasRef.current) return;
+
+        const rect = canvasRef.current!.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        setDrawings(prev => {
+            const newDrawing = {
+                [Mode.drawLine]: () => ({
+                    mode: Mode.drawLine,
+                    args: {
+                        startX: startPoint.x,
+                        startY: startPoint.y,
+                        endX: x,
+                        endY: y,
+                    },
+                }),
+                [Mode.drawRectangle]: () => ({
+                    mode: Mode.drawRectangle,
+                    args: {
+                        x: startPoint.x,
+                        y: startPoint.y,
+                        width: x - startPoint.x,
+                        height: y - startPoint.y,
+                    },
+                }),
+                [Mode.drawCircle]: () => {
+                    const dx = x - startPoint.x;
+                    const dy = y - startPoint.y;
+                    const radius = Math.sqrt(dx * dx + dy * dy);
+                    return {
+                        mode: Mode.drawCircle,
+                        args: {
+                            centerX: startPoint.x,
+                            centerY: startPoint.y,
+                            radius,
+                        },
+                    };
+                }
+            }[mode];
+
+            return newDrawing ? [...prev, newDrawing()] : prev;
+        });
+        setIsDrawing(false);
+        setStartPoint(null);
+        setCurrentPoint(null);
+    };
+
+    function formatUnixTime(unixTime: number): string {
+        const date = new Date(unixTime);
+        const options: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        };
+        return new Intl.DateTimeFormat('he-IL', options).format(date);
+    }
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
+        if (canvasWidth === 0 || canvasHeight === 0) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
+        canvas.width = canvasWidth * dpr;
+        canvas.height = canvasHeight * dpr;
+        canvas.style.width = `${canvasWidth}px`;
+        canvas.style.height = `${canvasHeight}px`;
+
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
 
-        // ניקוי הרקע
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, width, height);
+        ctx.clearRect(0, 0, canvas.width, canvasHeight);
 
-        // ציור הצורות
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 2;
-        drawings.forEach((d) => {
-            ctx.beginPath();
-            if (d.mode === Mode.drawLine) {
-                const args = d.args as any;
-                const line = new LineShape(args.startX, args.startY, args.endX, args.endY);
-                line.draw(ctx);
-            } else if (d.mode === Mode.drawRectangle) {
-                const args = d.args as any;
-                const rect = new RectangleShape(args.x, args.y, args.width, args.height);
-                rect.draw(ctx);
-            } else if (d.mode === Mode.drawCircle) {
-                const args = d.args as any;
-                const circ = new CircleShape(args.centerX, args.centerY, args.radius);
-                circ.draw(ctx);
-            }
-            ctx.stroke();
-        });
+        drawGrid(ctx, canvas.width, canvasHeight, padding);
+        drawAxes(
+            ctx,
+            candlesToUse,
+            canvas.width,
+            canvasHeight,
+            padding
+        );
+        drawCandlesticks(ctx, candlesToUse, visibleRange, padding, minPrice, maxPrice);
+        drawDrawings(ctx, drawings, selectedIndex);
+        drawOverlay(ctx, mode, isDrawing, startPoint, currentPoint);
 
-        // הדגשת הצורה הנבחרת
-        if (selectedIndex !== null && drawings[selectedIndex]) {
-            const d = drawings[selectedIndex];
-            let shape = null;
-            if (d.mode === Mode.drawLine) {
-                const args = d.args as any;
-                shape = new LineShape(args.startX, args.startY, args.endX, args.endY);
-            } else if (d.mode === Mode.drawRectangle) {
-                const args = d.args as any;
-                shape = new RectangleShape(args.x, args.y, args.width, args.height);
-            } else if (d.mode === Mode.drawCircle) {
-                const args = d.args as any;
-                shape = new CircleShape(args.centerX, args.centerY, args.radius);
-            }
-            if (shape) {
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 2;
-                shape.draw(ctx);
-            }
-        }
-
-        // ציור הנרות בטווח הנראה
-        const visibleCandles = candles.slice(visibleRange.start, visibleRange.end);
-        drawCandlesticks(ctx, visibleCandles, canvas);
-    }, [drawings, selectedIndex, candles, visibleRange, width, height]);
+    }, [
+        candlesToUse,
+        visibleRange,
+        drawings,
+        selectedIndex,
+        mode,
+        isDrawing,
+        startPoint,
+        currentPoint,
+        canvasHeight,
+        canvasWidth,
+        padding,
+        minPrice,
+        maxPrice,
+    ]);
 
     return (
-        <canvas
-            ref={canvasRef}
-            style={{position: 'absolute', top: 0, left: 0, zIndex: 0, width, height}}
-            width={width}
-            height={height}
-        />
+        <div ref={containerRef} className="chart-canvas-container" style={{width: '100%', height: '100%'}}>
+            <canvas
+                ref={canvasRef}
+                style={{width: '100%', height: '100%', userSelect: 'none', display: 'block'}}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+            />
+        </div>
     );
-};
-
-export default BackgroundLayer;
-
-// File: src/components/Canvas/ChartCanvas.tsx
-import React, { useRef, useEffect, useState } from 'react';
-import { Mode, useMode } from '../../contexts/ModeContext';
-import { Drawing } from '../Drawing/types';
-
-interface ChartCanvasProps {
-  candles: Candle[];
-  width: number;
-  height: number;
-  visibleRange?: { start: number; end: number };
-}
-
-import { drawGrid } from './utils/drawGrid';
-import { drawAxes } from './utils/drawAxes';
-import { drawCandlesticks } from './utils/drawCandlesticks';
-import { drawDrawings } from './utils/drawDrawings';
-import { drawOverlay } from './utils/drawOverlay';
-import {Candle} from "../../types/Candle.ts";
-
-export const ChartCanvas: React.FC<ChartCanvasProps> = ({
-  candles,
-  width,
-  height,
-  visibleRange: initialVisibleRange,
-}) => {
-  const { mode } = useMode();
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
-  const [currentPoint, setCurrentPoint] = useState<{ x: number; y: number } | null>(null);
-  const [drawings, setDrawings] = useState<Drawing[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
-  // הגדרת טווח צפייה דיפולטי אם לא סופק בפרופס
-  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>(
-    initialVisibleRange || { start: 0, end: candles.length }
-  );
-
-  const padding = 40;
-
-  // חישוב מינימום ומקסימום מתוך נתוני הנרות בטווח הנראה
-  const visibleCandles = candles.slice(visibleRange.start, visibleRange.end);
-  const prices = visibleCandles.flatMap(c => [c.h, c.l]);
-  const maxPrice = Math.max(...prices);
-  const minPrice = Math.min(...prices);
-
-  // ניהול אירועים - mouse
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current) return;
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (mode === Mode.select) {
-      // בדיקה אם לוחצים על צורה קיימת
-      for (let i = 0; i < drawings.length; i++) {
-        const d = drawings[i];
-        let shape = null;
-        if (d.mode === Mode.drawLine) {
-          // @ts-ignore
-          shape = new LineShape(d.args.startX, d.args.startY, d.args.endX, d.args.endY);
-        } else if (d.mode === Mode.drawRectangle) {
-          // @ts-ignore
-          shape = new RectangleShape(d.args.x, d.args.y, d.args.width, d.args.height);
-        } else if (d.mode === Mode.drawCircle) {
-          // @ts-ignore
-          shape = new CircleShape(d.args.centerX, d.args.centerY, d.args.radius);
-        }
-        if (shape && shape.isHit(x, y)) {
-          setSelectedIndex(i);
-          return;
-        }
-      }
-      setSelectedIndex(null);
-      return;
-    }
-
-    if (mode !== Mode.none) {
-      setStartPoint({ x, y });
-      setIsDrawing(true);
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !startPoint || mode === Mode.none) return;
-    if (!canvasRef.current) return;
-
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setCurrentPoint({ x, y });
-  };
-
-  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !startPoint || mode === Mode.none) return;
-    if (!canvasRef.current) return;
-
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setDrawings(prev => {
-      if (mode === Mode.drawLine) {
-        return [
-          ...prev,
-          {
-            mode: Mode.drawLine,
-            args: {
-              startX: startPoint.x,
-              startY: startPoint.y,
-              endX: x,
-              endY: y,
-            },
-          },
-        ];
-      } else if (mode === Mode.drawRectangle) {
-        return [
-          ...prev,
-          {
-            mode: Mode.drawRectangle,
-            args: {
-              x: startPoint.x,
-              y: startPoint.y,
-              width: x - startPoint.x,
-              height: y - startPoint.y,
-            },
-          },
-        ];
-      } else if (mode === Mode.drawCircle) {
-        const dx = x - startPoint.x;
-        const dy = y - startPoint.y;
-        const radius = Math.sqrt(dx * dx + dy * dy);
-        return [
-          ...prev,
-          {
-            mode: Mode.drawCircle,
-            args: {
-              centerX: startPoint.x,
-              centerY: startPoint.y,
-              radius,
-            },
-          },
-        ];
-      }
-      return prev;
-    });
-
-    setIsDrawing(false);
-    setStartPoint(null);
-    setCurrentPoint(null);
-  };
-
-  // פונקציית ציור מרכזית
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-
-    ctx.clearRect(0, 0, width, height);
-
-    drawGrid(ctx, width, height, padding);
-    drawAxes(ctx, candles, visibleRange, width, height, padding, minPrice, maxPrice);
-    drawCandlesticks(ctx, candles, visibleRange, width, height, padding, minPrice, maxPrice);
-    drawDrawings(ctx, drawings, selectedIndex);
-    drawOverlay(ctx, mode, isDrawing, startPoint, currentPoint);
-
-  }, [
-    candles,
-    visibleRange,
-    drawings,
-    selectedIndex,
-    mode,
-    isDrawing,
-    startPoint,
-    currentPoint,
-    width,
-    height,
-    padding,
-    minPrice,
-    maxPrice,
-  ]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ width, height, userSelect: 'none', display: 'block' }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-    />
-  );
 };
 
 // File: src/components/Canvas/utils/drawAxes.ts
 import {Candle} from "../../../types/Candle.ts";
+import { useChartStore } from '../../../store/useChartStore';
 
 export function drawAxes(
     ctx: CanvasRenderingContext2D,
     candles: Candle[],
-    visibleRange: { start: number; end: number },
     width: number,
     height: number,
     padding: number,
-    minPrice: number,
-    maxPrice: number
 ) {
+    const {
+      visibleRange,
+      minPrice,
+      maxPrice,
+      yAxisPosition,
+      numberOfYTicks,
+      numberOfXTicks,
+      timeFormat,
+      priceDecimalPlaces,
+    } = useChartStore.getState?.();
+
+    function formatUnixTime(unixTime: number): string {
+      const date = new Date(unixTime);
+      const options: Intl.DateTimeFormatOptions = timeFormat;
+      return new Intl.DateTimeFormat('default', options).format(date);
+    }
+
     ctx.strokeStyle = '#333';
     ctx.fillStyle = '#333';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     ctx.font = '12px Arial';
-
     ctx.textBaseline = 'middle';
 
-    // ציור קווים אופקיים (ציר Y) עם סימני מחיר
-    const priceRange = maxPrice - minPrice;
-    const yTicks = 5;
-    const yStep = (height - 2 * padding) / yTicks;
-    ctx.textAlign = 'right';
+    const yAxisX = yAxisPosition === 'left' ? padding : width - padding;
 
-    for (let i = 0; i <= yTicks; i++) {
-        const y = padding + i * yStep;
-        const price = maxPrice - (priceRange / yTicks) * i;
-
-        // קו אופקי
-        ctx.beginPath();
-        ctx.moveTo(padding, y);
-        ctx.lineTo(width - padding, y);
-        ctx.stroke();
-
-        // טקסט מחיר בצד שמאל
-        ctx.fillText(price.toFixed(2), padding - 5, y);
-    }
-
-    // ציור קווים אנכיים (ציר X) עם סימוני זמן
-    const candleCount = visibleRange.end - visibleRange.start;
-    if (candleCount === 0) return;
-
-    const xStep = (width - 2 * padding) / candleCount;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-
-    const visibleCandles = candles.slice(visibleRange.start, visibleRange.end);
-
-    // מציג סימני זמן כל N נרות (כדי לא לעמוס)
-    const stepInterval = Math.max(1, Math.floor(candleCount / 10));
-
-    for (let i = 0; i < candleCount; i++) {
-        if (i % stepInterval === 0) {
-            const x = padding + i * xStep + xStep / 2;
-            const candle = visibleCandles[i];
-            const date = new Date(candle.t);
-            const label = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-
-            // קו אנכי
-            ctx.beginPath();
-            ctx.moveTo(x, height - padding);
-            ctx.lineTo(x, padding);
-            ctx.stroke();
-
-            // טקסט זמן מתחת לציר X
-            ctx.fillText(label, x, height - padding + 5);
-        }
-    }
-
-    // ציור מסגרת חיצונית לצירים
-    ctx.lineWidth = 2;
+    // ציור קו ציר Y
     ctx.beginPath();
-    ctx.moveTo(padding, padding);
-    ctx.lineTo(padding, height - padding);
+    ctx.moveTo(yAxisX, padding);
+    ctx.lineTo(yAxisX, height - (padding - 7));
+    ctx.stroke();
+
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+
+    // ציור קו ציר X
+    ctx.beginPath();
+    ctx.moveTo(padding, height - padding);
     ctx.lineTo(width - padding, height - padding);
     ctx.stroke();
+
+    // ציור ערכי ביניים בציר Y
+    const step = (maxPrice - minPrice) / (numberOfYTicks - 1);
+
+    for (let i = 0; i < numberOfYTicks; i++) {
+        const value = minPrice + i * step;
+        const y = height - padding - (i * (height - 2 * padding) / (numberOfYTicks - 1));
+
+        const formattedValue = value.toFixed(priceDecimalPlaces);
+        const offset = (formattedValue.length ) * 5;
+        const xPos = yAxisPosition === 'left' ? yAxisX - offset : yAxisX + offset;
+
+        ctx.fillText(formattedValue, xPos, y - 5);
+
+        ctx.beginPath();
+        ctx.moveTo(yAxisX - (yAxisPosition === 'left' ? 5 : -5), y);
+        ctx.lineTo(yAxisX , y);
+        ctx.stroke();
+
+    }
+
+    // ציור ערכי ביניים בציר X עם שימוש בפונקציה formatUnixTime
+    const timeRange = visibleRange.end - visibleRange.start;
+    if (timeRange <= 0) return;
+
+    ctx.textAlign = 'center';
+
+    const xPositions = [
+        visibleRange.start,
+        visibleRange.end
+    ];
+    // הוספת ערכי בינתיים על ידי מספר ticks ל-x
+    const stepX = (visibleRange.end - visibleRange.start) / (numberOfXTicks - 1);
+    for (let i = 1; i < numberOfXTicks - 1; i++) {
+        xPositions.push(visibleRange.start + i * stepX);
+    }
+
+    // מיון הערכים כדי להבטיח סדר כרונולוגי
+    xPositions.sort((a, b) => a - b);
+
+
+    // ציור הערכים בציר X
+    xPositions.forEach(time => {
+        // הוספת קו באורך 10 מעל לטקסט
+        const x = padding + ((time - visibleRange.start) / timeRange) * (width - 2 * padding);
+        ctx.beginPath();
+        ctx.moveTo(x, height - padding);
+        ctx.lineTo(x, height - padding + 7);
+        ctx.stroke();
+        // הוספת טקסט מתחת לקו
+        const label = formatUnixTime(time);
+        ctx.fillText(label, x, height - padding + 10);
+    });
 }
 
 // File: src/components/Canvas/utils/drawCandlesticks.ts
-import { Candle } from '../../../types/Candle';
+import {Candle} from '../../../types/Candle';
+import {useChartStore} from "../../../store/useChartStore.ts";
 
 export function drawCandlesticks(
-  ctx: CanvasRenderingContext2D,
-  candles: Candle[],
-  visibleRange: { start: number; end: number },
-  width: number,
-  height: number,
-  padding: number,
-  minPrice: number,
-  maxPrice: number
+    ctx: CanvasRenderingContext2D,
+    candles: Candle[],
+    visibleRange: { start: number; end: number },
+    padding: number,
+    minPrice: number,
+    maxPrice: number
 ): void {
-  const dpr = window.devicePixelRatio || 1;
-  const drawableWidth = width - 2 * padding;
-  const drawableHeight = height - 2 * padding;
 
-  const candleCount = visibleRange.end - visibleRange.start;
-  if (candleCount <= 0) return;
+    const {canvasWidth, canvasHeight} = useChartStore.getState?.();
 
-  const candleSpacing = drawableWidth / candleCount;
-  const candleWidth = candleSpacing * 0.6;
+    const drawableWidth = canvasWidth - 2 * padding;
+    const drawableHeight = canvasHeight - 2 * padding;
 
-  const priceRange = maxPrice - minPrice;
+    const candleCount = visibleRange.end - visibleRange.start;
+    if (candleCount <= 0) return;
 
-  // פונקציה להמרת מחיר למיקום Y בקנבס
-  const priceToY = (price: number) => {
-    return padding + drawableHeight * (1 - (price - minPrice) / priceRange);
-  };
+    const candleSpacing = drawableWidth / candleCount;
+    const candleWidth = candleSpacing * 0.6;
 
-  const visibleCandles = candles.slice(visibleRange.start, visibleRange.end);
+    const priceRange = maxPrice - minPrice;
 
-  visibleCandles.forEach((candle, i) => {
-    const x = padding + i * candleSpacing;
-    const highY = priceToY(candle.h);
-    const lowY = priceToY(candle.l);
-    const openY = priceToY(candle.o);
-    const closeY = priceToY(candle.c);
+    // פונקציה להמרת מחיר למיקום Y בקנבס
+    const priceToY = (price: number) => {
+        return padding + drawableHeight * (1 - (price - minPrice) / priceRange);
+    };
 
-    const isUp = candle.c >= candle.o;
+    const visibleCandles = candles.slice(visibleRange.start, visibleRange.end);
 
-    ctx.strokeStyle = isUp ? 'green' : 'red';
-    ctx.fillStyle = isUp ? 'green' : 'red';
-    ctx.lineWidth = 1;
+    visibleCandles.forEach((candle, i) => {
+        const x = padding + i * candleSpacing;
+        const highY = priceToY(candle.h);
+        const lowY = priceToY(candle.l);
+        const openY = priceToY(candle.o);
+        const closeY = priceToY(candle.c);
 
-    // ציור ה-wick (הקו העליון והתחתון)
-    ctx.beginPath();
-    ctx.moveTo(x + candleWidth / 2, highY);
-    ctx.lineTo(x + candleWidth / 2, lowY);
-    ctx.stroke();
+        const isUp = candle.c >= candle.o;
 
-    // ציור גוף הנר
-    const bodyY = Math.min(openY, closeY);
-    const bodyHeight = Math.max(1, Math.abs(openY - closeY)); // לפחות 1 פיקסל גובה
-    ctx.fillRect(x, bodyY, candleWidth, bodyHeight);
-  });
+        ctx.strokeStyle = isUp ? 'green' : 'red';
+        ctx.fillStyle = isUp ? 'green' : 'red';
+        ctx.lineWidth = 1;
+
+        // ציור ה-wick (הקו העליון והתחתון)
+        ctx.beginPath();
+        ctx.moveTo(x + candleWidth / 2, highY);
+        ctx.lineTo(x + candleWidth / 2, lowY);
+        ctx.stroke();
+
+        // ציור גוף הנר
+        const bodyY = Math.min(openY, closeY);
+        const bodyHeight = Math.max(1, Math.abs(openY - closeY)); // לפחות 1 פיקסל גובה
+        ctx.fillRect(x, bodyY, candleWidth, bodyHeight);
+    });
 }
 
 
@@ -576,15 +538,16 @@ export function drawDrawings(
 }
 
 // File: src/components/Canvas/utils/drawGrid.ts
+import { useChartStore } from '../../../store/useChartStore';
+
 export function drawGrid(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   padding: number,
-  stepX: number = 50,
-  stepY: number = 50,
-  strokeStyle: string = '#eee'
 ) {
+  const { stepX, stepY, strokeStyle } = useChartStore.getState?.();
+
   ctx.strokeStyle = strokeStyle;
   ctx.lineWidth = 1;
 
@@ -605,6 +568,56 @@ export function drawGrid(
   }
 }
 
+
+// File: src/components/Canvas/utils/drawOverlay.ts
+
+
+import { Mode } from '../../../contexts/ModeContext';
+
+export function drawOverlay(
+  ctx: CanvasRenderingContext2D,
+  mode: Mode,
+  isDrawing: boolean,
+  startPoint: { x: number; y: number } | null,
+  currentPoint: { x: number; y: number } | null
+) {
+  if (!isDrawing || !startPoint || !currentPoint) return;
+
+  ctx.strokeStyle = 'blue';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 5]); // קו מנוקד
+
+  ctx.beginPath();
+  switch (mode) {
+    case Mode.drawLine:
+      ctx.moveTo(startPoint.x, startPoint.y);
+      ctx.lineTo(currentPoint.x, currentPoint.y);
+      break;
+
+    case Mode.drawRectangle:
+      ctx.rect(
+        Math.min(startPoint.x, currentPoint.x),
+        Math.min(startPoint.y, currentPoint.y),
+        Math.abs(currentPoint.x - startPoint.x),
+        Math.abs(currentPoint.y - startPoint.y)
+      );
+      break;
+
+    case Mode.drawCircle:
+      const dx = currentPoint.x - startPoint.x;
+      const dy = currentPoint.y - startPoint.y;
+      const radius = Math.sqrt(dx * dx + dy * dy);
+      ctx.arc(startPoint.x, startPoint.y, radius, 0, Math.PI * 2);
+      break;
+
+    default:
+      ctx.setLineDash([]);
+      return;
+  }
+
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
 
 // File: src/components/Drawing/Angleshape.ts
 import {IDrawingShape} from "./IDrawingShape.ts";
@@ -1274,6 +1287,181 @@ ReactDOM.createRoot(root).render(
     </React.StrictMode>
 );
 
+// File: src/store/useChartStore.ts
+import {create} from 'zustand';
+import type { Candle } from '../types/Candle.ts';
+
+interface ChartState {
+    numberOfXTicks: number;
+    numberOfYTicks: number;
+    timeFormat: string;
+    visibleRange: { start: number; end: number };
+    canvasWidth: number;
+    canvasHeight: number;
+    setCanvasWidth: (width: number) => void;
+    setCanvasHeight: (height: number) => void;
+    setNumberOfXTicks: (n: number) => void;
+    setNumberOfYTicks: (n: number) => void;
+    setTimeFormat: (format: string) => void;
+    setVisibleRange: (range: { start: number; end: number }) => void;
+
+    // Drawing state
+    drawings: any[]; // אפשר להחליף לסוג מדויק יותר
+    setDrawings: (drawings: any[] | ((prev: any[]) => any[])) => void;
+    selectedIndex: number | null;
+    setSelectedIndex: (index: number | null) => void;
+
+    // Mode
+    mode: string;
+    setMode: (mode: string) => void;
+
+    // Is Drawing
+    isDrawing: boolean;
+    setIsDrawing: (val: boolean) => void;
+
+    // Points
+    startPoint: { x: number; y: number } | null;
+    setStartPoint: (point: { x: number; y: number } | null) => void;
+    currentPoint: { x: number; y: number } | null;
+    setCurrentPoint: (point: { x: number; y: number } | null) => void;
+
+    stepX: number;
+    stepY: number;
+    strokeStyle: string;
+    padding: number;
+    width: number;
+    height: number;
+
+    setStepX: (value: number) => void;
+    setStepY: (value: number) => void;
+    setStrokeStyle: (value: string) => void;
+    setPadding: (value: number) => void;
+    setWidth: (value: number) => void;
+    setHeight: (value: number) => void;
+
+    minPrice: number;
+    maxPrice: number;
+    setMinPrice: (value: number) => void;
+    setMaxPrice: (value: number) => void;
+
+    yAxisPosition: 'left' | 'right';
+    setYAxisPosition: (position: 'left' | 'right') => void;
+
+    priceDecimalPlaces: number;
+    setPriceDecimalPlaces: (value: number) => void;
+
+    decimalSeparator: string;
+    setDecimalSeparator: (value: string) => void;
+
+    thousandSeparator: string;
+    setThousandSeparator: (value: string) => void;
+
+    currencySymbol: string;
+    setCurrencySymbol: (value: string) => void;
+
+    currencySymbolPosition: 'before' | 'after';
+    setCurrencySymbolPosition: (value: 'before' | 'after') => void;
+
+    safeCandles: Candle[];
+    visibleCandles: Candle[];
+    candlesToUse: Candle[];
+    setCandlesAndVisibleRange: (candles: Candle[], visibleRange: { start: number; end: number }) => void;
+}
+
+export const useChartStore = create<ChartState>((set) => ({
+    numberOfXTicks: 5,
+    numberOfYTicks: 5,
+    timeFormat: 'YYYY/MM/DD',
+    visibleRange: {start: Date.now() - 365 * 24 * 60 * 60 * 1000, end: Date.now()},
+    canvasWidth: 800,
+    canvasHeight: 600,
+    setCanvasWidth: (width) => set({canvasWidth: width}),
+    setCanvasHeight: (height) => set({canvasHeight: height}),
+    setNumberOfXTicks: (n) => set({numberOfXTicks: n}),
+    setNumberOfYTicks: (n) => set({numberOfYTicks: n}),
+    setTimeFormat: (format) => set({timeFormat: format}),
+    setVisibleRange: (range) => set({visibleRange: range}),
+
+    drawings: [],
+    setDrawings: (update) => set(state => ({
+        drawings: typeof update === 'function' ? update(state.drawings) : update
+    })),
+    selectedIndex: null,
+    setSelectedIndex: (index) => set({selectedIndex: index}),
+
+    mode: 'none',
+    setMode: (mode) => set({mode}),
+
+    isDrawing: false,
+    setIsDrawing: (val) => set({isDrawing: val}),
+
+    startPoint: null,
+    setStartPoint: (point) => set({startPoint: point}),
+
+    currentPoint: null,
+    setCurrentPoint: (point) => set({currentPoint: point}),
+
+    stepX: 50,
+    stepY: 50,
+    strokeStyle: '#eee',
+    padding: 20,
+    width: 800,
+    height: 600,
+
+    setStepX: (value) => set({stepX: value}),
+    setStepY: (value) => set({stepY: value}),
+    setStrokeStyle: (value) => set({strokeStyle: value}),
+    setPadding: (value) => set({padding: value}),
+    setWidth: (value) => set({width: value}),
+    setHeight: (value) => set({height: value}),
+
+    minPrice: 0,
+    maxPrice: 100,
+    setMinPrice: (value) => set({minPrice: value}),
+    setMaxPrice: (value) => set({maxPrice: value}),
+
+    yAxisPosition: 'left',
+    setYAxisPosition: (position) => set({yAxisPosition: position}),
+
+    priceDecimalPlaces: 2,
+    setPriceDecimalPlaces: (value) => set({ priceDecimalPlaces: value }),
+
+    decimalSeparator: '.',
+    setDecimalSeparator: (value) => set({ decimalSeparator: value }),
+
+    thousandSeparator: ',',
+    setThousandSeparator: (value) => set({ thousandSeparator: value }),
+
+    currencySymbol: '$',
+    setCurrencySymbol: (value) => set({ currencySymbol: value }),
+
+    currencySymbolPosition: 'before',
+    setCurrencySymbolPosition: (value) => set({ currencySymbolPosition: value }),
+
+    safeCandles: [],
+    visibleCandles: [],
+    candlesToUse: [],
+    setCandlesAndVisibleRange: (candles, visibleRange) => set(state => {
+        const safeCandles = candles || [];
+        const visibleCandles = safeCandles.filter(
+            c => visibleRange && c.t >= visibleRange.start && c.t <= visibleRange.end
+        );
+        const candlesToUse = visibleCandles.length > 0 ? visibleCandles : safeCandles;
+        const prices = candlesToUse.length > 0
+            ? candlesToUse.flatMap(c => [c.h, c.l])
+            : [];
+        const maxPrice = prices.length > 0 ? Math.max(...prices) : 1;
+        const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+        return {
+            safeCandles,
+            visibleCandles,
+            candlesToUse,
+            minPrice,
+            maxPrice
+        };
+    }),
+}));
+
 // File: src/styles/App.scss
 //make the html file to cover the whole screen
 html, body {
@@ -1436,8 +1624,14 @@ export interface Candle {
     l: number; // low
     h: number; // high
 }
+
 export interface CandleWithIndex extends Candle {
     index: number; // index in the original array
+}
+
+export interface TimeRange {
+    start: number; // timestamp התחלה
+    end: number;   // timestamp סיום
 }
 
 // File: src/types/chartStyleOptions.d.ts

@@ -1,6 +1,5 @@
-import React, {useRef, useEffect, useState} from 'react';
+import React, {useRef, useEffect} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
-import {Drawing} from '../Drawing/types';
 import {Candle, TimeRange} from '../../types/Candle';
 import {drawGrid} from './utils/drawGrid';
 import {drawAxes} from './utils/drawAxes';
@@ -29,25 +28,30 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     const setDrawings = useChartStore(state => state.setDrawings);
     const selectedIndex = useChartStore(state => state.selectedIndex);
     const setSelectedIndex = useChartStore(state => state.setSelectedIndex);
-    const timeFormat = useChartStore(state => state.timeFormat);
     const visibleRange = useChartStore(state => state.visibleRange);
     const setVisibleRange = useChartStore(state => state.setVisibleRange);
+    const canvasWidth = useChartStore(state => state.canvasWidth);
+    const setCanvasWidth = useChartStore(state => state.setCanvasWidth);
+    const canvasHeight = useChartStore(state => state.canvasHeight);
+    const setCanvasHeight = useChartStore(state => state.setCanvasHeight);
 
     const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    const [dimensions, setDimensions] = useState({width: 0, height: 0});
-    const padding = 50;
+    const padding = useChartStore(state => state.padding);
+
+    const candlesToUse = useChartStore(state => state.candlesToUse);
+    const minPrice = useChartStore(state => state.minPrice);
+    const maxPrice = useChartStore(state => state.maxPrice);
+    const setCandlesAndVisibleRange = useChartStore(state => state.setCandlesAndVisibleRange);
 
     useEffect(() => {
         if (!containerRef.current) return;
         const container = containerRef.current!;
         const observer = new ResizeObserver(entries => {
             for (const entry of entries) {
-                setDimensions({
-                    width: entry.contentRect.width,
-                    height: entry.contentRect.height,
-                });
+                setCanvasWidth(entry.contentRect.width);
+                setCanvasHeight(entry.contentRect.height);
             }
         });
         observer.observe(container);
@@ -72,19 +76,10 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         }
     }, [initialVisibleRange, candles, visibleRange, setVisibleRange]);
 
-    const safeCandles = candles || [];
-    const visibleCandles = safeCandles.filter(
-        c => visibleRange && c.t >= visibleRange.start && c.t <= visibleRange.end
-    );
-
-    const candlesToUse = visibleCandles.length > 0 ? visibleCandles : safeCandles;
-
-    const prices = candlesToUse.length > 0
-        ? candlesToUse.flatMap(c => [c.h, c.l])
-        : [];
-
-    const maxPrice = prices.length > 0 ? Math.max(...prices) : 1;
-    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    // useEffect for setting candles and visible range in store
+    useEffect(() => {
+        setCandlesAndVisibleRange(candles, visibleRange || {start: 0, end: Date.now()});
+    }, [candles, visibleRange, setCandlesAndVisibleRange]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
@@ -194,30 +189,30 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        if (dimensions.width === 0 || dimensions.height === 0) return;
+        if (canvasWidth === 0 || canvasHeight === 0) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = dimensions.width * dpr;
-        canvas.height = dimensions.height * dpr;
-        canvas.style.width = `${dimensions.width}px`;
-        canvas.style.height = `${dimensions.height}px`;
+        canvas.width = canvasWidth * dpr;
+        canvas.height = canvasHeight * dpr;
+        canvas.style.width = `${canvasWidth}px`;
+        canvas.style.height = `${canvasHeight}px`;
 
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
 
-        ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+        ctx.clearRect(0, 0, canvas.width, canvasHeight);
 
-        drawGrid(ctx, dimensions.width, dimensions.height, padding);
+        drawGrid(ctx, canvas.width, canvasHeight, padding);
         drawAxes(
             ctx,
             candlesToUse,
-            dimensions.width,
-            dimensions.height,
+            canvas.width,
+            canvasHeight,
             padding
         );
-        drawCandlesticks(ctx, candlesToUse, visibleRange, dimensions.width, dimensions.height, padding, minPrice, maxPrice);
+        drawCandlesticks(ctx, candlesToUse, visibleRange, padding, minPrice, maxPrice);
         drawDrawings(ctx, drawings, selectedIndex);
         drawOverlay(ctx, mode, isDrawing, startPoint, currentPoint);
 
@@ -230,7 +225,8 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         isDrawing,
         startPoint,
         currentPoint,
-        dimensions,
+        canvasHeight,
+        canvasWidth,
         padding,
         minPrice,
         maxPrice,
