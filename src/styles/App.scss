@@ -42,15 +42,6 @@ html, body {
   flex-direction: row;
   overflow: hidden; /* למנוע גלילה אופקית */
 }
-
-// במידה ולא קיימות בקובץ אחר, הוסף כאן:
-.chart-canvas-container {
-  flex-grow: 1;
-  width: calc(100% - 40px); /* להוריד רוחב של ה-toolbar */
-  height: 100%;
-  position: relative;
-}
-
 .toolbar-container {
   width: 40px; /* רוחב סרגל הכלים */
   height: 100%;

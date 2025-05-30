@@ -10,8 +10,3 @@ export interface Candle {
 export interface CandleWithIndex extends Candle {
     index: number; // index in the original array
 }
-
-export interface TimeRange {
-    start: number; // timestamp התחלה
-    end: number;   // timestamp סיום
-}

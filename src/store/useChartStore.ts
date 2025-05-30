@@ -1,14 +1,19 @@
 import {create} from 'zustand';
 import type {Candle} from '../types/Candle.ts';
+import {} from '../types/Candle.ts'
+import {TimeRange} from '../types/Graph.ts';
+import {useState} from "react";
+
 
 interface ChartState {
     numberOfXTicks: number;
     numberOfYTicks: number;
     timeFormat: string;
     timeFormat12h: boolean;
-    visibleRange: { start: number; end: number };
-    canvasWidth: number;
-    canvasHeight: number;
+    xAxisHeight: number;
+    yAxisWidth: number;
+    setXAxisHeight: (height: number) => void;
+    setYAxisWidth: (width: number) => void;
     setCanvasWidth: (width: number) => void;
     setCanvasHeight: (height: number) => void;
     setNumberOfXTicks: (n: number) => void;
@@ -73,7 +78,9 @@ interface ChartState {
     safeCandles: Candle[];
     visibleCandles: Candle[];
     candlesToUse: Candle[];
-    setCandlesAndVisibleRange: (candles: Candle[], visibleRange: { start: number; end: number }) => void;
+    visibleRange: TimeRange;
+
+    setCandlesAndVisibleRange: (candles: Candle[], visibleRange: TimeRange) => void;
 
     timeDetailLevel: 'auto' | 'low' | 'medium' | 'high';
     setTimeDetailLevel: (level: 'auto' | 'low' | 'medium' | 'high') => void;
@@ -84,20 +91,24 @@ export const useChartStore = create<ChartState>((set) => ({
     numberOfYTicks: 5,
     timeFormat: 'YYYY/MM/DD',
     timeFormat12h: false, // false = 24 שעות, true = 12 שעות AM/PM
-    visibleRange: {start: Date.now() - 365 * 24 * 60 * 60 * 1000, end: Date.now()},
-    canvasWidth: 800,
-    canvasHeight: 600,
+    xAxisHeight: 40,
+    yAxisWidth: 40,
+    setXAxisHeight: (height) => set({xAxisHeight: height}),
+    setYAxisWidth: (width) => set({yAxisWidth: width}),
     stepX: 50,
     stepY: 50,
     strokeStyle: '#eee',
-    padding: 50,
+    padding: 15,
+    setCandles: (candles) => set({candles}),
+    candles: [],
+    visibleRange: {start: Date.now() - 365 * 24 * 60 * 60 * 1000, end: Date.now()},
+    setVisibleRange: (range) => set({visibleRange: range}),
     setCanvasWidth: (width) => set({canvasWidth: width}),
     setCanvasHeight: (height) => set({canvasHeight: height}),
     setNumberOfXTicks: (n) => set({numberOfXTicks: n}),
     setNumberOfYTicks: (n) => set({numberOfYTicks: n}),
     setTimeFormat: (format) => set({timeFormat: format}),
-    setTimeFormat12h: (value) => set({ timeFormat12h: value }),
-    setVisibleRange: (range) => set({visibleRange: range}),
+    setTimeFormat12h: (value) => set({timeFormat12h: value}),
 
     drawings: [],
     setDrawings: (update) => set(state => ({
@@ -162,6 +173,7 @@ export const useChartStore = create<ChartState>((set) => ({
         const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
         return {
             safeCandles,
+            visibleRange,
             visibleCandles,
             candlesToUse,
             minPrice,
@@ -170,5 +182,5 @@ export const useChartStore = create<ChartState>((set) => ({
     }),
 
     timeDetailLevel: 'auto',
-    setTimeDetailLevel: (level) => set({ timeDetailLevel: level }),
+    setTimeDetailLevel: (level) => set({timeDetailLevel: level}),
 }));

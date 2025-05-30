@@ -1,5 +1,3 @@
-
-
 import { Mode } from '../../../contexts/ModeContext';
 
 export function drawOverlay(
@@ -7,7 +5,9 @@ export function drawOverlay(
   mode: Mode,
   isDrawing: boolean,
   startPoint: { x: number; y: number } | null,
-  currentPoint: { x: number; y: number } | null
+  currentPoint: { x: number; y: number } | null,
+  width: number,
+  height: number
 ) {
   if (!isDrawing || !startPoint || !currentPoint) return;
 

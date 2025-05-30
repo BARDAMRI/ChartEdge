@@ -1,6 +1,6 @@
 // File: src/components/App.tsx
 import React from 'react';
-import {ChartCanvas} from './Canvas/ChartCanvas.tsx';
+import {ChartStage} from './Canvas/ChartStage.tsx';
 import {Toolbar} from './Toolbar/Toolbar.tsx';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar.tsx';
 import '../styles/App.scss';
@@ -12,425 +12,483 @@ export const App: React.FC = () => {
                 <SettingsToolbar/>
             </div>
             <div className={'lower-container'}>
-                <ChartCanvas/>
+                <ChartStage/>
                 <Toolbar/>
             </div>
         </div>
     );
 };
 
-// File: src/components/Canvas/ChartCanvas.tsx
-import React, {useRef, useEffect} from 'react';
-import {Mode, useMode} from '../../contexts/ModeContext';
-import {Candle, TimeRange} from '../../types/Candle';
-import {drawGrid} from './utils/drawGrid';
-import {drawAxes} from './utils/drawAxes';
-import {drawCandlesticks} from './utils/drawCandlesticks';
-import {drawDrawings} from './utils/drawDrawings';
-import {drawOverlay} from './utils/drawOverlay';
-import {useChartStore} from '../../store/useChartStore';
+// File: src/components/Canvas/Axes/XAxis.tsx
+import React, {useEffect, useRef} from 'react';
+import {useChartStore} from '../../../store/useChartStore.ts';
+import {generateTimeTicks} from '../utils/generateTimeTicks.ts';
 
-interface ChartCanvasProps {
-    candles: Candle[];
-    visibleRange?: TimeRange | null;
+export default function XAxis() {
+    const {
+        canvasWidth,
+        canvasHeight,
+        padding,
+        visibleRange,
+        timeDetailLevel,
+        timeFormat12h,
+    } = useChartStore();
+
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const dpr = window.devicePixelRatio || 1;
+    const chartWidth = canvasWidth - 2 * padding;
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw X-axis line
+        ctx.strokeStyle = 'black';
+        ctx.fillStyle = 'black';
+        ctx.font = `${12 * dpr}px Arial`;
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'center';
+
+        ctx.beginPath();
+        ctx.moveTo(0, 5);
+        ctx.lineTo(width, 5);
+        ctx.stroke();
+
+        // Generate and draw ticks
+        const ticks = generateTimeTicks(
+            visibleRange.start,
+            visibleRange.end,
+            chartWidth,
+            timeDetailLevel,
+            timeFormat12h
+        );
+
+        ticks.forEach(({time, label}) => {
+            const x = padding + ((time - visibleRange.start) / (visibleRange.end - visibleRange.start)) * chartWidth;
+
+            // Draw tick mark
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, 5);
+            ctx.stroke();
+
+            // Draw label
+            ctx.fillText(label, x, 12);
+        });
+    }, [canvasWidth, canvasHeight, padding, visibleRange, timeDetailLevel, timeFormat12h, dpr]);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            style={{
+                display: 'block',
+                position: 'relative',
+                bottom: 0,
+                left: 0,
+                width: '100%',
+                height: '40px',
+                padding: 0,
+                margin: 0
+            }}
+        />
+    );
 }
 
-export const ChartCanvas: React.FC<ChartCanvasProps> = ({
-                                                            candles,
-                                                            visibleRange: initialVisibleRange,
-                                                        }) => {
-    const mode = useMode().mode;
-    const isDrawing = useChartStore(state => state.isDrawing);
-    const setIsDrawing = useChartStore(state => state.setIsDrawing);
-    const startPoint = useChartStore(state => state.startPoint);
-    const setStartPoint = useChartStore(state => state.setStartPoint);
-    const currentPoint = useChartStore(state => state.currentPoint);
-    const setCurrentPoint = useChartStore(state => state.setCurrentPoint);
-    const drawings = useChartStore(state => state.drawings);
-    const setDrawings = useChartStore(state => state.setDrawings);
-    const selectedIndex = useChartStore(state => state.selectedIndex);
-    const setSelectedIndex = useChartStore(state => state.setSelectedIndex);
-    const visibleRange = useChartStore(state => state.visibleRange);
-    const setVisibleRange = useChartStore(state => state.setVisibleRange);
-    const canvasWidth = useChartStore(state => state.canvasWidth);
-    const setCanvasWidth = useChartStore(state => state.setCanvasWidth);
-    const canvasHeight = useChartStore(state => state.canvasHeight);
-    const setCanvasHeight = useChartStore(state => state.setCanvasHeight);
 
-    const containerRef = useRef<HTMLDivElement | null>(null);
-    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+// File: src/components/Canvas/Axes/YAxis.tsx
+import React, {useEffect, useRef} from 'react';
+import {useChartStore} from '../../../store/useChartStore';
 
-    const padding = useChartStore(state => state.padding);
+export default function YAxis({parentWidth = 0, parentHeight = 0}){
+    const {
+        canvasHeight,
+        minPrice,
+        maxPrice,
+        numberOfYTicks,
+        yAxisPosition,
+        padding
+    } = useChartStore();
 
-    const candlesToUse = useChartStore(state => state.candlesToUse);
-    const minPrice = useChartStore(state => state.minPrice);
-    const maxPrice = useChartStore(state => state.maxPrice);
-    const setCandlesAndVisibleRange = useChartStore(state => state.setCandlesAndVisibleRange);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const dpr = window.devicePixelRatio || 1;
 
-    useEffect(() => {
-        if (!containerRef.current) return;
-        const container = containerRef.current!;
-        const observer = new ResizeObserver(entries => {
-            for (const entry of entries) {
-                setCanvasWidth(entry.contentRect.width);
-                setCanvasHeight(entry.contentRect.height);
-            }
+    function calculateTicks(): { y: number; value: number }[] {
+        const chartHeight = canvasHeight;
+        const step = (maxPrice - minPrice) / (numberOfYTicks - 1);
+        return Array.from({length: numberOfYTicks}).map((_, i) => {
+            return {
+                value: minPrice + i * step,
+                y: chartHeight - (i / (numberOfYTicks - 1)) * chartHeight,
+            };
         });
-        observer.observe(container);
-        return () => {
-            observer.disconnect();
-        };
-    }, []);
-
-    const now = Date.now();
-    const oneYearAgo = now - 365 * 24 * 60 * 60 * 1000;
-    const defaultVisibleRange: TimeRange = {
-        start: oneYearAgo,
-        end: now,
-    };
-
-    // Initialize visibleRange in store if not set and initialVisibleRange is provided
-    useEffect(() => {
-        if (initialVisibleRange && candles && candles.length && !visibleRange) {
-            setVisibleRange(initialVisibleRange);
-        } else if (!visibleRange) {
-            setVisibleRange(defaultVisibleRange);
-        }
-    }, [initialVisibleRange, candles, visibleRange, setVisibleRange]);
-
-    // useEffect for setting candles and visible range in store
-    useEffect(() => {
-        setCandlesAndVisibleRange(candles, visibleRange || { start: 0, end: Date.now() });
-    }, [candles, visibleRange, setCandlesAndVisibleRange]);
-
-    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!canvasRef.current) return;
-        const rect = canvasRef.current!.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        if (mode === Mode.select) {
-            for (let i = 0; i < drawings.length; i++) {
-                const d = drawings[i];
-                let shape = null;
-                if (d.mode === Mode.drawLine) {
-                    // @ts-ignore
-                    shape = new LineShape(d.args.startX, d.args.startY, d.args.endX, d.args.endY);
-                } else if (d.mode === Mode.drawRectangle) {
-                    // @ts-ignore
-                    shape = new RectangleShape(d.args.x, d.args.y, d.args.width, d.args.height);
-                } else if (d.mode === Mode.drawCircle) {
-                    // @ts-ignore
-                    shape = new CircleShape(d.args.centerX, d.args.centerY, d.args.radius);
-                }
-                if (shape && shape.isHit(x, y)) {
-                    setSelectedIndex(i);
-                    return;
-                }
-            }
-            setSelectedIndex(null);
-            return;
-        }
-
-        if (mode !== Mode.none) {
-            setStartPoint({x, y});
-            setIsDrawing(true);
-        }
-    };
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!isDrawing || !startPoint || mode === Mode.none) return;
-        if (!canvasRef.current) return;
-
-        const rect = canvasRef.current!.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        setCurrentPoint({x, y});
-    };
-
-    const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!isDrawing || !startPoint || mode === Mode.none) return;
-        if (!canvasRef.current) return;
-
-        const rect = canvasRef.current!.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        setDrawings(prev => {
-            const newDrawing = {
-                [Mode.drawLine]: () => ({
-                    mode: Mode.drawLine,
-                    args: {
-                        startX: startPoint.x,
-                        startY: startPoint.y,
-                        endX: x,
-                        endY: y,
-                    },
-                }),
-                [Mode.drawRectangle]: () => ({
-                    mode: Mode.drawRectangle,
-                    args: {
-                        x: startPoint.x,
-                        y: startPoint.y,
-                        width: x - startPoint.x,
-                        height: y - startPoint.y,
-                    },
-                }),
-                [Mode.drawCircle]: () => {
-                    const dx = x - startPoint.x;
-                    const dy = y - startPoint.y;
-                    const radius = Math.sqrt(dx * dx + dy * dy);
-                    return {
-                        mode: Mode.drawCircle,
-                        args: {
-                            centerX: startPoint.x,
-                            centerY: startPoint.y,
-                            radius,
-                        },
-                    };
-                }
-            }[mode];
-
-            return newDrawing ? [...prev, newDrawing()] : prev;
-        });
-        setIsDrawing(false);
-        setStartPoint(null);
-        setCurrentPoint(null);
-    };
-
-    function formatUnixTime(unixTime: number): string {
-        const date = new Date(unixTime);
-        const options: Intl.DateTimeFormatOptions = {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-        };
-        return new Intl.DateTimeFormat('he-IL', options).format(date);
     }
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        if (canvasWidth === 0 || canvasHeight === 0) return;
+
+        const width = parentWidth;
+        const height = parentHeight;
+
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = canvasWidth * dpr;
-        canvas.height = canvasHeight * dpr;
-        canvas.style.width = `${canvasWidth}px`;
-        canvas.style.height = `${canvasHeight}px`;
-
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.clearRect(0, 0, canvas.width, canvasHeight);
+        ctx.strokeStyle = 'black';
+        ctx.fillStyle = 'black';
+        ctx.font = `${12 * dpr}px Arial`;
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = yAxisPosition === 'left' ? 'right' : 'left';
 
-        drawGrid(ctx, canvas.width, canvasHeight, padding);
-        drawAxes(
-            ctx,
-            candlesToUse,
-            canvas.width,
-            canvasHeight,
-            padding
-        );
-        drawCandlesticks(ctx, candlesToUse, visibleRange, padding, minPrice, maxPrice);
-        drawDrawings(ctx, drawings, selectedIndex);
-        drawOverlay(ctx, mode, isDrawing, startPoint, currentPoint);
+        const chartHeight = height;
+        const yAxisX = width ; //yAxisPosition === 'left' ? width
+        ctx.beginPath();
+        ctx.moveTo(yAxisX, chartHeight);
+        ctx.lineTo(yAxisX, 0);
+        ctx.stroke();
 
-    }, [
-        candlesToUse,
-        visibleRange,
-        drawings,
-        selectedIndex,
-        mode,
-        isDrawing,
-        startPoint,
-        currentPoint,
-        canvasHeight,
-        canvasWidth,
-        padding,
-        minPrice,
-        maxPrice,
-    ]);
+        const ticks = calculateTicks();
+        ticks.forEach(({y, value}) => {
+            ctx.beginPath();
+            ctx.moveTo(yAxisX, y);
+            ctx.lineTo(yAxisPosition === 'left' ? yAxisX - 5 : yAxisX + 5, y);
+            ctx.stroke();
+
+            const text = value.toFixed(2);
+            const textWidth = ctx.measureText(text).width;
+            const offsetX = yAxisPosition === 'left' ? yAxisX - 10 - textWidth : yAxisX + 10;
+
+            ctx.fillText(text, offsetX, y);
+        });
+    }, [canvasHeight, minPrice, maxPrice, numberOfYTicks, yAxisPosition, dpr]);
 
     return (
-        <div ref={containerRef} className="chart-canvas-container" style={{width: '100%', height: '100%'}}>
-            <canvas
-                ref={canvasRef}
-                style={{width: '100%', height: '100%', userSelect: 'none', display: 'block'}}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-            />
-        </div>
+        <canvas
+            className={`y-canvas block absolute left-${ yAxisPosition === 'left' ? 0 : 'auto'} right-${yAxisPosition === 'right' ? 0 : 'auto'} top-0 bottom-0 z-10 pointer-events-none w-[100%] h-[100%]`}
+            ref={canvasRef}
+        />
     );
+}
+
+// File: src/components/Canvas/ChartCanvas.tsx
+import React, { useRef, useEffect } from 'react';
+import { Mode, useMode } from '../../contexts/ModeContext';
+import { drawGrid } from './utils/drawGrid';
+import { drawCandlesticks } from './utils/drawCandlesticks';
+import { drawDrawings } from './utils/drawDrawings';
+import { drawOverlay } from './utils/drawOverlay';
+import { useChartStore } from '../../store/useChartStore';
+import { TimeRange } from "../../types/Graph.ts";
+
+interface ChartCanvasProps {
+  width: number;
+  height: number;
+}
+
+export const ChartCanvas: React.FC<ChartCanvasProps> = ({ width, height }) => {
+  const mode = useMode().mode;
+  const isDrawing = useChartStore(state => state.isDrawing);
+  const setIsDrawing = useChartStore(state => state.setIsDrawing);
+  const startPoint = useChartStore(state => state.startPoint);
+  const setStartPoint = useChartStore(state => state.setStartPoint);
+  const currentPoint = useChartStore(state => state.currentPoint);
+  const setCurrentPoint = useChartStore(state => state.setCurrentPoint);
+  const drawings = useChartStore(state => state.drawings);
+  const setDrawings = useChartStore(state => state.setDrawings);
+  const selectedIndex = useChartStore(state => state.selectedIndex);
+  const setSelectedIndex = useChartStore(state => state.setSelectedIndex);
+  const visibleRange = useChartStore(state => state.visibleRange);
+  const setVisibleRange = useChartStore(state => state.setVisibleRange);
+  const candlesToUse = useChartStore(state => state.candlesToUse);
+  const padding = useChartStore(state => state.padding);
+  const minPrice = useChartStore(state => state.minPrice);
+  const maxPrice = useChartStore(state => state.maxPrice);
+  const setCandlesAndVisibleRange = useChartStore(state => state.setCandlesAndVisibleRange);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const xAxisHeight = useChartStore(state => state.xAxisHeight);
+
+  // Initialize visibleRange in store if not set
+  useEffect(() => {
+    const now = Date.now();
+    const oneYearAgo = now - 365 * 24 * 60 * 60 * 1000;
+    const defaultVisibleRange: TimeRange = { start: oneYearAgo, end: now };
+    if (!visibleRange || visibleRange.start === 0 || visibleRange.end === 0) {
+      setVisibleRange(defaultVisibleRange);
+    }
+  }, [candlesToUse, visibleRange, setVisibleRange]);
+
+  // Set candles and visibleRange in store
+  useEffect(() => {
+    setCandlesAndVisibleRange(candlesToUse, visibleRange || { start: 0, end: Date.now() });
+  }, [candlesToUse, visibleRange, setCandlesAndVisibleRange]);
+
+  // Mouse event handlers
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (mode === Mode.select) {
+      for (let i = 0; i < drawings.length; i++) {
+        const d = drawings[i];
+        let shape = null;
+        if (d.mode === Mode.drawLine) {
+          // @ts-ignore
+          shape = new LineShape(d.args.startX, d.args.startY, d.args.endX, d.args.endY);
+        } else if (d.mode === Mode.drawRectangle) {
+          // @ts-ignore
+          shape = new RectangleShape(d.args.x, d.args.y, d.args.width, d.args.height);
+        } else if (d.mode === Mode.drawCircle) {
+          // @ts-ignore
+          shape = new CircleShape(d.args.centerX, d.args.centerY, d.args.radius);
+        }
+        if (shape && shape.isHit(x, y)) {
+          setSelectedIndex(i);
+          return;
+        }
+      }
+      setSelectedIndex(null);
+      return;
+    }
+
+    if (mode !== Mode.none) {
+      setStartPoint({ x, y });
+      setIsDrawing(true);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !startPoint || mode === Mode.none) return;
+    if (!canvasRef.current) return;
+
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setCurrentPoint({ x, y });
+  };
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !startPoint || mode === Mode.none) return;
+    if (!canvasRef.current) return;
+
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setDrawings(prev => {
+      const newDrawing = {
+        [Mode.drawLine]: () => ({
+          mode: Mode.drawLine,
+          args: {
+            startX: startPoint.x,
+            startY: startPoint.y,
+            endX: x,
+            endY: y,
+          },
+        }),
+        [Mode.drawRectangle]: () => ({
+          mode: Mode.drawRectangle,
+          args: {
+            x: startPoint.x,
+            y: startPoint.y,
+            width: x - startPoint.x,
+            height: y - startPoint.y,
+          },
+        }),
+        [Mode.drawCircle]: () => {
+          const dx = x - startPoint.x;
+          const dy = y - startPoint.y;
+          const radius = Math.sqrt(dx * dx + dy * dy);
+          return {
+            mode: Mode.drawCircle,
+            args: {
+              centerX: startPoint.x,
+              centerY: startPoint.y,
+              radius,
+            },
+          };
+        }
+      };
+      return newDrawing[mode] ? [...prev, newDrawing[mode]()] : prev;
+    });
+
+    setIsDrawing(false);
+    setStartPoint(null);
+    setCurrentPoint(null);
+  };
+
+  // Drawing effect
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (width === 0 || height === 0) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, width, height);
+
+    drawGrid(ctx, width, height);
+    drawCandlesticks(ctx, candlesToUse, visibleRange, padding, minPrice, maxPrice, width, height);
+    drawDrawings(ctx, drawings, selectedIndex, width, height);
+    drawOverlay(ctx, mode, isDrawing, startPoint, currentPoint, width, height);
+
+  }, [
+    width,
+    height,
+    candlesToUse,
+    visibleRange,
+    drawings,
+    selectedIndex,
+    mode,
+    isDrawing,
+    startPoint,
+    currentPoint,
+    padding,
+    minPrice,
+    maxPrice,
+  ]);
+
+  return (
+    <div className="canvas-container relative" style={{ width: '100%', height: `calc(100% - ${xAxisHeight}px)` }}>
+      <canvas
+        ref={canvasRef}
+        style={{ userSelect: 'none', display: 'block' }}
+        width={width}
+        height={height}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+      />
+    </div>
+  );
 };
 
-// File: src/components/Canvas/utils/drawAxes.ts
-import {Candle} from "../../../types/Candle.ts";
-import { useChartStore } from '../../../store/useChartStore';
+// File: src/components/Canvas/ChartStage.tsx
+import React, { useRef } from 'react';
+import { ChartCanvas } from './ChartCanvas';
+import { useChartStore } from "../../store/useChartStore.ts";
+import XAxis from "./Axes/XAxis.tsx";
+import YAxis from "./Axes/YAxis.tsx";
 
-export function drawAxes(
-    ctx: CanvasRenderingContext2D,
-    candles: Candle[],
-    width: number,
-    height: number,
-    padding: number,
-) {
-    const {
-      visibleRange,
-      minPrice,
-      maxPrice,
-      yAxisPosition,
-      numberOfYTicks,
-      numberOfXTicks,
-      timeFormat,
-      priceDecimalPlaces,
-    } = useChartStore.getState?.();
+export const ChartStage: React.FC = () => {
+  const yAxisPosition = useChartStore(state => state.yAxisPosition);
+  const padding = useChartStore(state => state.padding);
 
-    function formatUnixTime(unixTime: number): string {
-      const date = new Date(unixTime);
-      const options: Intl.DateTimeFormatOptions = timeFormat;
-      return new Intl.DateTimeFormat('default', options).format(date);
-    }
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-    ctx.strokeStyle = '#333';
-    ctx.fillStyle = '#333';
-    ctx.lineWidth = 2;
-    ctx.font = '12px Arial';
-    ctx.textBaseline = 'middle';
+  return (
+    <div
+      ref={containerRef}
+      className="chart-stage-container grid w-full h-full"
+      style={{
+        gridTemplateColumns: yAxisPosition === 'left' ? `40px 1fr` : `1fr 40px`,
+        gridTemplateRows: `1fr 40px`,
+        padding,
+      }}
+    >
+      {yAxisPosition === 'left' && (
+        <div className="right-y-axis-container relative">
+          <YAxis containerRef={containerRef} />
+        </div>
+      )}
 
-    const yAxisX = yAxisPosition === 'left' ? padding : width - padding;
+      <div className="canvas-axis-container relative">
+        <ChartCanvas containerRef={containerRef} />
+        <div className="x-axis-container absolute bottom-0 left-0 w-full">
+          <XAxis containerRef={containerRef} />
+        </div>
+      </div>
 
-    // ציור קו ציר Y
-    ctx.beginPath();
-    ctx.moveTo(yAxisX, padding);
-    ctx.lineTo(yAxisX, height - (padding - 7));
-    ctx.stroke();
-
-    ctx.textBaseline = 'top';
-    ctx.textAlign = 'center';
-
-    // ציור קו ציר X
-    ctx.beginPath();
-    ctx.moveTo(padding, height - padding);
-    ctx.lineTo(width - padding, height - padding);
-    ctx.stroke();
-
-    // ציור ערכי ביניים בציר Y
-    const step = (maxPrice - minPrice) / (numberOfYTicks - 1);
-
-    for (let i = 0; i < numberOfYTicks; i++) {
-        const value = minPrice + i * step;
-        const y = height - padding - (i * (height - 2 * padding) / (numberOfYTicks - 1));
-
-        const formattedValue = value.toFixed(priceDecimalPlaces);
-        const offset = (formattedValue.length ) * 5;
-        const xPos = yAxisPosition === 'left' ? yAxisX - offset : yAxisX + offset;
-
-        ctx.fillText(formattedValue, xPos, y - 5);
-
-        ctx.beginPath();
-        ctx.moveTo(yAxisX - (yAxisPosition === 'left' ? 5 : -5), y);
-        ctx.lineTo(yAxisX , y);
-        ctx.stroke();
-
-    }
-
-    // ציור ערכי ביניים בציר X עם שימוש בפונקציה formatUnixTime
-    const timeRange = visibleRange.end - visibleRange.start;
-    if (timeRange <= 0) return;
-
-    ctx.textAlign = 'center';
-
-    const xPositions = [
-        visibleRange.start,
-        visibleRange.end
-    ];
-    // הוספת ערכי בינתיים על ידי מספר ticks ל-x
-    const stepX = (visibleRange.end - visibleRange.start) / (numberOfXTicks - 1);
-    for (let i = 1; i < numberOfXTicks - 1; i++) {
-        xPositions.push(visibleRange.start + i * stepX);
-    }
-
-    // מיון הערכים כדי להבטיח סדר כרונולוגי
-    xPositions.sort((a, b) => a - b);
-
-
-    // ציור הערכים בציר X
-    xPositions.forEach(time => {
-        // הוספת קו באורך 10 מעל לטקסט
-        const x = padding + ((time - visibleRange.start) / timeRange) * (width - 2 * padding);
-        ctx.beginPath();
-        ctx.moveTo(x, height - padding);
-        ctx.lineTo(x, height - padding + 7);
-        ctx.stroke();
-        // הוספת טקסט מתחת לקו
-        const label = formatUnixTime(time);
-        ctx.fillText(label, x, height - padding + 10);
-    });
-}
+      {yAxisPosition === 'right' && (
+        <div className="left-y-axis-container relative">
+          <YAxis containerRef={containerRef} />
+        </div>
+      )}
+    </div>
+  );
+};
 
 // File: src/components/Canvas/utils/drawCandlesticks.ts
-import {Candle} from '../../../types/Candle';
-import {useChartStore} from "../../../store/useChartStore.ts";
+import { Candle } from '../../../types/Candle';
 
 export function drawCandlesticks(
-    ctx: CanvasRenderingContext2D,
-    candles: Candle[],
-    visibleRange: { start: number; end: number },
-    padding: number,
-    minPrice: number,
-    maxPrice: number
+  ctx: CanvasRenderingContext2D,
+  candles: Candle[],
+  visibleRange: { start: number; end: number },
+  padding: number,
+  minPrice: number,
+  maxPrice: number,
+  width: number,
+  height: number
 ): void {
+  const drawableWidth = width - 2 * padding;
+  const drawableHeight = height - 2 * padding;
 
-    const {canvasWidth, canvasHeight} = useChartStore.getState?.();
+  const candleCount = visibleRange.end - visibleRange.start;
+  if (candleCount <= 0) return;
 
-    const drawableWidth = canvasWidth - 2 * padding;
-    const drawableHeight = canvasHeight - 2 * padding;
+  const candleSpacing = drawableWidth / candleCount;
+  const candleWidth = candleSpacing * 0.6;
 
-    const candleCount = visibleRange.end - visibleRange.start;
-    if (candleCount <= 0) return;
+  const priceRange = maxPrice - minPrice;
 
-    const candleSpacing = drawableWidth / candleCount;
-    const candleWidth = candleSpacing * 0.6;
+  // פונקציה להמרת מחיר למיקום Y בקנבס
+  const priceToY = (price: number) => {
+    return padding + drawableHeight * (1 - (price - minPrice) / priceRange);
+  };
 
-    const priceRange = maxPrice - minPrice;
+  const visibleCandles = candles.slice(visibleRange.start, visibleRange.end);
 
-    // פונקציה להמרת מחיר למיקום Y בקנבס
-    const priceToY = (price: number) => {
-        return padding + drawableHeight * (1 - (price - minPrice) / priceRange);
-    };
+  visibleCandles.forEach((candle, i) => {
+    const x = padding + i * candleSpacing;
+    const highY = priceToY(candle.h);
+    const lowY = priceToY(candle.l);
+    const openY = priceToY(candle.o);
+    const closeY = priceToY(candle.c);
 
-    const visibleCandles = candles.slice(visibleRange.start, visibleRange.end);
+    const isUp = candle.c >= candle.o;
 
-    visibleCandles.forEach((candle, i) => {
-        const x = padding + i * candleSpacing;
-        const highY = priceToY(candle.h);
-        const lowY = priceToY(candle.l);
-        const openY = priceToY(candle.o);
-        const closeY = priceToY(candle.c);
+    ctx.strokeStyle = isUp ? 'green' : 'red';
+    ctx.fillStyle = isUp ? 'green' : 'red';
+    ctx.lineWidth = 1;
 
-        const isUp = candle.c >= candle.o;
+    // ציור ה-wick (הקו העליון והתחתון)
+    ctx.beginPath();
+    ctx.moveTo(x + candleWidth / 2, highY);
+    ctx.lineTo(x + candleWidth / 2, lowY);
+    ctx.stroke();
 
-        ctx.strokeStyle = isUp ? 'green' : 'red';
-        ctx.fillStyle = isUp ? 'green' : 'red';
-        ctx.lineWidth = 1;
-
-        // ציור ה-wick (הקו העליון והתחתון)
-        ctx.beginPath();
-        ctx.moveTo(x + candleWidth / 2, highY);
-        ctx.lineTo(x + candleWidth / 2, lowY);
-        ctx.stroke();
-
-        // ציור גוף הנר
-        const bodyY = Math.min(openY, closeY);
-        const bodyHeight = Math.max(1, Math.abs(openY - closeY)); // לפחות 1 פיקסל גובה
-        ctx.fillRect(x, bodyY, candleWidth, bodyHeight);
-    });
+    // ציור גוף הנר
+    const bodyY = Math.min(openY, closeY);
+    const bodyHeight = Math.max(1, Math.abs(openY - closeY)); // לפחות 1 פיקסל גובה
+    ctx.fillRect(x, bodyY, candleWidth, bodyHeight);
+  });
 }
-
 
 
 // File: src/components/Canvas/utils/drawDrawings.ts
@@ -450,7 +508,9 @@ import { Mode } from '../../../contexts/ModeContext';
 export function drawDrawings(
   ctx: CanvasRenderingContext2D,
   drawings: Drawing[],
-  selectedIndex: number | null
+  selectedIndex: number | null,
+  width: number,
+  height: number
 ): void {
   drawings.forEach((d, index) => {
     ctx.beginPath();
@@ -538,40 +598,39 @@ export function drawDrawings(
 }
 
 // File: src/components/Canvas/utils/drawGrid.ts
-import { useChartStore } from '../../../store/useChartStore';
-
-export function drawGrid(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  padding: number,
-) {
-  const { stepX, stepY, strokeStyle } = useChartStore.getState?.();
+export function drawGrid(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  const stepX = 50; // ריווח אופקי בין קווים, ניתן לשנות
+  const stepY = 50; // ריווח אנכי בין קווים, ניתן לשנות
+  const strokeStyle = '#ccc'; // צבע הקווים, ניתן לשנות
 
   ctx.strokeStyle = strokeStyle;
   ctx.lineWidth = 1;
 
+  // קצוות הגריד
+  const xStart = 0;
+  const xEnd = width;
+  const yStart = 0;
+  const yEnd = height;
+
   // קווים אנכיים
-  for (let x = padding; x <= width - padding; x += stepX) {
+  for (let x = xStart; x <= xEnd; x += stepX) {
     ctx.beginPath();
-    ctx.moveTo(x, padding);
-    ctx.lineTo(x, height - padding);
+    ctx.moveTo(x, yStart);
+    ctx.lineTo(x, yEnd);
     ctx.stroke();
   }
 
   // קווים אופקיים
-  for (let y = padding; y <= height - padding; y += stepY) {
+  for (let y = yStart; y <= yEnd; y += stepY) {
     ctx.beginPath();
-    ctx.moveTo(padding, y);
-    ctx.lineTo(width - padding, y);
+    ctx.moveTo(xStart, y);
+    ctx.lineTo(xEnd, y);
     ctx.stroke();
   }
 }
 
 
 // File: src/components/Canvas/utils/drawOverlay.ts
-
-
 import { Mode } from '../../../contexts/ModeContext';
 
 export function drawOverlay(
@@ -579,7 +638,9 @@ export function drawOverlay(
   mode: Mode,
   isDrawing: boolean,
   startPoint: { x: number; y: number } | null,
-  currentPoint: { x: number; y: number } | null
+  currentPoint: { x: number; y: number } | null,
+  width: number,
+  height: number
 ) {
   if (!isDrawing || !startPoint || !currentPoint) return;
 
@@ -618,6 +679,194 @@ export function drawOverlay(
   ctx.stroke();
   ctx.setLineDash([]);
 }
+
+// File: src/components/Canvas/utils/generateTimeTicks.ts
+import { Tick } from "../../../types/Graph.ts";
+
+type TimeDetailLevel = 'auto' | 'low' | 'medium' | 'high';
+
+export function generateTimeTicks(
+    startTime: number,
+    endTime: number,
+    canvasWidth: number,
+    timeDetailLevel: TimeDetailLevel,
+    timeFormat12h: boolean,
+    minPixelPerTick = 60,
+): Tick[] {
+    const ticks: Tick[] = [];
+    const rangeMs = endTime - startTime;
+
+    // Calculate time span in days
+    const timeSpanDays = rangeMs / (24 * 60 * 60 * 1000);
+
+    // Determine appropriate tick interval based on time span
+    let interval: 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second';
+    let intervalStep = 1;
+
+    if (timeSpanDays > 365 * 2) {
+        interval = 'year';
+        intervalStep = Math.ceil(timeSpanDays / 365 / 10); // Show approximately 10 years
+    } else if (timeSpanDays > 60) {
+        interval = 'month';
+        intervalStep = Math.ceil(timeSpanDays / 30 / 12); // Show approximately 12 months
+    } else if (timeSpanDays > 10) {
+        interval = 'day';
+        intervalStep = Math.ceil(timeSpanDays / 10); // Show approximately 10 days
+    } else if (timeSpanDays > 1) {
+        interval = 'hour';
+        intervalStep = Math.ceil(timeSpanDays * 24 / 12); // Show approximately 12 hours
+    } else if (timeSpanDays > 0.04) { // ~1 hour
+        interval = 'minute';
+        intervalStep = Math.ceil(timeSpanDays * 24 * 60 / 15); // Show approximately every 15 minutes
+    } else {
+        interval = 'second';
+        intervalStep = Math.ceil(timeSpanDays * 24 * 60 * 60 / 15); // Show approximately every 15 seconds
+    }
+
+    // Override with user-selected detail level if not auto
+    if (timeDetailLevel !== 'auto') {
+        switch (timeDetailLevel) {
+            case 'low':
+                if (interval === 'year') intervalStep = Math.max(intervalStep, 2);
+                else if (interval === 'month') interval = 'year';
+                else if (interval === 'day') interval = 'month';
+                else if (interval === 'hour') interval = 'day';
+                else if (interval === 'minute') interval = 'hour';
+                else interval = 'minute';
+                break;
+            case 'medium':
+                // Keep default interval but maybe adjust step
+                break;
+            case 'high':
+                if (interval === 'year') interval = 'month';
+                else if (interval === 'month') interval = 'day';
+                else if (interval === 'day') interval = 'hour';
+                else if (interval === 'hour') interval = 'minute';
+                else if (interval === 'minute') interval = 'second';
+                intervalStep = 1;
+                break;
+        }
+    }
+
+    // Calculate max ticks based on canvas width
+    const maxTicks = Math.floor(canvasWidth / minPixelPerTick);
+
+    // Generate ticks based on interval
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+
+    // Function to get next tick date based on interval
+    function getNextTickDate(date: Date): Date {
+        const newDate = new Date(date);
+        switch (interval) {
+            case 'year':
+                newDate.setFullYear(newDate.getFullYear() + intervalStep);
+                break;
+            case 'month':
+                newDate.setMonth(newDate.getMonth() + intervalStep);
+                break;
+            case 'day':
+                newDate.setDate(newDate.getDate() + intervalStep);
+                break;
+            case 'hour':
+                newDate.setHours(newDate.getHours() + intervalStep);
+                break;
+            case 'minute':
+                newDate.setMinutes(newDate.getMinutes() + intervalStep);
+                break;
+            case 'second':
+                newDate.setSeconds(newDate.getSeconds() + intervalStep);
+                break;
+        }
+        return newDate;
+    }
+
+    // Function to format date based on interval
+    function formatTickLabel(date: Date): string {
+        switch (interval) {
+            case 'year':
+                return date.getFullYear().toString();
+            case 'month':
+                return date.toLocaleString('default', { month: 'short', year: 'numeric' });
+            case 'day':
+                return date.toLocaleString('default', { day: '2-digit', month: 'short' });
+            case 'hour':
+                return date.toLocaleString('default', { hour12: timeFormat12h, hour: '2-digit', minute: '2-digit' });
+            case 'minute':
+                return date.toLocaleString('default', { hour12: timeFormat12h, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            case 'second':
+                return date.toLocaleString('default', { hour12: timeFormat12h, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+    }
+    
+    // Find first tick (align to interval boundary)
+    let currentDate = new Date(startDate);
+    switch (interval) {
+        case 'year':
+            currentDate = new Date(currentDate.getFullYear(), 0, 1);
+            break;
+        case 'month':
+            currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            break;
+        case 'day':
+            currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+            break;
+        case 'hour':
+            currentDate = new Date(
+                currentDate.getFullYear(), 
+                currentDate.getMonth(), 
+                currentDate.getDate(), 
+                currentDate.getHours()
+            );
+            break;
+        case 'minute':
+            currentDate = new Date(
+                currentDate.getFullYear(), 
+                currentDate.getMonth(), 
+                currentDate.getDate(), 
+                currentDate.getHours(),
+                Math.floor(currentDate.getMinutes() / intervalStep) * intervalStep
+            );
+            break;
+        case 'second':
+            currentDate = new Date(
+                currentDate.getFullYear(), 
+                currentDate.getMonth(), 
+                currentDate.getDate(), 
+                currentDate.getHours(),
+                currentDate.getMinutes(),
+                Math.floor(currentDate.getSeconds() / intervalStep) * intervalStep
+            );
+            break;
+    }
+    
+    // If first tick is before start time, move to next tick
+    if (currentDate.getTime() < startTime) {
+        currentDate = getNextTickDate(currentDate);
+    }
+    
+    // Generate ticks until we reach end time
+    while (currentDate.getTime() <= endTime) {
+        const tickTime = currentDate.getTime();
+        const label = formatTickLabel(currentDate);
+        
+        ticks.push({ time: tickTime, label });
+        currentDate = getNextTickDate(currentDate);
+        
+        // Safety check to prevent infinite loops
+        if (ticks.length > 100) break;
+    }
+    
+    // Ensure we don't have too many ticks for the available width
+    if (ticks.length > maxTicks) {
+        // Sample ticks evenly
+        const step = Math.ceil(ticks.length / maxTicks);
+        return ticks.filter((_, i) => i % step === 0);
+    }
+    
+    return ticks;
+}
+
 
 // File: src/components/Drawing/Angleshape.ts
 import {IDrawingShape} from "./IDrawingShape.ts";
@@ -1271,7 +1520,17 @@ export const useMode = (): ModeContextProps => {
     return context;
 };
 
+// File: src/index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// File: src/main.ts
+
+
 // File: src/main.tsx
+import './index.css'; //
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import {App} from './components/App';
@@ -1289,20 +1548,27 @@ ReactDOM.createRoot(root).render(
 
 // File: src/store/useChartStore.ts
 import {create} from 'zustand';
-import type { Candle } from '../types/Candle.ts';
+import type {Candle} from '../types/Candle.ts';
+import {} from '../types/Candle.ts'
+import {TimeRange} from '../types/Graph.ts';
+import {useState} from "react";
+
 
 interface ChartState {
     numberOfXTicks: number;
     numberOfYTicks: number;
     timeFormat: string;
-    visibleRange: { start: number; end: number };
-    canvasWidth: number;
-    canvasHeight: number;
+    timeFormat12h: boolean;
+    xAxisHeight: number;
+    yAxisWidth: number;
+    setXAxisHeight: (height: number) => void;
+    setYAxisWidth: (width: number) => void;
     setCanvasWidth: (width: number) => void;
     setCanvasHeight: (height: number) => void;
     setNumberOfXTicks: (n: number) => void;
     setNumberOfYTicks: (n: number) => void;
     setTimeFormat: (format: string) => void;
+    setTimeFormat12h: (value: boolean) => void;
     setVisibleRange: (range: { start: number; end: number }) => void;
 
     // Drawing state
@@ -1329,15 +1595,11 @@ interface ChartState {
     stepY: number;
     strokeStyle: string;
     padding: number;
-    width: number;
-    height: number;
 
     setStepX: (value: number) => void;
     setStepY: (value: number) => void;
     setStrokeStyle: (value: string) => void;
     setPadding: (value: number) => void;
-    setWidth: (value: number) => void;
-    setHeight: (value: number) => void;
 
     minPrice: number;
     maxPrice: number;
@@ -1365,22 +1627,37 @@ interface ChartState {
     safeCandles: Candle[];
     visibleCandles: Candle[];
     candlesToUse: Candle[];
-    setCandlesAndVisibleRange: (candles: Candle[], visibleRange: { start: number; end: number }) => void;
+    visibleRange: TimeRange;
+
+    setCandlesAndVisibleRange: (candles: Candle[], visibleRange: TimeRange) => void;
+
+    timeDetailLevel: 'auto' | 'low' | 'medium' | 'high';
+    setTimeDetailLevel: (level: 'auto' | 'low' | 'medium' | 'high') => void;
 }
 
 export const useChartStore = create<ChartState>((set) => ({
     numberOfXTicks: 5,
     numberOfYTicks: 5,
     timeFormat: 'YYYY/MM/DD',
+    timeFormat12h: false, // false = 24 שעות, true = 12 שעות AM/PM
+    xAxisHeight: 40,
+    yAxisWidth: 40,
+    setXAxisHeight: (height) => set({xAxisHeight: height}),
+    setYAxisWidth: (width) => set({yAxisWidth: width}),
+    stepX: 50,
+    stepY: 50,
+    strokeStyle: '#eee',
+    padding: 15,
+    setCandles: (candles) => set({candles}),
+    candles: [],
     visibleRange: {start: Date.now() - 365 * 24 * 60 * 60 * 1000, end: Date.now()},
-    canvasWidth: 800,
-    canvasHeight: 600,
+    setVisibleRange: (range) => set({visibleRange: range}),
     setCanvasWidth: (width) => set({canvasWidth: width}),
     setCanvasHeight: (height) => set({canvasHeight: height}),
     setNumberOfXTicks: (n) => set({numberOfXTicks: n}),
     setNumberOfYTicks: (n) => set({numberOfYTicks: n}),
     setTimeFormat: (format) => set({timeFormat: format}),
-    setVisibleRange: (range) => set({visibleRange: range}),
+    setTimeFormat12h: (value) => set({timeFormat12h: value}),
 
     drawings: [],
     setDrawings: (update) => set(state => ({
@@ -1401,19 +1678,10 @@ export const useChartStore = create<ChartState>((set) => ({
     currentPoint: null,
     setCurrentPoint: (point) => set({currentPoint: point}),
 
-    stepX: 50,
-    stepY: 50,
-    strokeStyle: '#eee',
-    padding: 20,
-    width: 800,
-    height: 600,
-
     setStepX: (value) => set({stepX: value}),
     setStepY: (value) => set({stepY: value}),
     setStrokeStyle: (value) => set({strokeStyle: value}),
     setPadding: (value) => set({padding: value}),
-    setWidth: (value) => set({width: value}),
-    setHeight: (value) => set({height: value}),
 
     minPrice: 0,
     maxPrice: 100,
@@ -1424,19 +1692,19 @@ export const useChartStore = create<ChartState>((set) => ({
     setYAxisPosition: (position) => set({yAxisPosition: position}),
 
     priceDecimalPlaces: 2,
-    setPriceDecimalPlaces: (value) => set({ priceDecimalPlaces: value }),
+    setPriceDecimalPlaces: (value) => set({priceDecimalPlaces: value}),
 
     decimalSeparator: '.',
-    setDecimalSeparator: (value) => set({ decimalSeparator: value }),
+    setDecimalSeparator: (value) => set({decimalSeparator: value}),
 
     thousandSeparator: ',',
-    setThousandSeparator: (value) => set({ thousandSeparator: value }),
+    setThousandSeparator: (value) => set({thousandSeparator: value}),
 
     currencySymbol: '$',
-    setCurrencySymbol: (value) => set({ currencySymbol: value }),
+    setCurrencySymbol: (value) => set({currencySymbol: value}),
 
     currencySymbolPosition: 'before',
-    setCurrencySymbolPosition: (value) => set({ currencySymbolPosition: value }),
+    setCurrencySymbolPosition: (value) => set({currencySymbolPosition: value}),
 
     safeCandles: [],
     visibleCandles: [],
@@ -1454,12 +1722,16 @@ export const useChartStore = create<ChartState>((set) => ({
         const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
         return {
             safeCandles,
+            visibleRange,
             visibleCandles,
             candlesToUse,
             minPrice,
             maxPrice
         };
     }),
+
+    timeDetailLevel: 'auto',
+    setTimeDetailLevel: (level) => set({timeDetailLevel: level}),
 }));
 
 // File: src/styles/App.scss
@@ -1507,15 +1779,6 @@ html, body {
   flex-direction: row;
   overflow: hidden; /* למנוע גלילה אופקית */
 }
-
-// במידה ולא קיימות בקובץ אחר, הוסף כאן:
-.chart-canvas-container {
-  flex-grow: 1;
-  width: calc(100% - 40px); /* להוריד רוחב של ה-toolbar */
-  height: 100%;
-  position: relative;
-}
-
 .toolbar-container {
   width: 40px; /* רוחב סרגל הכלים */
   height: 100%;
@@ -1525,10 +1788,16 @@ html, body {
 // File: src/styles/Canvas/Axes.scss
 
 
-// File: src/styles/Canvas/Grid.scss
+// File: src/styles/Canvas/CanvasStage.scss
 
+//.canvas-container canvas {
+//  position: absolute;
+//  top: 0;
+//  left: 0;
+//  z-index: 0;
+//}
 
-// File: src/styles/ChartCanves.scss
+// File: src/styles/Canvas/ChartCanves.scss
 .chart-canvas-container {
   flex-grow: 1;
   width: calc(100% - 40px); /* להוריד רוחב של ה-toolbar */
@@ -1537,6 +1806,9 @@ html, body {
   display: block;
   max-height: 100%;
 }
+
+// File: src/styles/Canvas/Grid.scss
+
 
 // File: src/styles/Drawing.scss
 
@@ -1627,6 +1899,12 @@ export interface Candle {
 
 export interface CandleWithIndex extends Candle {
     index: number; // index in the original array
+}
+
+// File: src/types/Graph.ts
+export interface Tick {
+    time: number;      // timestamp UNIX במילישניות
+    label: string;     // תצוגת הטיק כטקסט
 }
 
 export interface TimeRange {

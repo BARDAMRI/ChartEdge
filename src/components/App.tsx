@@ -1,5 +1,5 @@
 import React from 'react';
-import {ChartCanvas} from './Canvas/ChartCanvas.tsx';
+import {ChartStage} from './Canvas/ChartStage.tsx';
 import {Toolbar} from './Toolbar/Toolbar.tsx';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar.tsx';
 import '../styles/App.scss';
@@ -11,7 +11,7 @@ export const App: React.FC = () => {
                 <SettingsToolbar/>
             </div>
             <div className={'lower-container'}>
-                <ChartCanvas/>
+                <ChartStage/>
                 <Toolbar/>
             </div>
         </div>

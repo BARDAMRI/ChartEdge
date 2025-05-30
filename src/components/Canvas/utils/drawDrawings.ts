@@ -14,7 +14,9 @@ import { Mode } from '../../../contexts/ModeContext';
 export function drawDrawings(
   ctx: CanvasRenderingContext2D,
   drawings: Drawing[],
-  selectedIndex: number | null
+  selectedIndex: number | null,
+  width: number,
+  height: number
 ): void {
   drawings.forEach((d, index) => {
     ctx.beginPath();

@@ -1,19 +1,16 @@
-import { useChartStore } from '../../../store/useChartStore';
-
-export function drawGrid(
-  ctx: CanvasRenderingContext2D,
-) {
-
-  const { stepX, stepY, strokeStyle, canvasWidth, canvasHeight, padding} = useChartStore.getState?.();
+export function drawGrid(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  const stepX = 50; // ריווח אופקי בין קווים, ניתן לשנות
+  const stepY = 50; // ריווח אנכי בין קווים, ניתן לשנות
+  const strokeStyle = '#ccc'; // צבע הקווים, ניתן לשנות
 
   ctx.strokeStyle = strokeStyle;
   ctx.lineWidth = 1;
 
   // קצוות הגריד
-  const xStart = padding;
-  const xEnd = canvasWidth - padding;
-  const yStart = padding;
-  const yEnd = canvasHeight - padding;
+  const xStart = 0;
+  const xEnd = width;
+  const yStart = 0;
+  const yEnd = height;
 
   // קווים אנכיים
   for (let x = xStart; x <= xEnd; x += stepX) {
