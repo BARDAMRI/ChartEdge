@@ -7,16 +7,20 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "combine-code": "node combineFiles.cjs"
+    "combine-code": "node combineFiles.cjs",
+    "test": "jest"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.7",
+    "@types/jest": "^29.5.14",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.5.0",
     "autoprefixer": "^10.4.21",
+    "jest": "^29.7.0",
     "postcss": "^8.5.3",
     "sass-embedded": "^1.87.0",
     "tailwindcss": "^3.4.17",
+    "ts-jest": "^29.3.4",
     "typescript": "~5.7.2",
     "vite": "^5.4.19"
   },
