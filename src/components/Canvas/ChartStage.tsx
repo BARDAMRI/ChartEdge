@@ -27,7 +27,7 @@ class DebugLogger {
 
     downloadLogs() {
         const logContent = this.getLogs();
-        const blob = new Blob([logContent], { type: 'text/plain' });
+        const blob = new Blob([logContent], {type: 'text/plain'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -94,7 +94,7 @@ export const ChartStage: React.FC = () => {
             const parentRect = parent.getBoundingClientRect();
             const parentStyle = window.getComputedStyle(parent);
             logger.log(`🔷 Parent ${level} (${parent.className}):`, {
-                size: { width: parentRect.width, height: parentRect.height },
+                size: {width: parentRect.width, height: parentRect.height},
                 minWidth: parentStyle.minWidth,
                 maxWidth: parentStyle.maxWidth,
                 display: parentStyle.display,
@@ -111,11 +111,11 @@ export const ChartStage: React.FC = () => {
             setLogCount(prev => prev + 1);
 
             for (let entry of entries) {
-                const { width, height } = entry.contentRect;
-                const { target } = entry;
+                const {width, height} = entry.contentRect;
+                const {target} = entry;
 
                 logger.log('🟢 ResizeObserver data:', {
-                    contentRect: { width, height },
+                    contentRect: {width, height},
                     borderBoxSize: entry.borderBoxSize?.[0],
                     contentBoxSize: entry.contentBoxSize?.[0],
                     targetClass: (target as HTMLElement).className,
@@ -125,22 +125,22 @@ export const ChartStage: React.FC = () => {
                 // Also log current element measurements
                 const currentRect = element.getBoundingClientRect();
                 logger.log('🟢 Current element measurements:', {
-                    getBoundingClientRect: { width: currentRect.width, height: currentRect.height },
-                    clientSize: { width: element.clientWidth, height: element.clientHeight },
-                    offsetSize: { width: element.offsetWidth, height: element.offsetHeight }
+                    getBoundingClientRect: {width: currentRect.width, height: currentRect.height},
+                    clientSize: {width: element.clientWidth, height: element.clientHeight},
+                    offsetSize: {width: element.offsetWidth, height: element.offsetHeight}
                 });
 
                 setCanvasSizes(prev => {
                     if (prev.width !== width || prev.height !== height) {
                         logger.log('🔄 Updating canvas sizes:', {
                             from: prev,
-                            to: { width, height },
+                            to: {width, height},
                             change: {
                                 width: width - prev.width,
                                 height: height - prev.height
                             }
                         });
-                        return { width, height };
+                        return {width, height};
                     }
                     logger.log('🚫 No size change, keeping previous:', prev);
                     return prev;
@@ -150,11 +150,11 @@ export const ChartStage: React.FC = () => {
 
         // Add window resize listener for comparison
         const handleWindowResize = () => {
-            const windowSize = { width: window.innerWidth, height: window.innerHeight };
+            const windowSize = {width: window.innerWidth, height: window.innerHeight};
             const elementRect = element.getBoundingClientRect();
             logger.log('🌍 Window resize:', {
                 window: windowSize,
-                element: { width: elementRect.width, height: elementRect.height }
+                element: {width: elementRect.width, height: elementRect.height}
             });
             setLogCount(prev => prev + 1);
         };
@@ -162,7 +162,7 @@ export const ChartStage: React.FC = () => {
         window.addEventListener('resize', handleWindowResize);
         resizeObserver.observe(element);
 
-        logger.log('🔷 ResizeObserver attached to element:', { className: element.className });
+        logger.log('🔷 ResizeObserver attached to element:', {className: element.className});
 
         return () => {
             logger.log('🔴 Cleaning up ResizeObserver');
@@ -183,60 +183,66 @@ export const ChartStage: React.FC = () => {
             style={{margin: `${margin}px`}}
             className="chart-stage-container flex w-full h-full">
 
-            {/* Debug controls */}
-            <div style={{
-                position: 'fixed',
-                top: '10px',
-                right: '10px',
-                background: 'white',
-                border: '1px solid #ccc',
-                padding: '10px',
-                borderRadius: '5px',
-                zIndex: 2000,
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-            }}>
-                <div style={{ fontSize: '12px', marginBottom: '5px' }}>
-                    Debug Logger ({logCount} events)
-                </div>
-                <button
-                    onClick={() => logger.downloadLogs()}
-                    style={{
-                        padding: '5px 10px',
-                        marginRight: '5px',
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    💾 Download Logs
-                </button>
-                <button
-                    onClick={() => {
-                        logger.clear();
-                        setLogCount(0);
-                    }}
-                    style={{
-                        padding: '5px 10px',
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    🗑️ Clear
-                </button>
-            </div>
+            {/*===================== Size indicator and logs downloader for debug  ===================== */}
 
-            {/* Size indicator */}
-            <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                background: 'rgba(255,0,0,0.1)',
-                padding: '4px',
-                fontSize: '12px',
-                zIndex: 1000,
-                pointerEvents: 'none'
-            }}>
-                Container: {Math.round(canvasSizes.width)}×{Math.round(canvasSizes.height)}
-            </div>
+            {/*/!* Debug controls *!/*/}
+            {/*<div style={{*/}
+            {/*    position: 'fixed',*/}
+            {/*    top: '10px',*/}
+            {/*    right: '10px',*/}
+            {/*    background: 'white',*/}
+            {/*    border: '1px solid #ccc',*/}
+            {/*    padding: '10px',*/}
+            {/*    borderRadius: '5px',*/}
+            {/*    zIndex: 2000,*/}
+            {/*    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'*/}
+            {/*}}>*/}
+            {/*    <div style={{ fontSize: '12px', marginBottom: '5px' }}>*/}
+            {/*        Debug Logger ({logCount} events)*/}
+            {/*    </div>*/}
+            {/*    <button*/}
+            {/*        onClick={() => logger.downloadLogs()}*/}
+            {/*        style={{*/}
+            {/*            padding: '5px 10px',*/}
+            {/*            marginRight: '5px',*/}
+            {/*            fontSize: '12px',*/}
+            {/*            cursor: 'pointer'*/}
+            {/*        }}*/}
+            {/*    >*/}
+            {/*        💾 Download Logs*/}
+            {/*    </button>*/}
+            {/*    <button*/}
+            {/*        onClick={() => {*/}
+            {/*            logger.clear();*/}
+            {/*            setLogCount(0);*/}
+            {/*        }}*/}
+            {/*        style={{*/}
+            {/*            padding: '5px 10px',*/}
+            {/*            fontSize: '12px',*/}
+            {/*            cursor: 'pointer'*/}
+            {/*        }}*/}
+            {/*    >*/}
+            {/*        🗑️ Clear*/}
+            {/*    </button>*/}
+            {/*</div>*/}
+
+            {/*/!* Size indicator *!/*/}
+            {/*<div style={{*/}
+            {/*    position: 'absolute',*/}
+            {/*    top: 0,*/}
+            {/*    left: 0,*/}
+            {/*    background: 'rgba(255,0,0,0.1)',*/}
+            {/*    padding: '4px',*/}
+            {/*    fontSize: '12px',*/}
+            {/*    zIndex: 1000,*/}
+            {/*    pointerEvents: 'none'*/}
+            {/*}}>*/}
+            {/*    Container: {Math.round(canvasSizes.width)}×{Math.round(canvasSizes.height)}*/}
+            {/*</div>*/}
+
+
+            {/*========================================================================================= */}
+
 
             {yAxisPosition === 'left' && (
                 <div className="right-y-axis-container relative flex h-full" style={{width: `${yAxisWidth}px`}}>
