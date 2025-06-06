@@ -1,12 +1,14 @@
 import React, {useEffect, useRef} from 'react';
 import {useChartStore} from '../../../store/useChartStore';
 import {generateTimeTicks} from "../utils/generateTimeTicks.ts";
+import {CanvasSizes} from "../ChartStage.tsx";
 
 interface YAxisProps {
     parentContainerRef?: React.RefObject<HTMLDivElement>;
+    canvasSizes: CanvasSizes;
 }
 
-export default function YAxis({parentContainerRef}: YAxisProps) {
+export default function YAxis({parentContainerRef, canvasSizes}: YAxisProps) {
     const yAxisPosition = useChartStore(state => state.yAxisPosition);
     const xAxisHeight = useChartStore(state => state.xAxisHeight);
     const yAxisWidth = useChartStore(state => state.yAxisWidth);
@@ -48,8 +50,8 @@ export default function YAxis({parentContainerRef}: YAxisProps) {
         ctx.textAlign = yAxisPosition === 'left' ? 'right' : 'left';
 
         ctx.beginPath();
-        ctx.moveTo(y_axis_canvas_width, 0);
-        ctx.lineTo(y_axis_canvas_width, (y_axis_canvas_height - xAxisHeight));
+        ctx.moveTo(y_axis_canvas_width, (y_axis_canvas_height - xAxisHeight + 1));
+        ctx.lineTo(y_axis_canvas_width, 0);
         ctx.stroke();
 
         // const ticks = calculateTicks();
@@ -65,7 +67,7 @@ export default function YAxis({parentContainerRef}: YAxisProps) {
         //
         //     ctx.fillText(text, offsetX, y);
         // });
-    }, [parentContainerRef, yAxisWidth, minPrice, maxPrice, numberOfYTicks, yAxisPosition, dpr]);
+    }, [parentContainerRef, yAxisWidth, minPrice, maxPrice, numberOfYTicks, yAxisPosition, dpr, canvasSizes]);
 
     return (
         <canvas

@@ -1,49 +1,63 @@
+
+
 //make the html file to cover the whole screen
-html, body {
+html, body, #root {
   height: 100%;
+  width: 100%;
   margin: 0;
   padding: 0;
-    overflow: hidden; /* למנוע גלילה מיותרת */
+  min-height: 0;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-#root {
-  height: calc(100% - 4px); /* להוריד גובה של ה-toolbar */
-  width: calc(100% - 4px); /* להוריד רוחב של ה-toolbar */
-  margin: 2px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* למנוע גלילה מיותרת */
-}
-
-// make the app container to cover the whole screen
+/* מכולה ראשית של האפליקציה */
 .main-app-window {
   display: flex;
   flex-direction: column;
-  position: relative;
   height: 100%;
   width: 100%;
-  padding: 2px;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  min-width: 0;
   box-sizing: border-box;
-  overflow: hidden; /* למנוע גלילה מיותרת */
 }
+
+
+.lower-container {
+  display: flex;
+  flex: 1 1 auto;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* אזור הטולבר */
+.toolbar-area {
+  flex: 0 0 auto; /* רוחב קבוע לפי התוכן */
+  height: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+
+.chart-stage-area {
+  flex: 1 1 auto; /* מתפשט ומצטמצם לפי שאר החלל */
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
 
 .settings-area {
   display: flex;
   flex-direction: row;
   height: 30px;
   width: 100%;
-}
-
-.lower-container {
-  height: calc(100% - 40px);
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  overflow: hidden; /* למנוע גלילה אופקית */
-}
-.toolbar-container {
-  width: 40px; /* רוחב סרגל הכלים */
-  height: 100%;
-  flex-shrink: 0; /* למנוע כיווץ */
 }

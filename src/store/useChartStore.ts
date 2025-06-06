@@ -45,7 +45,7 @@ interface ChartState {
     stepX: number;
     stepY: number;
     strokeStyle: string;
-    padding: number;
+    margin: number;
 
     setStepX: (value: number) => void;
     setStepY: (value: number) => void;
@@ -132,7 +132,7 @@ export const useChartStore = create<ChartState>((set) => ({
     setStepX: (value) => set({stepX: value}),
     setStepY: (value) => set({stepY: value}),
     setStrokeStyle: (value) => set({strokeStyle: value}),
-    setPadding: (value) => set({padding: value}),
+    setMargin: (value) => set({margin: value}),
 
     minPrice: 0,
     maxPrice: 100,

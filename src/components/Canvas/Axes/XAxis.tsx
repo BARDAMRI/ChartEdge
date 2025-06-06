@@ -1,15 +1,16 @@
 import React, {useEffect, useRef} from 'react';
 import {useChartStore} from '../../../store/useChartStore.ts';
 import {generateTimeTicks} from '../utils/generateTimeTicks.ts';
+import {CanvasSizes} from "../ChartStage.tsx";
 
 interface XAxisProps {
+    canvasSizes: CanvasSizes;
     parentContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
-export default function XAxis({parentContainerRef = null}: XAxisProps) {
+export default function XAxis({canvasSizes, parentContainerRef = null}: XAxisProps) {
 
     const xAxisHeight = useChartStore(state => state.xAxisHeight);
-    const padding = useChartStore(state => state.padding);
     const visibleRange = useChartStore(state => state.visibleRange);
     const timeDetailLevel = useChartStore(state => state.timeDetailLevel);
     const timeFormat12h = useChartStore(state => state.timeFormat12h);
@@ -46,28 +47,28 @@ export default function XAxis({parentContainerRef = null}: XAxisProps) {
         ctx.lineTo(x_axis_canvas_width, 0);
         ctx.stroke();
 
-        // Generate and draw ticks
-        const ticks = generateTimeTicks(
-            visibleRange.start,
-            visibleRange.end,
-            x_axis_canvas_width,
-            timeDetailLevel,
-            timeFormat12h
-        );
-
-        ticks.forEach(({time, label}) => {
-            const x = padding + ((time - visibleRange.start) / (visibleRange.end - visibleRange.start)) * x_axis_canvas_width;
-
-            // Draw tick mark
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, 5);
-            ctx.stroke();
-
-            // Draw label
-            ctx.fillText(label, x, 12);
-        });
-    }, [xAxisHeight, parentContainerRef, padding, visibleRange, timeDetailLevel, timeFormat12h, dpr]);
+        // // Generate and draw ticks
+        // const ticks = generateTimeTicks(
+        //     visibleRange.start,
+        //     visibleRange.end,
+        //     x_axis_canvas_width,
+        //     timeDetailLevel,
+        //     timeFormat12h
+        // );
+        //
+        // ticks.forEach(({time, label}) => {
+        //     const x = padding + ((time - visibleRange.start) / (visibleRange.end - visibleRange.start)) * x_axis_canvas_width;
+        //
+        //     // Draw tick mark
+        //     ctx.beginPath();
+        //     ctx.moveTo(x, 0);
+        //     ctx.lineTo(x, 5);
+        //     ctx.stroke();
+        //
+        //     // Draw label
+        //     ctx.fillText(label, x, 12);
+        // });
+    }, [xAxisHeight, parentContainerRef, visibleRange, timeDetailLevel, timeFormat12h, dpr, canvasSizes]);
 
     return (
         <canvas

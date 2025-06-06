@@ -30,7 +30,7 @@ export const ChartCanvas: React.FC = ({parentContainerRef}:ChartCanvasProps) => 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const xAxisHeight = useChartStore(state => state.xAxisHeight);
 
-    const padding = useChartStore(state => state.padding);
+    const padding = useChartStore(state => state.margin);
 
     const candlesToUse = useChartStore(state => state.candlesToUse);
     const minPrice = useChartStore(state => state.minPrice);
@@ -124,6 +124,7 @@ export const ChartCanvas: React.FC = ({parentContainerRef}:ChartCanvasProps) => 
         const rect = canvasRef.current!.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
+
         setDrawings(prev => {
             const newDrawing = {
                 [Mode.drawLine]: () => ({
@@ -158,8 +159,9 @@ export const ChartCanvas: React.FC = ({parentContainerRef}:ChartCanvasProps) => 
                     };
                 }
             };
-            return newDrawing ? [...prev, newDrawing] : prev;
+            return newDrawing[mode] ? [...prev, newDrawing[mode]()] : prev;
         });
+
         setIsDrawing(false);
         setStartPoint(null);
         setCurrentPoint(null);
@@ -211,11 +213,11 @@ export const ChartCanvas: React.FC = ({parentContainerRef}:ChartCanvasProps) => 
     ]);
 
     return (
-        <div className="canvas-container relative" style={{width: '100%', height: `calc(100% - ${xAxisHeight}px)`}}>
+        <div className="inner-canvas-container relative" style={{width: '100%', height: `calc(100% - ${xAxisHeight}px)`}}>
 
             <canvas
+                className={'canvas flex relative w-full h-full p-0 m-0 bg-white border-none pointer-events-auto'}
                 ref={canvasRef}
-                style={{userSelect: 'none', display: 'block', height: '100%', width: '100%'}}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}

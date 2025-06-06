@@ -1,0 +1,51 @@
+
+.chart-stage-container {
+  display: flex;
+  flex: 1 1 auto;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* מכולה של הקנבס והצירים */
+.canvas-axis-container {
+  display: flex;
+  flex: 1 1 auto;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* מכולות ציר Y - לקצה שמאל או ימין */
+.left-y-axis-container,
+.right-y-axis-container {
+  flex: 0 0 auto;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* מכולת הציר X */
+.x-axis-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--x-axis-height, 40px); /* אפשר להגדיר ב- CSS משתנה */
+  box-sizing: border-box;
+}
+
+/* מכולת הקנבס הראשי */
+.canvas-container {
+  flex: 1 1 auto;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+}
