@@ -1,56 +1,56 @@
 import React, {useRef, useEffect} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
-import {Candle} from '../../types/Candle';
-import {drawGrid} from './utils/drawGrid';
-import {drawCandlesticks} from './utils/drawCandlesticks';
-import {drawDrawings} from './utils/drawDrawings';
-import {drawOverlay} from './utils/drawOverlay';
-import {useChartStore} from '../../store/useChartStore';
-import {TimeRange} from "../../types/Graph.ts";
+import {TimeRange} from "../../types/Graph";
+import type {Candle} from "../../types/Candle";
+
+type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
 interface ChartCanvasProps {
-    parentContainerRef?: React.RefObject<HTMLDivElement>;
+    parentContainerRef: React.RefObject<HTMLDivElement | null>;
+    isDrawing: boolean;
+    setIsDrawing: (value: boolean) => void;
+    startPoint: { x: number; y: number } | null;
+    setStartPoint: (point: { x: number; y: number } | null) => void;
+    currentPoint: { x: number; y: number } | null;
+    setCurrentPoint: (point: { x: number; y: number } | null) => void;
+    drawings: any[];
+    setDrawings: (drawings: any[] | ((prev: any[]) => any[])) => void;
+    selectedIndex: number | null;
+    setSelectedIndex: (index: number | null) => void;
+    visibleRange: TimeRange;
+    setVisibleRange: (range: TimeRange) => void;
+    setCandlesAndVisibleRange: (candles: Candle[], visibleRange: TimeRange) => void;
+    xAxisHeight: number;
+    padding: number;
+    minPrice: number;
+    maxPrice: number;
+    candlesToUse: Candle[];
 }
-export const ChartCanvas: React.FC = ({parentContainerRef}:ChartCanvasProps) => {
+
+export const ChartCanvas: React.FC<ChartCanvasProps> = ({
+                                                            parentContainerRef,
+                                                            candlesToUse,
+                                                            setCandlesAndVisibleRange,
+                                                            setVisibleRange,
+                                                            visibleRange,
+                                                            drawings,
+                                                            isDrawing,
+                                                            setIsDrawing,
+                                                            currentPoint,
+                                                            padding,
+                                                            setCurrentPoint,
+                                                            setDrawings,
+                                                            startPoint,
+                                                            setStartPoint,
+                                                            maxPrice,
+                                                            minPrice,
+                                                            selectedIndex,
+                                                            setSelectedIndex,
+                                                            xAxisHeight,
+                                                        }) => {
     const mode = useMode().mode;
-    const isDrawing = useChartStore(state => state.isDrawing);
-    const setIsDrawing = useChartStore(state => state.setIsDrawing);
-    const startPoint = useChartStore(state => state.startPoint);
-    const setStartPoint = useChartStore(state => state.setStartPoint);
-    const currentPoint = useChartStore(state => state.currentPoint);
-    const setCurrentPoint = useChartStore(state => state.setCurrentPoint);
-    const drawings = useChartStore(state => state.drawings);
-    const setDrawings = useChartStore(state => state.setDrawings);
-    const selectedIndex = useChartStore(state => state.selectedIndex);
-    const setSelectedIndex = useChartStore(state => state.setSelectedIndex);
-    const visibleRange = useChartStore(state => state.visibleRange);
-    const setVisibleRange = useChartStore(state => state.setVisibleRange);
-    const candles = useChartStore(state => state.candlesToUse);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const xAxisHeight = useChartStore(state => state.xAxisHeight);
-
-    const padding = useChartStore(state => state.margin);
-
-    const candlesToUse = useChartStore(state => state.candlesToUse);
-    const minPrice = useChartStore(state => state.minPrice);
-    const maxPrice = useChartStore(state => state.maxPrice);
-    const setCandlesAndVisibleRange = useChartStore(state => state.setCandlesAndVisibleRange);
-
-    // useEffect(() => {
-    //     if (!containerRef.current) return;
-    //     const container = containerRef.current!;
-    //     const observer = new ResizeObserver(entries => {
-    //         for (const entry of entries) {
-    //             setCanvasWidth(entry.contentRect.width);
-    //             setCanvasHeight(entry.contentRect.height);
-    //         }
-    //     });
-    //     observer.observe(container);
-    //     return () => {
-    //         observer.disconnect();
-    //     };
-    // }, []);
 
     const now = Date.now();
     const oneYearAgo = now - 365 * 24 * 60 * 60 * 1000;
@@ -59,17 +59,15 @@ export const ChartCanvas: React.FC = ({parentContainerRef}:ChartCanvasProps) => 
         end: now,
     };
 
-    // Initialize visibleRange in store if not set and initialVisibleRange is provided
     useEffect(() => {
         if (!visibleRange || visibleRange.start === 0 || visibleRange.end === 0) {
             setVisibleRange(defaultVisibleRange);
         }
-    }, [candles, visibleRange, setVisibleRange]);
+    }, [candlesToUse, visibleRange, setVisibleRange]);
 
-    // useEffect for setting candles and visible range in store
     useEffect(() => {
-        setCandlesAndVisibleRange(candles, visibleRange || {start: 0, end: Date.now()});
-    }, [candles, visibleRange, setCandlesAndVisibleRange]);
+        setCandlesAndVisibleRange(candlesToUse, visibleRange || {start: 0, end: Date.now()});
+    }, [candlesToUse, visibleRange, setCandlesAndVisibleRange]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
@@ -119,19 +117,19 @@ export const ChartCanvas: React.FC = ({parentContainerRef}:ChartCanvasProps) => 
 
     const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!isDrawing || !startPoint || mode === Mode.none) return;
-        if (!canvasRef.current) return;
+        if (!canvasRef || !canvasRef.current) return;
 
         const rect = canvasRef.current!.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
         setDrawings(prev => {
-            const newDrawing = {
+            const newDrawing: DrawingFactoryMap = {
                 [Mode.drawLine]: () => ({
                     mode: Mode.drawLine,
                     args: {
-                        startX: startPoint.x,
-                        startY: startPoint.y,
+                        startX: startPoint!.x,
+                        startY: startPoint!.y,
                         endX: x,
                         endY: y,
                     },
@@ -139,27 +137,32 @@ export const ChartCanvas: React.FC = ({parentContainerRef}:ChartCanvasProps) => 
                 [Mode.drawRectangle]: () => ({
                     mode: Mode.drawRectangle,
                     args: {
-                        x: startPoint.x,
-                        y: startPoint.y,
-                        width: x - startPoint.x,
-                        height: y - startPoint.y,
+                        x: startPoint!.x,
+                        y: startPoint!.y,
+                        width: x - startPoint!.x,
+                        height: y - startPoint!.y,
                     },
                 }),
                 [Mode.drawCircle]: () => {
-                    const dx = x - startPoint.x;
-                    const dy = y - startPoint.y;
+                    const dx = x - startPoint!.x;
+                    const dy = y - startPoint!.y;
                     const radius = Math.sqrt(dx * dx + dy * dy);
                     return {
                         mode: Mode.drawCircle,
                         args: {
-                            centerX: startPoint.x,
-                            centerY: startPoint.y,
+                            centerX: startPoint!.x,
+                            centerY: startPoint!.y,
                             radius,
                         },
                     };
                 }
             };
-            return newDrawing[mode] ? [...prev, newDrawing[mode]()] : prev;
+
+            if (mode in newDrawing) {
+                return [...prev, newDrawing[mode]!()];
+            } else {
+                return prev;
+            }
         });
 
         setIsDrawing(false);
@@ -167,56 +170,14 @@ export const ChartCanvas: React.FC = ({parentContainerRef}:ChartCanvasProps) => 
         setCurrentPoint(null);
     };
 
-    function formatUnixTime(unixTime: number): string {
-        const date = new Date(unixTime);
-        const options: Intl.DateTimeFormatOptions = {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-        };
-        return new Intl.DateTimeFormat('he-IL', options).format(date);
-    }
-
-    useEffect(() => {
-        // const canvas = canvasRef.current;
-        // if (!canvas) return;
-        // if (canvasWidth === 0 || canvasHeight === 0) return;
-        // const ctx = canvas.getContext('2d');
-        // if (!ctx) return;
-        //
-        // const dpr = window.devicePixelRatio || 1;
-        // canvas.style.width = `${canvasWidth}px`;
-        // canvas.style.height = `${canvasHeight}px`;
-        //
-        // ctx.setTransform(1, 0, 0, 1, 0, 0);
-        // ctx.scale(dpr, dpr);
-        //
-        // ctx.clearRect(0, 0, canvas.width, canvasHeight);
-
-        // drawGrid(ctx);
-        // drawCandlesticks(ctx, candlesToUse, visibleRange, padding, minPrice, maxPrice);
-        // drawDrawings(ctx, drawings, selectedIndex);
-        // drawOverlay(ctx, mode, isDrawing, startPoint, currentPoint);
-
-    }, [
-        candlesToUse,
-        visibleRange,
-        drawings,
-        selectedIndex,
-        mode,
-        isDrawing,
-        startPoint,
-        currentPoint,
-        padding,
-        minPrice,
-        maxPrice,
-    ]);
-
     return (
-        <div className="inner-canvas-container relative" style={{width: '100%', height: `calc(100% - ${xAxisHeight}px)`}}>
-
+        <div
+            className="inner-canvas-container relative"
+            style={{width: '100%', height: `calc(100% - ${xAxisHeight}px)`}}
+            ref={containerRef}
+        >
             <canvas
-                className={'canvas flex relative w-full h-full p-0 m-0 bg-white border-none pointer-events-auto'}
+                className="canvas flex relative w-full h-full p-0 m-0 bg-white border-none pointer-events-auto"
                 ref={canvasRef}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}

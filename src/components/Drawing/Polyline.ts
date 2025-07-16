@@ -1,4 +1,4 @@
-import {IDrawingShape} from "./IDrawingShape.ts";
+import {IDrawingShape} from "./IDrawingShape";
 
 interface Point {
     x: number,

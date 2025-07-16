@@ -1,4 +1,4 @@
-import {Mode} from "../../contexts/ModeContext.tsx";
+import {Mode} from "../../contexts/ModeContext";
 
 export type Drawing = {
     mode: Mode;

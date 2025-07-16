@@ -1,9 +1,12 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {ChartCanvas} from './ChartCanvas';
-import {useChartStore} from "../../store/useChartStore.ts";
-import XAxis from "./Axes/XAxis.tsx";
-import YAxis from "./Axes/YAxis.tsx";
+import XAxis from "./Axes/XAxis";
+import YAxis from "./Axes/YAxis";
 import '../../styles/Canvas/ChartStage.scss';
+import {TimeRange} from "../../types/Graph";
+import {Candle} from "../../types/Candle";
+import {TimeDetailLevel} from "../../types/chartStyleOptions";
+import {AxesPosition} from "../../types/types";
 
 export interface CanvasSizes {
     width: number;
@@ -45,20 +48,61 @@ class DebugLogger {
 
 const logger = new DebugLogger();
 
-export const ChartStage: React.FC = () => {
-    const yAxisPosition = useChartStore(state => state.yAxisPosition);
-    const margin = useChartStore(state => state.margin);
-    const xAxisHeight = useChartStore(state => state.xAxisHeight);
-    const yAxisWidth = useChartStore(state => state.yAxisWidth);
+interface ChartStageProps {
+    initialCandles: Candle[];
+    initialYAxisPosition: AxesPosition;
+    initialMargin: number;
+    initialNumberOfYTicks: number;
+    initialXAxisHeight: number;
+    initialYAxisWidth: number;
+    initialTimeDetailLevel: TimeDetailLevel;
+    initialTimeFormat12h: boolean;
+    initialVisibleRange: TimeRange;
+}
+
+export const ChartStage: React.FC<ChartStageProps> = ({
+                                                          initialCandles,
+                                                          initialYAxisPosition ,
+                                                          initialMargin,
+                                                          initialNumberOfYTicks,
+                                                          initialXAxisHeight,
+                                                          initialYAxisWidth,
+                                                          initialTimeDetailLevel,
+                                                          initialTimeFormat12h,
+                                                          initialVisibleRange,
+                                                      }) => {
     const [canvasSizes, setCanvasSizes] = useState<CanvasSizes>({width: 0, height: 0});
     const [logCount, setLogCount] = useState(0);
     const containerRef = useRef<HTMLDivElement | null>(null);
 
+    const [candles, setCandles] = useState(initialCandles);
+    const [yAxisPosition, setYAxisPosition] = useState(initialYAxisPosition);
+    const [margin, setMargin] = useState(initialMargin);
+    const [numberOfYTicks, setNumberOfYTicks] = useState(initialNumberOfYTicks);
+    const [xAxisHeight, setXAxisHeight] = useState(initialXAxisHeight);
+    const [yAxisWidth, setYAxisWidth] = useState(initialYAxisWidth);
+    const [timeDetailLevel, setTimeDetailLevel] = useState<TimeDetailLevel>(initialTimeDetailLevel);
+    const [timeFormat12h, setTimeFormat12h] = useState(initialTimeFormat12h);
+    const [visibleRange, setVisibleRange] = useState<TimeRange>(() => {
+        if (initialVisibleRange) return initialVisibleRange;
+        const now = Date.now();
+        return {start: now - 7 * 24 * 60 * 60 * 1000, end: now}; // default last 7 days
+    });
+
+    // חישוב מחירים מינימלי ומקסימלי מתוך הנרות (candles)
+    const [minPrice, maxPrice] = React.useMemo(() => {
+        if (!candles || candles.length === 0) return [0, 0];
+        const prices = candles.flatMap(c => [c.l, c.h]);
+        return [Math.min(...prices), Math.max(...prices)];
+    }, [candles]);
+
     useEffect(() => {
         if (!containerRef.current) return;
 
-        const element = containerRef.current!;
+        const element = containerRef.current;
 
+        if (!element)
+            return;
         // Initial size logging
         const initialRect = element.getBoundingClientRect();
         logger.log('🔷 Initial container size:', {
@@ -87,7 +131,7 @@ export const ChartStage: React.FC = () => {
             overflow: computedStyle.overflow
         });
 
-        // Check parent chain
+        // Check parent chain (up to 3 levels)
         let parent = element.parentElement;
         let level = 1;
         while (parent && level <= 3) {
@@ -177,95 +221,96 @@ export const ChartStage: React.FC = () => {
         containerRefCurrent: !!containerRef.current
     });
 
+    const [currentPoint, setCurrentPoint] = useState<null | {x: number; y: number}>(null);
+    const [drawings, setDrawings] = useState<any[]>([]);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
+    const [startPoint, setStartPoint] = useState<null | {x: number; y: number}>(null);
+
+    const setCandlesAndVisibleRange = (newCandles: Candle[], newVisibleRange: TimeRange) => {
+        setCandles(newCandles);
+        setVisibleRange(newVisibleRange);
+    };
+
     return (
         <div
             ref={containerRef}
             style={{margin: `${margin}px`}}
-            className="chart-stage-container flex w-full h-full">
-
-            {/*===================== Size indicator and logs downloader for debug  ===================== */}
-
-            {/*/!* Debug controls *!/*/}
-            {/*<div style={{*/}
-            {/*    position: 'fixed',*/}
-            {/*    top: '10px',*/}
-            {/*    right: '10px',*/}
-            {/*    background: 'white',*/}
-            {/*    border: '1px solid #ccc',*/}
-            {/*    padding: '10px',*/}
-            {/*    borderRadius: '5px',*/}
-            {/*    zIndex: 2000,*/}
-            {/*    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'*/}
-            {/*}}>*/}
-            {/*    <div style={{ fontSize: '12px', marginBottom: '5px' }}>*/}
-            {/*        Debug Logger ({logCount} events)*/}
-            {/*    </div>*/}
-            {/*    <button*/}
-            {/*        onClick={() => logger.downloadLogs()}*/}
-            {/*        style={{*/}
-            {/*            padding: '5px 10px',*/}
-            {/*            marginRight: '5px',*/}
-            {/*            fontSize: '12px',*/}
-            {/*            cursor: 'pointer'*/}
-            {/*        }}*/}
-            {/*    >*/}
-            {/*        💾 Download Logs*/}
-            {/*    </button>*/}
-            {/*    <button*/}
-            {/*        onClick={() => {*/}
-            {/*            logger.clear();*/}
-            {/*            setLogCount(0);*/}
-            {/*        }}*/}
-            {/*        style={{*/}
-            {/*            padding: '5px 10px',*/}
-            {/*            fontSize: '12px',*/}
-            {/*            cursor: 'pointer'*/}
-            {/*        }}*/}
-            {/*    >*/}
-            {/*        🗑️ Clear*/}
-            {/*    </button>*/}
-            {/*</div>*/}
-
-            {/*/!* Size indicator *!/*/}
-            {/*<div style={{*/}
-            {/*    position: 'absolute',*/}
-            {/*    top: 0,*/}
-            {/*    left: 0,*/}
-            {/*    background: 'rgba(255,0,0,0.1)',*/}
-            {/*    padding: '4px',*/}
-            {/*    fontSize: '12px',*/}
-            {/*    zIndex: 1000,*/}
-            {/*    pointerEvents: 'none'*/}
-            {/*}}>*/}
-            {/*    Container: {Math.round(canvasSizes.width)}×{Math.round(canvasSizes.height)}*/}
-            {/*</div>*/}
-
-
-            {/*========================================================================================= */}
-
-
+            className="chart-stage-container flex w-full h-full"
+        >
             {yAxisPosition === 'left' && (
                 <div className="right-y-axis-container relative flex h-full" style={{width: `${yAxisWidth}px`}}>
-                    <YAxis containerRef={containerRef} canvasSizes={canvasSizes}/>
+                    <YAxis
+                        parentContainerRef={containerRef}
+                        canvasSizes={canvasSizes}
+                        maxPrice={maxPrice}
+                        minPrice={minPrice}
+                        numberOfYTicks={numberOfYTicks}
+                        xAxisHeight={xAxisHeight}
+                        yAxisPosition={yAxisPosition}
+                        yAxisWidth={yAxisWidth}
+                    />
                 </div>
             )}
 
-            <div className="canvas-axis-container relative flex h-full" style={{
-                width: `${canvasSizes.width - (yAxisWidth + 40)}px`,
-                marginLeft: `${yAxisPosition === 'left' ? 0 : 40}px`,
-                marginRight: `${yAxisPosition === 'right' ? 0 : 40}px`
-            }}>
-                <div className={`canvas-container relative`}>
-                    <ChartCanvas parentContainerRef={containerRef}/>
+            <div
+                className="canvas-axis-container relative flex h-full"
+                style={{
+                    width: `${canvasSizes.width - (yAxisWidth + 40)}px`,
+                    marginLeft: `${yAxisPosition === 'left' ? 0 : 40}px`,
+                    marginRight: `${yAxisPosition === 'right' ? 0 : 40}px`,
+                }}
+            >
+                <div className="canvas-container relative">
+                    <ChartCanvas
+                        parentContainerRef={containerRef}
+                        candlesToUse={candles}
+                        currentPoint={currentPoint}
+                        drawings={drawings}
+                        isDrawing={isDrawing}
+                        maxPrice={maxPrice}
+                        minPrice={minPrice}
+                        padding={10}
+                        selectedIndex={selectedIndex}
+                        setCandlesAndVisibleRange={setCandlesAndVisibleRange}
+                        setCurrentPoint={setCurrentPoint}
+                        setDrawings={setDrawings}
+                        setIsDrawing={setIsDrawing}
+                        setSelectedIndex={setSelectedIndex}
+                        setStartPoint={setStartPoint}
+                        setVisibleRange={setVisibleRange}
+                        startPoint={startPoint}
+                        visibleRange={visibleRange}
+                        xAxisHeight={xAxisHeight}
+                    />
                 </div>
-                <div className="x-axis-container absolute bottom-0 left-0 w-full" style={{height: `${xAxisHeight}px`}}>
-                    <XAxis containerRef={containerRef} canvasSizes={canvasSizes}/>
+                <div
+                    className="x-axis-container absolute bottom-0 left-0 w-full"
+                    style={{height: `${xAxisHeight}px`}}
+                >
+                    <XAxis
+                        canvasSizes={canvasSizes}
+                        parentContainerRef={containerRef}
+                        timeDetailLevel={timeDetailLevel}
+                        timeFormat12h={timeFormat12h}
+                        visibleRange={visibleRange}
+                        xAxisHeight={xAxisHeight}
+                    />
                 </div>
             </div>
 
             {yAxisPosition === 'right' && (
                 <div className="left-y-axis-container relative flex h-full" style={{width: `${yAxisWidth}px`}}>
-                    <YAxis containerRef={containerRef} canvasSizes={canvasSizes}/>
+                    <YAxis
+                        parentContainerRef={containerRef}
+                        canvasSizes={canvasSizes}
+                        maxPrice={maxPrice}
+                        minPrice={minPrice}
+                        numberOfYTicks={numberOfYTicks}
+                        xAxisHeight={xAxisHeight}
+                        yAxisPosition={yAxisPosition}
+                        yAxisWidth={yAxisWidth}
+                    />
                 </div>
             )}
         </div>

@@ -1,21 +1,27 @@
 import React, {useEffect, useRef} from 'react';
-import {useChartStore} from '../../../store/useChartStore';
-import {generateTimeTicks} from "../utils/generateTimeTicks.ts";
-import {CanvasSizes} from "../ChartStage.tsx";
+import {CanvasSizes} from "../ChartStage";
 
 interface YAxisProps {
-    parentContainerRef?: React.RefObject<HTMLDivElement>;
+    parentContainerRef: React.RefObject<HTMLDivElement | null>;
     canvasSizes: CanvasSizes;
+    yAxisPosition: 'left' | 'right';
+    xAxisHeight: number;
+    yAxisWidth: number;
+    minPrice: number;
+    maxPrice: number;
+    numberOfYTicks: number;
 }
 
-export default function YAxis({parentContainerRef, canvasSizes}: YAxisProps) {
-    const yAxisPosition = useChartStore(state => state.yAxisPosition);
-    const xAxisHeight = useChartStore(state => state.xAxisHeight);
-    const yAxisWidth = useChartStore(state => state.yAxisWidth);
-    const minPrice = useChartStore(state => state.minPrice);
-    const maxPrice = useChartStore(state => state.maxPrice);
-    const numberOfYTicks = useChartStore(state => state.numberOfYTicks);
-
+export default function YAxis({
+                                  parentContainerRef,
+                                  canvasSizes,
+                                  yAxisWidth,
+                                  xAxisHeight,
+                                  yAxisPosition,
+                                  minPrice,
+                                  maxPrice,
+                                  numberOfYTicks
+                              }: YAxisProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const dpr = window.devicePixelRatio || 1;
 

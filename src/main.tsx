@@ -2,7 +2,7 @@ import './index.css'; //
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import {App} from './components/App';
+import {SimpleChartEdge} from './components/SimpleChartEdge';
 import {ModeProvider} from './contexts/ModeContext';
 
 const root = document.getElementById('root') as HTMLElement;
@@ -10,7 +10,7 @@ const root = document.getElementById('root') as HTMLElement;
 ReactDOM.createRoot(root).render(
     <React.StrictMode>
         <ModeProvider>
-            <App/>
+            <SimpleChartEdge/>
         </ModeProvider>
     </React.StrictMode>
 );

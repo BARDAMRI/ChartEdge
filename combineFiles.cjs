@@ -3,7 +3,7 @@ const path = require('path');
 
 const extensions = ['.ts', '.tsx', '.css', '.scss'];
 const sourceDir = './src';  // שנה בהתאם למבנה הפרויקט
-const outputFile = 'combined_code.txt';
+const outputFile = 'combined_code.js';
 
 function getFiles(dir) {
   let files = [];
@@ -17,6 +17,7 @@ function getFiles(dir) {
   }
   return files;
 }
+
 
 const files = getFiles(sourceDir);
 

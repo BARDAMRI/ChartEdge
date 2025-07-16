@@ -1,4 +1,4 @@
-import {IDrawingShape} from "./IDrawingShape.ts";
+import {IDrawingShape} from "./IDrawingShape";
 
 export interface TriangleShapeArgs {
     x1: number,

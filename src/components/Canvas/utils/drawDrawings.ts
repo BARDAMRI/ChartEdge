@@ -5,11 +5,11 @@ import { LineShape } from '../../Drawing/LineShape';
 import { RectangleShape } from '../../Drawing/RectangleShape';
 import { CircleShape } from '../../Drawing/CircleShape';
 import { TriangleShape } from '../../Drawing/TriangleShape';
-import { AngleShape } from '../../Drawing/AngleShape';
 import { Polyline } from '../../Drawing/Polyline';
 import { ArrowShape } from '../../Drawing/ArrowShape';
 import { CustomSymbolShape } from '../../Drawing/CustomSymbolShape';
 import { Mode } from '../../../contexts/ModeContext';
+import {AngleShape} from "../../Drawing/Angleshape";
 
 export function drawDrawings(
   ctx: CanvasRenderingContext2D,

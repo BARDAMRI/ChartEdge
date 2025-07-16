@@ -1,4 +1,4 @@
-import { Tick } from "../../../types/Graph.ts";
+import { Tick } from "../../../types/Graph";
 
 type TimeDetailLevel = 'auto' | 'low' | 'medium' | 'high';
 

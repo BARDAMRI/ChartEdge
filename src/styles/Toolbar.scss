@@ -18,6 +18,7 @@
   grid-template-rows: auto;
   grid-template-columns: auto;
   align-content: start;
+  justify-content: center;
 
   button {
     display: flex;
@@ -28,6 +29,8 @@
     overflow: hidden;
     text-align: center;
     font-size: 10px;
+    justify-content: center;
+    align-content: center;
 
     &.selected {
       background-color: #333;

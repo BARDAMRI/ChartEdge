@@ -1,15 +1,28 @@
 import React from 'react';
 import '../../styles/SettingsToolbar.scss';
+
 export const SettingsToolbar: React.FC = () => {
     const handleDownload = () => {
-        const canvas = document.querySelector('Canvas');
-        if (!canvas) return;
+        const canvas = document.querySelector('canvas'); // Ensure the tag name is lowercase
+        if (!(canvas instanceof HTMLCanvasElement)) {
+            console.error('Canvas element not found or invalid.');
+            return;
+        }
         const link = document.createElement('a');
         link.download = 'chart-snapshot.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
     };
 
+    const openSettingsMenu = () => {
+        // This function should open the settings menu.
+        // You can implement this based on your application's requirements.
+        console.log('Opening settings menu...');
+    }
+
+    // add the styles using daisy-ui to all elements.
+    //style all options in the select elements and all buttons with daisy ui styles.
+    // I want this to look like a modern trading platform toolbar with a light theme.
     return (
         <div className={'settings-toolbar'}>
             <input type="text" placeholder="Symbol"/>

@@ -1,7 +1,7 @@
 // chartStyleOptions.ts
 
 // Candles style
-import {AxesPosition} from "./types.ts";
+import {AxesPosition} from "./types";
 
 export interface CandleStyleOptions {
     upColor?: string;
@@ -31,17 +31,27 @@ export interface AxesStyleOptions {
     dateLocale?: string;
     numberFractionDigits?: number; // Number of decimal places to format axis values
 }
-export interface LineOverlayOptions{
+
+export interface LineOverlayOptions {
     color?: string;
     lineWidth?: number;
     dashed?: boolean;
 }
+
 // Main Chart style options
 export interface ChartStyleOptions {
     candles?: CandleStyleOptions;
     grid?: GridStyleOptions;
     axes?: AxesStyleOptions;
-    lineOverlay?:LineOverlayOptions;
-    backgroundColor?:string;
+    lineOverlay?: LineOverlayOptions;
+    backgroundColor?: string;
     // אפשר להוסיף פה עוד (למשל lineOverlay וכו')
+}
+
+
+export enum TimeDetailLevel {
+    Auto = 'auto',
+    Low = 'low',
+    Medium = 'medium',
+    High = 'high',
 }
