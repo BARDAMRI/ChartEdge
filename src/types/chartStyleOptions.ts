@@ -45,7 +45,6 @@ export interface ChartStyleOptions {
     axes?: AxesStyleOptions;
     lineOverlay?: LineOverlayOptions;
     backgroundColor?: string;
-    // אפשר להוסיף פה עוד (למשל lineOverlay וכו')
 }
 
 

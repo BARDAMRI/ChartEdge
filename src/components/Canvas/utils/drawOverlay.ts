@@ -13,7 +13,7 @@ export function drawOverlay(
 
   ctx.strokeStyle = 'blue';
   ctx.lineWidth = 2;
-  ctx.setLineDash([5, 5]); // קו מנוקד
+  ctx.setLineDash([5, 5]);
 
   ctx.beginPath();
   switch (mode) {

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const extensions = ['.ts', '.tsx', '.css', '.scss'];
-const sourceDir = './src';  // שנה בהתאם למבנה הפרויקט
+const sourceDir = './src';
 const outputFile = 'combined_code.js';
 
 function getFiles(dir) {

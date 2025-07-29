@@ -3,19 +3,24 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-    plugins: [react()],
+    plugins: [
+        react(),
+    ],
     resolve: {
         extensions: ['.tsx', '.ts', '.js'],
     },
+
     build: {
+        sourcemap: true,
+        cssCodeSplit: true,
         lib: {
-            entry: path.resolve(__dirname, 'src/index.ts'), // entry point for the library
+            entry: path.resolve(__dirname, 'src/index.ts'),
             name: 'ChartEdge',
             fileName: (format) => `index.${format}.js`,
-            formats: ['es', 'cjs'], // output formats
+            formats: ['es', 'cjs'],
         },
         rollupOptions: {
-            external: ['react', 'react-dom'], // files to exclude from the bundle
+            external: ['react', 'react-dom'],
             output: {
                 globals: {
                     react: 'React',

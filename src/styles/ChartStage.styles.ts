@@ -1,5 +1,6 @@
+import styled from 'styled-components';
 
-.chart-stage-container {
+export const ChartStageContainer = styled.div`
   display: flex;
   flex: 1 1 auto;
   height: 100%;
@@ -8,10 +9,9 @@
   min-height: 0;
   overflow: hidden;
   box-sizing: border-box;
-}
+`;
 
-/* מכולה של הקנבס והצירים */
-.canvas-axis-container {
+export const CanvasAxisContainer = styled.div`
   display: flex;
   flex: 1 1 auto;
   height: 100%;
@@ -19,33 +19,37 @@
   min-height: 0;
   position: relative;
   box-sizing: border-box;
-}
+`;
 
-/* מכולות ציר Y - לקצה שמאל או ימין */
-.left-y-axis-container,
-.right-y-axis-container {
+export const LeftYAxisContainer = styled.div`
   flex: 0 0 auto;
   height: 100%;
   min-width: 0;
   min-height: 0;
   box-sizing: border-box;
-}
+`;
 
-/* מכולת הציר X */
-.x-axis-container {
+export const RightYAxisContainer = styled.div`
+  flex: 0 0 auto;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+`;
+
+export const XAxisContainer = styled.div`
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--x-axis-height, 40px); /* אפשר להגדיר ב- CSS משתנה */
+  height: 40px;
   box-sizing: border-box;
-}
+`;
 
-/* מכולת הקנבס הראשי */
-.canvas-container {
+export const CanvasContainer = styled.div`
   flex: 1 1 auto;
   height: 100%;
   min-width: 0;
   min-height: 0;
   box-sizing: border-box;
-}
+`;

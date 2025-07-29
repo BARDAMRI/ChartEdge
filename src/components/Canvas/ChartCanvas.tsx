@@ -2,6 +2,7 @@ import React, {useRef, useEffect} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {TimeRange} from "../../types/Graph";
 import type {Candle} from "../../types/Candle";
+import {StyledCanvas} from '../../styles/ ChartCanvas.styles';
 
 type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
@@ -176,7 +177,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             style={{width: '100%', height: `calc(100% - ${xAxisHeight}px)`}}
             ref={containerRef}
         >
-            <canvas
+            <StyledCanvas
                 className="canvas flex relative w-full h-full p-0 m-0 bg-white border-none pointer-events-auto"
                 ref={canvasRef}
                 onMouseDown={handleMouseDown}

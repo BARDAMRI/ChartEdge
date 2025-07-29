@@ -2,7 +2,15 @@ import React, {useEffect, useRef, useState} from 'react';
 import {ChartCanvas} from './ChartCanvas';
 import XAxis from "./Axes/XAxis";
 import YAxis from "./Axes/YAxis";
-import '../../styles/Canvas/ChartStage.scss';
+import {
+    ChartStageContainer,
+    CanvasAxisContainer,
+    CanvasContainer,
+    LeftYAxisContainer,
+    RightYAxisContainer,
+    XAxisContainer
+} from '../../styles/ChartStage.styles';
+
 import {TimeRange} from "../../types/Graph";
 import {Candle} from "../../types/Candle";
 import {TimeDetailLevel} from "../../types/chartStyleOptions";
@@ -62,7 +70,7 @@ interface ChartStageProps {
 
 export const ChartStage: React.FC<ChartStageProps> = ({
                                                           initialCandles,
-                                                          initialYAxisPosition ,
+                                                          initialYAxisPosition,
                                                           initialMargin,
                                                           initialNumberOfYTicks,
                                                           initialXAxisHeight,
@@ -89,7 +97,6 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         return {start: now - 7 * 24 * 60 * 60 * 1000, end: now}; // default last 7 days
     });
 
-    // חישוב מחירים מינימלי ומקסימלי מתוך הנרות (candles)
     const [minPrice, maxPrice] = React.useMemo(() => {
         if (!candles || candles.length === 0) return [0, 0];
         const prices = candles.flatMap(c => [c.l, c.h]);
@@ -221,11 +228,11 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         containerRefCurrent: !!containerRef.current
     });
 
-    const [currentPoint, setCurrentPoint] = useState<null | {x: number; y: number}>(null);
+    const [currentPoint, setCurrentPoint] = useState<null | { x: number; y: number }>(null);
     const [drawings, setDrawings] = useState<any[]>([]);
     const [isDrawing, setIsDrawing] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
-    const [startPoint, setStartPoint] = useState<null | {x: number; y: number}>(null);
+    const [startPoint, setStartPoint] = useState<null | { x: number; y: number }>(null);
 
     const setCandlesAndVisibleRange = (newCandles: Candle[], newVisibleRange: TimeRange) => {
         setCandles(newCandles);
@@ -233,13 +240,9 @@ export const ChartStage: React.FC<ChartStageProps> = ({
     };
 
     return (
-        <div
-            ref={containerRef}
-            style={{margin: `${margin}px`}}
-            className="chart-stage-container flex w-full h-full"
-        >
+        <ChartStageContainer className={'chart-stage-container'} ref={containerRef} style={{margin: `${margin}px`}}>
             {yAxisPosition === 'left' && (
-                <div className="right-y-axis-container relative flex h-full" style={{width: `${yAxisWidth}px`}}>
+                <RightYAxisContainer className={'right-axis-container'} style={{width: `${yAxisWidth}px`}}>
                     <YAxis
                         parentContainerRef={containerRef}
                         canvasSizes={canvasSizes}
@@ -250,18 +253,17 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         yAxisPosition={yAxisPosition}
                         yAxisWidth={yAxisWidth}
                     />
-                </div>
+                </RightYAxisContainer>
             )}
 
-            <div
-                className="canvas-axis-container relative flex h-full"
+            <CanvasAxisContainer className={'canvas-axis-container'}
                 style={{
                     width: `${canvasSizes.width - (yAxisWidth + 40)}px`,
                     marginLeft: `${yAxisPosition === 'left' ? 0 : 40}px`,
                     marginRight: `${yAxisPosition === 'right' ? 0 : 40}px`,
                 }}
             >
-                <div className="canvas-container relative">
+                <CanvasContainer className={'canvas-container'}>
                     <ChartCanvas
                         parentContainerRef={containerRef}
                         candlesToUse={candles}
@@ -283,11 +285,9 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         visibleRange={visibleRange}
                         xAxisHeight={xAxisHeight}
                     />
-                </div>
-                <div
-                    className="x-axis-container absolute bottom-0 left-0 w-full"
-                    style={{height: `${xAxisHeight}px`}}
-                >
+                </CanvasContainer>
+
+                <XAxisContainer className={'x-axis-container'} style={{height: `${xAxisHeight}px`}}>
                     <XAxis
                         canvasSizes={canvasSizes}
                         parentContainerRef={containerRef}
@@ -296,11 +296,11 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         visibleRange={visibleRange}
                         xAxisHeight={xAxisHeight}
                     />
-                </div>
-            </div>
+                </XAxisContainer>
+            </CanvasAxisContainer>
 
             {yAxisPosition === 'right' && (
-                <div className="left-y-axis-container relative flex h-full" style={{width: `${yAxisWidth}px`}}>
+                <LeftYAxisContainer className={'left-axis-container'} style={{width: `${yAxisWidth}px`}}>
                     <YAxis
                         parentContainerRef={containerRef}
                         canvasSizes={canvasSizes}
@@ -311,8 +311,8 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         yAxisPosition={yAxisPosition}
                         yAxisWidth={yAxisWidth}
                     />
-                </div>
+                </LeftYAxisContainer>
             )}
-        </div>
+        </ChartStageContainer>
     );
 };

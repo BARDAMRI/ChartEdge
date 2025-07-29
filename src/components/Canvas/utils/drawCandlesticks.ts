@@ -21,7 +21,6 @@ export function drawCandlesticks(
 
   const priceRange = maxPrice - minPrice;
 
-  // פונקציה להמרת מחיר למיקום Y בקנבס
   const priceToY = (price: number) => {
     return padding + drawableHeight * (1 - (price - minPrice) / priceRange);
   };
@@ -41,15 +40,13 @@ export function drawCandlesticks(
     ctx.fillStyle = isUp ? 'green' : 'red';
     ctx.lineWidth = 1;
 
-    // ציור ה-wick (הקו העליון והתחתון)
     ctx.beginPath();
     ctx.moveTo(x + candleWidth / 2, highY);
     ctx.lineTo(x + candleWidth / 2, lowY);
     ctx.stroke();
 
-    // ציור גוף הנר
     const bodyY = Math.min(openY, closeY);
-    const bodyHeight = Math.max(1, Math.abs(openY - closeY)); // לפחות 1 פיקסל גובה
+    const bodyHeight = Math.max(1, Math.abs(openY - closeY));
     ctx.fillRect(x, bodyY, candleWidth, bodyHeight);
   });
 }

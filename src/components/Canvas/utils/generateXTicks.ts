@@ -36,7 +36,6 @@ interface DrawTicksOptions {
 export function generateAndDrawTimeTicks(
   canvas: HTMLCanvasElement,
   timeRange: TimeRange,
-  // פרמטרים שהוספתי מהסטור:
   numberOfXTicks: number,           // number of max ticks on the X axis
   timeFormat: string,              // the format of the time labels, e.g. 'DD/MM/YYYY HH:mm'
   timeFormat12h: boolean,          // the time format is 12h or 24h
@@ -54,21 +53,20 @@ export function generateAndDrawTimeTicks(
 
   const {
     tickHeight = 10,
-    tickColor = strokeStyle,        // משתמש בצבע הקווים מהסטור
-    labelColor = strokeStyle,       // משתמש בצבע הקווים מהסטור
+    tickColor = strokeStyle,
+    labelColor = strokeStyle,
     labelFont = '12px Arial',
     labelOffset = 15,
-    axisY = canvas.height - xAxisHeight  // מיקום הציר לפי גובה ציר X מהסטור
+    axisY = canvas.height - xAxisHeight
   } = options;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    throw new Error('לא ניתן לקבל context של הקנבס');
+    throw new Error('cannot receive canvas context');
   }
 
   const durationMs = end - start;
 
-  // המרת timestamps ל-Date objects
   const startDate = new Date(start);
   const endDate = new Date(end);
 
@@ -181,7 +179,6 @@ function drawTicks(
 
   // drawing each tick and its label
   ticks.forEach(tick => {
-    // ציור קו הטיק
     ctx.strokeStyle = tickColor;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -189,7 +186,6 @@ function drawTicks(
     ctx.lineTo(tick.position, axisY + tickHeight);
     ctx.stroke();
 
-    // ציור התווית
     ctx.fillStyle = labelColor;
     ctx.font = labelFont;
     ctx.textAlign = 'center';

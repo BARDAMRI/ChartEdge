@@ -9,7 +9,7 @@ export default defineConfig({
     },
     build: {
         rollupOptions: {
-            input: path.resolve(__dirname, 'src/main.tsx'),  // נקודת כניסה לאפליקציה
+            input: path.resolve(__dirname, 'src/main.tsx'),
         },
     },
 });

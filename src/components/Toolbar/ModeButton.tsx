@@ -1,7 +1,6 @@
-
-
 import React from 'react';
 import { Mode } from '../../contexts/ModeContext';
+import { ToolbarButton } from '../../styles/Toolbar.styles';
 
 interface ModeButtonProps {
   mode: Mode;
@@ -12,13 +11,11 @@ interface ModeButtonProps {
 
 const ModeButton: React.FC<ModeButtonProps> = ({ mode, currentMode, onClick, label }) => {
   const selected = mode === currentMode;
+
   return (
-    <button
-      className={selected ? 'selected' : ''}
-      onClick={() => onClick(mode)}
-    >
+    <ToolbarButton $selected={selected} onClick={() => onClick(mode)}>
       {label}
-    </button>
+    </ToolbarButton>
   );
 };
 

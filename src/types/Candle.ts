@@ -1,4 +1,3 @@
-// טיפוס Candle עם שדות t, o, c, l, h
 export interface Candle {
     t: number; // timestamp
     o: number; // open
