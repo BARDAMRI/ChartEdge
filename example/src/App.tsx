@@ -17,7 +17,7 @@ export default function App() {
     return (
         <div style={{height: '100vh', width: '100vw'}}>
             <SimpleChartEdge
-                initialCandles={exampleCandles}
+                // initialCandles={exampleCandles}
                 initialYAxisPosition={AxesPosition.left}
                 initialMargin={20}
                 initialNumberOfYTicks={5}
@@ -25,7 +25,7 @@ export default function App() {
                 initialYAxisWidth={50}
                 initialTimeDetailLevel={TimeDetailLevel.Auto}
                 initialTimeFormat12h={false}
-                initialVisibleRange={exampleVisibleRange}
+                // initialVisibleRange={exampleVisibleRange}
             />
         </div>
     );

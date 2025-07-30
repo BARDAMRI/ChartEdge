@@ -92,9 +92,14 @@ export const ChartStage: React.FC<ChartStageProps> = ({
     const [timeDetailLevel, setTimeDetailLevel] = useState<TimeDetailLevel>(initialTimeDetailLevel);
     const [timeFormat12h, setTimeFormat12h] = useState(initialTimeFormat12h);
     const [visibleRange, setVisibleRange] = useState<TimeRange>(() => {
-        if (initialVisibleRange) return initialVisibleRange;
-        const now = Date.now();
-        return {start: now - 7 * 24 * 60 * 60 * 1000, end: now}; // default last 7 days
+        if (initialCandles.length > 0) {
+            const times = initialCandles.map(c => c.t);
+            return {start: Math.min(...times), end: Math.max(...times)};
+        }
+        return initialVisibleRange ?? {
+            start: Date.now() - 7 * 24 * 60 * 60 * 1000,
+            end: Date.now()
+        };
     });
 
     const [minPrice, maxPrice] = React.useMemo(() => {
@@ -257,11 +262,11 @@ export const ChartStage: React.FC<ChartStageProps> = ({
             )}
 
             <CanvasAxisContainer className={'canvas-axis-container'}
-                style={{
-                    width: `${canvasSizes.width - (yAxisWidth + 40)}px`,
-                    marginLeft: `${yAxisPosition === 'left' ? 0 : 40}px`,
-                    marginRight: `${yAxisPosition === 'right' ? 0 : 40}px`,
-                }}
+                                 style={{
+                                     width: `${canvasSizes.width - (yAxisWidth + 40)}px`,
+                                     marginLeft: `${yAxisPosition === 'left' ? 0 : 40}px`,
+                                     marginRight: `${yAxisPosition === 'right' ? 0 : 40}px`,
+                                 }}
             >
                 <CanvasContainer className={'canvas-container'}>
                     <ChartCanvas

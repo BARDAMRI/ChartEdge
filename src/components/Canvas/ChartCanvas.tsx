@@ -2,7 +2,7 @@ import React, {useRef, useEffect} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {TimeRange} from "../../types/Graph";
 import type {Candle} from "../../types/Candle";
-import {StyledCanvas} from '../../styles/ ChartCanvas.styles';
+import {StyledCanvas} from '../../styles/ChartCanvas.styles';
 
 type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
