@@ -8,6 +8,9 @@ const exampleCandles: Candle[] = [
     {t: 1688007200000, o: 110, h: 120, l: 105, c: 115},
 ];
 
+const minPrice = Math.min(...exampleCandles.map(candle => [candle.l,candle.h, candle.c, candle.o]).flat());
+const maxPrice = Math.max(...exampleCandles.map(candle => [candle.l,candle.h, candle.c, candle.o]).flat());
+
 const exampleVisibleRange = {
     start: exampleCandles[0].t,
     end: exampleCandles[exampleCandles.length - 1].t,
@@ -25,7 +28,8 @@ export default function App() {
                 initialYAxisWidth={50}
                 initialTimeDetailLevel={TimeDetailLevel.Auto}
                 initialTimeFormat12h={false}
-                // initialVisibleRange={exampleVisibleRange}
+                // initialVisibleTimeRange={exampleVisibleRange}
+                // initialVisiblePriceRange={{min:minPrice, max: maxPrice}}
             />
         </div>
     );

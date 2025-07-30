@@ -4,6 +4,10 @@ export interface TimeRange {
     end: number;
 }
 
+export interface PriceRange {
+    min: number;
+    max: number;
+}
 
 export interface Tick {
     position: number; // x axis position in pixels

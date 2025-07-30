@@ -1,4 +1,4 @@
-import {generateXTicks, LABEL_TYPE} from '../src/components/Canvas/utils/generateXTicks'
+import {generateXTicks, LABEL_TYPE} from '../src/components/Canvas/utils/generateTicks'
 
 describe('generateXTicks', () => {
     const baseCandles = Array.from({length: 100}, (_, i) => ({

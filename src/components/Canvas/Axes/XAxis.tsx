@@ -3,7 +3,7 @@ import { CanvasSizes } from "../ChartStage";
 import {DrawTicksOptions, TimeRange} from "../../../types/Graph";
 import { TimeDetailLevel } from "../../../types/chartStyleOptions";
 import { StyledXAxisCanvas } from "../../../styles/XAxis.styles";
-import { generateAndDrawTimeTicks } from '../utils/generateXTicks';
+import { generateAndDrawTimeTicks } from '../utils/generateTicks';
 
 interface XAxisProps {
   canvasSizes: CanvasSizes;

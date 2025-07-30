@@ -1074,7 +1074,7 @@ export function generateTimeTicks(
 }
 
 
-// File: src/components/Canvas/utils/generateXTicks.ts
+// File: src/components/Canvas/utils/generateTicks.ts
 import {
   startOfHour,
   startOfDay,
@@ -1822,7 +1822,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                     initialYAxisWidth = 50,
                                                                     initialTimeDetailLevel = TimeDetailLevel.Auto,
                                                                     initialTimeFormat12h = false,
-                                                                    initialVisibleRange = {
+                                                                    initialVisibleTimeRange = {
                                                                         start: Date.now() - 7 * 24 * 60 * 60 * 1000,
                                                                         end: Date.now()
                                                                     },

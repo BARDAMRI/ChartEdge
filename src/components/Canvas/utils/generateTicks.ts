@@ -14,7 +14,7 @@ import {
     differenceInYears,
 } from 'date-fns';
 import {DrawTicksOptions, Tick, TimeRange} from "../../../types/Graph";
-import { TimeDetailLevel } from "../../../types/chartStyleOptions";
+import {TimeDetailLevel} from "../../../types/chartStyleOptions";
 
 
 export function generateAndDrawTimeTicks(
@@ -146,12 +146,53 @@ export function generateAndDrawTimeTicks(
     }
 
     // drawing the ticks on the canvas
-    drawTicks(ctx, ticks, tickHeight, tickColor, labelColor, labelFont, labelOffset, axisY);
+    drawXTicks(ctx, ticks, tickHeight, tickColor, labelColor, labelFont, labelOffset, axisY);
 
     return ticks;
 }
 
-function drawTicks(
+// Generate and draw Y-axis ticks
+export function generateAndDrawYTicks(
+    canvas: HTMLCanvasElement,
+    minValue: number,
+    maxValue: number,
+    numberOfYTicks: number,
+    xAxisHeight: number,
+    yAxisPosition: 'left' | 'right',
+    tickColor: string = 'black',
+    labelColor: string = 'black',
+    labelFont: string = '12px Arial',
+    tickLength: number = 5,
+    labelOffset: number = 5
+): void {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        throw new Error('Cannot get canvas context');
+    }
+
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const paddingTop = 10;
+    const paddingBottom = 10;
+    const effectiveHeight = height - xAxisHeight - paddingTop - paddingBottom;
+    const range = maxValue - minValue;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const ticks = Array.from({length: numberOfYTicks}, (_, i) => {
+        const ratio = i / (numberOfYTicks - 1);
+        const y = paddingTop + ratio * effectiveHeight;
+        const value = maxValue - ratio * range;
+        return {
+            y,
+            label: value.toFixed(2)
+        };
+    });
+
+    drawYTicks(ctx, ticks, width, xAxisHeight, yAxisPosition, tickColor, labelColor, labelFont, tickLength, labelOffset);
+}
+
+function drawXTicks(
     ctx: CanvasRenderingContext2D,
     ticks: Tick[],
     tickHeight: number,
@@ -184,4 +225,44 @@ function drawTicks(
         ctx.textBaseline = 'top';
         ctx.fillText(tick.label, tick.position, axisY + labelOffset + 5);
     });
+}
+
+// Draw Y-axis ticks helper
+function drawYTicks(
+    ctx: CanvasRenderingContext2D,
+    ticks: { y: number; label: string }[],
+    width: number,
+    xAxisHeight: number,
+    yAxisPosition: 'left' | 'right',
+    tickColor: string,
+    labelColor: string,
+    labelFont: string,
+    tickLength: number,
+    labelOffset: number
+): void {
+    ctx.strokeStyle = tickColor;
+    ctx.fillStyle = labelColor;
+    ctx.font = labelFont;
+    ctx.textAlign = yAxisPosition === 'left' ? 'right' : 'left';
+    ctx.textBaseline = 'middle';
+
+    // draw Y-axis line
+    const axisX = yAxisPosition === 'left' ? width : 0;
+    ctx.beginPath();
+    ctx.moveTo(axisX, 0);
+    ctx.lineTo(axisX, ctx.canvas.clientHeight - xAxisHeight);
+    ctx.stroke();
+
+    for (const tick of ticks) {
+        const x = yAxisPosition === 'left' ? width : 0;
+        const tickEndX = yAxisPosition === 'left' ? width - tickLength : tickLength;
+        const labelX = yAxisPosition === 'left' ? tickEndX - labelOffset : tickEndX + labelOffset;
+
+        ctx.beginPath();
+        ctx.moveTo(x, tick.y);
+        ctx.lineTo(tickEndX, tick.y);
+        ctx.stroke();
+
+        ctx.fillText(tick.label, labelX, tick.y);
+    }
 }

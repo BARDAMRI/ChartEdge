@@ -25,21 +25,26 @@ export type SimpleChartEdgeProps = {
     initialYAxisWidth?: number;
     initialTimeDetailLevel?: TimeDetailLevel;
     initialTimeFormat12h?: boolean;
-    initialVisibleRange?: TimeRange;
+    initialVisibleTimeRange?: TimeRange;
+    initialVisiblePriceRange?: { min: number; max: number };
 };
 
 export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                     initialCandles = [],
-                                                                    initialYAxisPosition = AxesPosition.left,
+                                                                    initialYAxisPosition = AxesPosition.left!,
                                                                     initialMargin = 20,
                                                                     initialNumberOfYTicks = 5,
                                                                     initialXAxisHeight = 40,
                                                                     initialYAxisWidth = 50,
                                                                     initialTimeDetailLevel = TimeDetailLevel.Auto,
                                                                     initialTimeFormat12h = false,
-                                                                    initialVisibleRange = {
+                                                                    initialVisibleTimeRange = {
                                                                         start: Date.now() - 7 * 24 * 60 * 60 * 1000,
                                                                         end: Date.now()
+                                                                    },
+                                                                    initialVisiblePriceRange = {
+                                                                        min: 0,
+                                                                        max: 100
                                                                     }
                                                                 }) => {
     return (
@@ -50,22 +55,23 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                     <SettingsToolbar/>
                 </SettingsArea>
                 <LowerContainer className={"lower-container"}>
-                        <ToolbarArea className={"toolbar-area"}>
-                            <Toolbar/>
-                        </ToolbarArea>
-                        <ChartStageArea className={"chart-stage-area"}>
-                            <ChartStage
-                                initialCandles={initialCandles}
-                                initialYAxisPosition={initialYAxisPosition}
-                                initialMargin={initialMargin}
-                                initialNumberOfYTicks={initialNumberOfYTicks}
-                                initialXAxisHeight={initialXAxisHeight}
-                                initialYAxisWidth={initialYAxisWidth}
-                                initialTimeDetailLevel={initialTimeDetailLevel}
-                                initialTimeFormat12h={initialTimeFormat12h}
-                                initialVisibleRange={initialVisibleRange}
-                            />
-                        </ChartStageArea>
+                    <ToolbarArea className={"toolbar-area"}>
+                        <Toolbar/>
+                    </ToolbarArea>
+                    <ChartStageArea className={"chart-stage-area"}>
+                        <ChartStage
+                            initialCandles={initialCandles}
+                            initialYAxisPosition={initialYAxisPosition}
+                            initialMargin={initialMargin}
+                            initialNumberOfYTicks={initialNumberOfYTicks}
+                            initialXAxisHeight={initialXAxisHeight}
+                            initialYAxisWidth={initialYAxisWidth}
+                            initialTimeDetailLevel={initialTimeDetailLevel}
+                            initialTimeFormat12h={initialTimeFormat12h}
+                            initialVisibleRange={initialVisibleTimeRange}
+                            initialVisiblePriceRange={initialVisiblePriceRange}
+                        />
+                    </ChartStageArea>
                 </LowerContainer>
             </MainAppWindow>
         </ModeProvider>

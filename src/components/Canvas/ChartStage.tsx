@@ -11,7 +11,7 @@ import {
     XAxisContainer
 } from '../../styles/ChartStage.styles';
 
-import {TimeRange} from "../../types/Graph";
+import {PriceRange, TimeRange} from "../../types/Graph";
 import {Candle} from "../../types/Candle";
 import {TimeDetailLevel} from "../../types/chartStyleOptions";
 import {AxesPosition} from "../../types/types";
@@ -66,6 +66,7 @@ interface ChartStageProps {
     initialTimeDetailLevel: TimeDetailLevel;
     initialTimeFormat12h: boolean;
     initialVisibleRange: TimeRange;
+    initialVisiblePriceRange: PriceRange;
 }
 
 export const ChartStage: React.FC<ChartStageProps> = ({
@@ -78,6 +79,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           initialTimeDetailLevel,
                                                           initialTimeFormat12h,
                                                           initialVisibleRange,
+                                                          initialVisiblePriceRange,
                                                       }) => {
     const [canvasSizes, setCanvasSizes] = useState<CanvasSizes>({width: 0, height: 0});
     const [logCount, setLogCount] = useState(0);
@@ -103,10 +105,14 @@ export const ChartStage: React.FC<ChartStageProps> = ({
     });
 
     const [minPrice, maxPrice] = React.useMemo(() => {
+        if (initialVisiblePriceRange) {
+            return [initialVisiblePriceRange.min, initialVisiblePriceRange.max];
+        }
+
         if (!candles || candles.length === 0) return [0, 0];
         const prices = candles.flatMap(c => [c.l, c.h]);
         return [Math.min(...prices), Math.max(...prices)];
-    }, [candles]);
+    }, [candles, initialVisiblePriceRange]);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -257,6 +263,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         xAxisHeight={xAxisHeight}
                         yAxisPosition={yAxisPosition}
                         yAxisWidth={yAxisWidth}
+                        initialVisiblePriceRange={initialVisiblePriceRange}
                     />
                 </RightYAxisContainer>
             )}
@@ -315,6 +322,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         xAxisHeight={xAxisHeight}
                         yAxisPosition={yAxisPosition}
                         yAxisWidth={yAxisWidth}
+                        initialVisiblePriceRange={initialVisiblePriceRange}
                     />
                 </LeftYAxisContainer>
             )}
