@@ -54,3 +54,11 @@ export enum TimeDetailLevel {
     Medium = 'medium',
     High = 'high',
 }
+
+export enum ChartType {
+    Candlestick = 'candlestick',
+    Line = 'line',
+    Area = 'area',
+    Bar = 'bar',
+    Histogram = 'histogram',
+}

@@ -1,8 +1,58 @@
+function drawCandlestickChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
+  if (candles.length === 0) return;
+
+  const padding = 10;
+  const maxPrice = Math.max(...candles.map(c => c.h));
+  const minPrice = Math.min(...candles.map(c => c.l));
+  const priceRange = maxPrice - minPrice;
+
+  const candleWidth = width / candles.length;
+
+  candles.forEach((candle, index) => {
+    const x = index * candleWidth;
+    const openY = height - ((candle.o - minPrice) / priceRange) * (height - padding * 2) - padding;
+    const closeY = height - ((candle.c - minPrice) / priceRange) * (height - padding * 2) - padding;
+    const highY = height - ((candle.h - minPrice) / priceRange) * (height - padding * 2) - padding;
+    const lowY = height - ((candle.l - minPrice) / priceRange) * (height - padding * 2) - padding;
+
+    const isBullish = candle.c > candle.o;
+    ctx.strokeStyle = isBullish ? 'green' : 'red';
+    ctx.fillStyle = isBullish ? 'green' : 'red';
+
+    // draw wick
+    ctx.beginPath();
+    ctx.moveTo(x + candleWidth / 2, highY);
+    ctx.lineTo(x + candleWidth / 2, lowY);
+    ctx.stroke();
+
+    // draw body
+    const bodyTop = Math.min(openY, closeY);
+    const bodyHeight = Math.abs(openY - closeY);
+    ctx.fillRect(x + 1, bodyTop, candleWidth - 2, bodyHeight || 1);
+  });
+}
+
+function drawLineChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
+  ctx.fillText('📈 Line chart rendering here', 10, 20);
+}
+
+function drawAreaChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
+  ctx.fillText('📉 Area chart rendering here', 10, 40);
+}
+
+function drawBarChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
+  ctx.fillText('📊 Bar chart rendering here', 10, 60);
+}
+
+function drawHistogramChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
+  ctx.fillText('📊 Histogram chart rendering here', 10, 80);
+}
 import React, {useRef, useEffect} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {TimeRange} from "../../types/Graph";
 import type {Candle} from "../../types/Candle";
 import {StyledCanvas} from '../../styles/ChartCanvas.styles';
+import { ChartType } from '../../types/chartStyleOptions';
 
 type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
@@ -25,12 +75,13 @@ interface ChartCanvasProps {
     padding: number;
     minPrice: number;
     maxPrice: number;
-    candlesToUse: Candle[];
+    intervalsArray: Candle[];
+    chartType: ChartType;
 }
 
 export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             parentContainerRef,
-                                                            candlesToUse,
+                                                            intervalsArray,
                                                             setCandlesAndVisibleRange,
                                                             setVisibleRange,
                                                             visibleRange,
@@ -48,6 +99,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             selectedIndex,
                                                             setSelectedIndex,
                                                             xAxisHeight,
+                                                            chartType,
                                                         }) => {
     const mode = useMode().mode;
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -64,11 +116,50 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         if (!visibleRange || visibleRange.start === 0 || visibleRange.end === 0) {
             setVisibleRange(defaultVisibleRange);
         }
-    }, [candlesToUse, visibleRange, setVisibleRange]);
+    }, [intervalsArray, visibleRange, setVisibleRange]);
 
     useEffect(() => {
-        setCandlesAndVisibleRange(candlesToUse, visibleRange || {start: 0, end: Date.now()});
-    }, [candlesToUse, visibleRange, setCandlesAndVisibleRange]);
+        setCandlesAndVisibleRange(intervalsArray, visibleRange || {start: 0, end: Date.now()});
+    }, [intervalsArray, visibleRange, setCandlesAndVisibleRange]);
+
+    useEffect(() => {
+      const canvas = canvasRef.current;
+      if (!canvas || intervalsArray.length === 0) return;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // HiDPI canvas resolution handling
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvas.clientWidth * dpr;
+      canvas.height = canvas.clientHeight * dpr;
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      ctx.fillStyle = 'black';
+
+      const visibleCandles = intervalsArray;
+
+      switch (chartType) {
+        case ChartType.Candlestick:
+          drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+          break;
+        case ChartType.Line:
+          drawLineChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+          break;
+        case ChartType.Area:
+          drawAreaChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+          break;
+        case ChartType.Bar:
+          drawBarChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+          break;
+        case ChartType.Histogram:
+          drawHistogramChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+          break;
+        default:
+          ctx.fillText('⚠️ Unknown chart type', 10, 20);
+      }
+    }, [intervalsArray, visibleRange,canvasRef.current, chartType]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;

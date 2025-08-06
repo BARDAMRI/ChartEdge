@@ -13,7 +13,7 @@ import {
 
 import {PriceRange, TimeRange} from "../../types/Graph";
 import {Candle} from "../../types/Candle";
-import {TimeDetailLevel} from "../../types/chartStyleOptions";
+import {ChartType, TimeDetailLevel} from "../../types/chartStyleOptions";
 import {AxesPosition} from "../../types/types";
 
 export interface CanvasSizes {
@@ -57,7 +57,7 @@ class DebugLogger {
 const logger = new DebugLogger();
 
 interface ChartStageProps {
-    initialCandles: Candle[];
+    intervalsArray: Candle[];
     initialYAxisPosition: AxesPosition;
     initialMargin: number;
     initialNumberOfYTicks: number;
@@ -67,10 +67,11 @@ interface ChartStageProps {
     initialTimeFormat12h: boolean;
     initialVisibleRange: TimeRange;
     initialVisiblePriceRange: PriceRange;
+    chartType: ChartType;
 }
 
 export const ChartStage: React.FC<ChartStageProps> = ({
-                                                          initialCandles,
+                                                          intervalsArray,
                                                           initialYAxisPosition,
                                                           initialMargin,
                                                           initialNumberOfYTicks,
@@ -80,12 +81,12 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           initialTimeFormat12h,
                                                           initialVisibleRange,
                                                           initialVisiblePriceRange,
+                                                          chartType
                                                       }) => {
     const [canvasSizes, setCanvasSizes] = useState<CanvasSizes>({width: 0, height: 0});
     const [logCount, setLogCount] = useState(0);
     const containerRef = useRef<HTMLDivElement | null>(null);
 
-    const [candles, setCandles] = useState(initialCandles);
     const [yAxisPosition, setYAxisPosition] = useState(initialYAxisPosition);
     const [margin, setMargin] = useState(initialMargin);
     const [numberOfYTicks, setNumberOfYTicks] = useState(initialNumberOfYTicks);
@@ -93,26 +94,33 @@ export const ChartStage: React.FC<ChartStageProps> = ({
     const [yAxisWidth, setYAxisWidth] = useState(initialYAxisWidth);
     const [timeDetailLevel, setTimeDetailLevel] = useState<TimeDetailLevel>(initialTimeDetailLevel);
     const [timeFormat12h, setTimeFormat12h] = useState(initialTimeFormat12h);
-    const [visibleRange, setVisibleRange] = useState<TimeRange>(() => {
-        if (initialCandles.length > 0) {
-            const times = initialCandles.map(c => c.t);
-            return {start: Math.min(...times), end: Math.max(...times)};
-        }
-        return initialVisibleRange ?? {
-            start: Date.now() - 7 * 24 * 60 * 60 * 1000,
-            end: Date.now()
-        };
+    const [visibleRange, setVisibleRange] = useState<TimeRange>(initialVisibleRange ?? {
+        start: Date.now() - 7 * 24 * 60 * 60 * 1000,
+        end: Date.now()
     });
 
+    useEffect(() => {
+
+        if (intervalsArray.length > 0) {
+            const times = intervalsArray.map(c => c.t);
+            setVisibleRange({start: Math.min(...times), end: Math.max(...times)});
+        } else {
+            setVisibleRange(initialVisibleRange ?? {
+                start: Date.now() - 7 * 24 * 60 * 60 * 1000,
+                end: Date.now()
+            });
+        }
+
+    }, [intervalsArray, initialVisibleRange]);
     const [minPrice, maxPrice] = React.useMemo(() => {
         if (initialVisiblePriceRange) {
             return [initialVisiblePriceRange.min, initialVisiblePriceRange.max];
         }
 
-        if (!candles || candles.length === 0) return [0, 0];
-        const prices = candles.flatMap(c => [c.l, c.h]);
+        if (!intervalsArray || intervalsArray.length === 0) return [0, 0];
+        const prices = intervalsArray.flatMap(c => [c.l, c.h]);
         return [Math.min(...prices), Math.max(...prices)];
-    }, [candles, initialVisiblePriceRange]);
+    }, [intervalsArray, initialVisiblePriceRange]);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -246,7 +254,6 @@ export const ChartStage: React.FC<ChartStageProps> = ({
     const [startPoint, setStartPoint] = useState<null | { x: number; y: number }>(null);
 
     const setCandlesAndVisibleRange = (newCandles: Candle[], newVisibleRange: TimeRange) => {
-        setCandles(newCandles);
         setVisibleRange(newVisibleRange);
     };
 
@@ -278,7 +285,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                 <CanvasContainer className={'canvas-container'}>
                     <ChartCanvas
                         parentContainerRef={containerRef}
-                        candlesToUse={candles}
+                        intervalsArray={intervalsArray}
                         currentPoint={currentPoint}
                         drawings={drawings}
                         isDrawing={isDrawing}
@@ -296,6 +303,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         startPoint={startPoint}
                         visibleRange={visibleRange}
                         xAxisHeight={xAxisHeight}
+                        chartType={chartType}
                     />
                 </CanvasContainer>
 

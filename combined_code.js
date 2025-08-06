@@ -420,7 +420,7 @@ interface ChartStageProps {
 }
 
 export const ChartStage: React.FC<ChartStageProps> = ({
-                                                          initialCandles,
+                                                          intervalsArray,
                                                           initialYAxisPosition ,
                                                           initialMargin,
                                                           initialNumberOfYTicks,

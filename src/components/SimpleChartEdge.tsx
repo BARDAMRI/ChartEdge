@@ -5,7 +5,7 @@ import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {Candle} from '../types/Candle';
 import {TimeRange} from '../types/Graph';
 import {AxesPosition} from '../types/types';
-import {TimeDetailLevel} from '../types/chartStyleOptions';
+import {ChartType, TimeDetailLevel} from '../types/chartStyleOptions';
 import {ModeProvider} from '../contexts/ModeContext';
 import {
     GlobalStyle,
@@ -17,7 +17,7 @@ import {
 } from '../styles/App.styles';
 
 export type SimpleChartEdgeProps = {
-    initialCandles?: Candle[];
+    intervalsArray?: Candle[];
     initialYAxisPosition?: AxesPosition;
     initialMargin?: number;
     initialNumberOfYTicks?: number;
@@ -27,10 +27,11 @@ export type SimpleChartEdgeProps = {
     initialTimeFormat12h?: boolean;
     initialVisibleTimeRange?: TimeRange;
     initialVisiblePriceRange?: { min: number; max: number };
+    chartType?: ChartType;
 };
 
 export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
-                                                                    initialCandles = [],
+                                                                    intervalsArray = [],
                                                                     initialYAxisPosition = AxesPosition.left!,
                                                                     initialMargin = 20,
                                                                     initialNumberOfYTicks = 5,
@@ -45,8 +46,11 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                     initialVisiblePriceRange = {
                                                                         min: 0,
                                                                         max: 100
-                                                                    }
-                                                                }) => {
+                                                                    },
+                                                                    chartType = ChartType.Candlestick
+}) => {
+
+    console.log('SimpleChartEdge rendered with initialCandles:', intervalsArray )
     return (
         <ModeProvider>
             <GlobalStyle/>
@@ -60,7 +64,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                     </ToolbarArea>
                     <ChartStageArea className={"chart-stage-area"}>
                         <ChartStage
-                            initialCandles={initialCandles}
+                            intervalsArray={intervalsArray}
                             initialYAxisPosition={initialYAxisPosition}
                             initialMargin={initialMargin}
                             initialNumberOfYTicks={initialNumberOfYTicks}
@@ -70,6 +74,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                             initialTimeFormat12h={initialTimeFormat12h}
                             initialVisibleRange={initialVisibleTimeRange}
                             initialVisiblePriceRange={initialVisiblePriceRange}
+                            chartType={chartType}
                         />
                     </ChartStageArea>
                 </LowerContainer>
