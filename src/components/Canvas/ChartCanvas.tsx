@@ -1,58 +1,4 @@
 import {DrawingPoint} from "../../types/Drawings";
-
-function drawCandlestickChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number, visibleRange: TimeRange, intervalMs: number) {
-    if (candles.length === 0) return;
-
-    const padding = 10;
-    const maxPrice = Math.max(...candles.map(c => c.h));
-    const minPrice = Math.min(...candles.map(c => c.l));
-    const priceRange = maxPrice - minPrice;
-
-    const candleWidth = width / candles.length;
-
-    candles.forEach((candle) => {
-        const timeOffset = candle.t - visibleRange.start;
-        const x = (timeOffset / intervalMs) * candleWidth;
-
-        if (x + candleWidth < 0 || x >= width + candleWidth / 2) return;
-
-        const openY = height - ((candle.o - minPrice) / priceRange) * (height - padding * 2) - padding;
-        const closeY = height - ((candle.c - minPrice) / priceRange) * (height - padding * 2) - padding;
-        const highY = height - ((candle.h - minPrice) / priceRange) * (height - padding * 2) - padding;
-        const lowY = height - ((candle.l - minPrice) / priceRange) * (height - padding * 2) - padding;
-
-        const isBullish = candle.c > candle.o;
-        ctx.strokeStyle = isBullish ? 'green' : 'red';
-        ctx.fillStyle = isBullish ? 'green' : 'red';
-
-        ctx.beginPath();
-        ctx.moveTo(x + candleWidth / 2, highY);
-        ctx.lineTo(x + candleWidth / 2, lowY);
-        ctx.stroke();
-
-        const bodyTop = Math.min(openY, closeY);
-        const bodyHeight = Math.abs(openY - closeY);
-        console.log('drawing new candle from x:', x, ' to x: ', x + candleWidth, ' bodyTop:', bodyTop, ' bodyHeight:', bodyHeight);
-        ctx.fillRect(x + 1, bodyTop, candleWidth - 2, bodyHeight || 1);
-    });
-}
-
-function drawLineChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
-    ctx.fillText('📈 Line chart rendering here', 10, 20);
-}
-
-function drawAreaChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
-    ctx.fillText('📉 Area chart rendering here', 10, 40);
-}
-
-function drawBarChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
-    ctx.fillText('📊 Bar chart rendering here', 10, 60);
-}
-
-function drawHistogramChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
-    ctx.fillText('📊 Histogram chart rendering here', 10, 80);
-}
-
 import React, {useRef, useEffect} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {TimeRange} from "../../types/Graph";
@@ -60,6 +6,7 @@ import type {Candle} from "../../types/Candle";
 import {StyledCanvas} from '../../styles/ChartCanvas.styles';
 import {ChartType} from '../../types/chartStyleOptions';
 import {parseInterval} from "./utils/RangeCalculators";
+import {drawAreaChart, drawBarChart, drawCandlestickChart, drawHistogramChart, drawLineChart} from "./utils/GraphDraw";
 
 type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
@@ -135,16 +82,16 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Line:
-                drawLineChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+                drawLineChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Area:
-                drawAreaChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+                drawAreaChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Bar:
-                drawBarChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+                drawBarChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Histogram:
-                drawHistogramChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+                drawHistogramChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
                 break;
             default:
                 ctx.fillText('⚠️ Unknown chart type', 10, 20);

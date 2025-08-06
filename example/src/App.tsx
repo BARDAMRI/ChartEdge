@@ -1,6 +1,5 @@
-import {SimpleChartEdge} from 'chartedge';
 import type {Candle} from 'chartedge';
-import {AxesPosition, TimeDetailLevel} from 'chartedge';
+import {AxesPosition, ChartType, SimpleChartEdge, TimeDetailLevel} from 'chartedge';
 
 const intervalsArray: Candle[] = [
     {t: 1688000000000, o: 100, h: 110, l: 95, c: 105},
@@ -60,6 +59,7 @@ export default function App() {
                 initialTimeFormat12h={false}
                 initialVisibleTimeRange={exampleVisibleRange}
                 initialVisiblePriceRange={{min:minPrice, max: maxPrice}}
+                chartType={ChartType.Histogram}
             />
         </div>
     );
