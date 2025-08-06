@@ -1,89 +1,94 @@
-function drawCandlestickChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
-  if (candles.length === 0) return;
+import {DrawingPoint} from "../../types/Drawings";
 
-  const padding = 10;
-  const maxPrice = Math.max(...candles.map(c => c.h));
-  const minPrice = Math.min(...candles.map(c => c.l));
-  const priceRange = maxPrice - minPrice;
+function drawCandlestickChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number, visibleRange: TimeRange, intervalMs: number) {
+    if (candles.length === 0) return;
 
-  const candleWidth = width / candles.length;
+    const padding = 10;
+    const maxPrice = Math.max(...candles.map(c => c.h));
+    const minPrice = Math.min(...candles.map(c => c.l));
+    const priceRange = maxPrice - minPrice;
 
-  candles.forEach((candle, index) => {
-    const x = index * candleWidth;
-    const openY = height - ((candle.o - minPrice) / priceRange) * (height - padding * 2) - padding;
-    const closeY = height - ((candle.c - minPrice) / priceRange) * (height - padding * 2) - padding;
-    const highY = height - ((candle.h - minPrice) / priceRange) * (height - padding * 2) - padding;
-    const lowY = height - ((candle.l - minPrice) / priceRange) * (height - padding * 2) - padding;
+    const candleWidth = width / candles.length;
 
-    const isBullish = candle.c > candle.o;
-    ctx.strokeStyle = isBullish ? 'green' : 'red';
-    ctx.fillStyle = isBullish ? 'green' : 'red';
+    candles.forEach((candle) => {
+        const timeOffset = candle.t - visibleRange.start;
+        const x = (timeOffset / intervalMs) * candleWidth;
 
-    // draw wick
-    ctx.beginPath();
-    ctx.moveTo(x + candleWidth / 2, highY);
-    ctx.lineTo(x + candleWidth / 2, lowY);
-    ctx.stroke();
+        if (x + candleWidth < 0 || x >= width + candleWidth / 2) return;
 
-    // draw body
-    const bodyTop = Math.min(openY, closeY);
-    const bodyHeight = Math.abs(openY - closeY);
-    ctx.fillRect(x + 1, bodyTop, candleWidth - 2, bodyHeight || 1);
-  });
+        const openY = height - ((candle.o - minPrice) / priceRange) * (height - padding * 2) - padding;
+        const closeY = height - ((candle.c - minPrice) / priceRange) * (height - padding * 2) - padding;
+        const highY = height - ((candle.h - minPrice) / priceRange) * (height - padding * 2) - padding;
+        const lowY = height - ((candle.l - minPrice) / priceRange) * (height - padding * 2) - padding;
+
+        const isBullish = candle.c > candle.o;
+        ctx.strokeStyle = isBullish ? 'green' : 'red';
+        ctx.fillStyle = isBullish ? 'green' : 'red';
+
+        ctx.beginPath();
+        ctx.moveTo(x + candleWidth / 2, highY);
+        ctx.lineTo(x + candleWidth / 2, lowY);
+        ctx.stroke();
+
+        const bodyTop = Math.min(openY, closeY);
+        const bodyHeight = Math.abs(openY - closeY);
+        console.log('drawing new candle from x:', x, ' to x: ', x + candleWidth, ' bodyTop:', bodyTop, ' bodyHeight:', bodyHeight);
+        ctx.fillRect(x + 1, bodyTop, candleWidth - 2, bodyHeight || 1);
+    });
 }
 
 function drawLineChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
-  ctx.fillText('📈 Line chart rendering here', 10, 20);
+    ctx.fillText('📈 Line chart rendering here', 10, 20);
 }
 
 function drawAreaChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
-  ctx.fillText('📉 Area chart rendering here', 10, 40);
+    ctx.fillText('📉 Area chart rendering here', 10, 40);
 }
 
 function drawBarChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
-  ctx.fillText('📊 Bar chart rendering here', 10, 60);
+    ctx.fillText('📊 Bar chart rendering here', 10, 60);
 }
 
 function drawHistogramChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number) {
-  ctx.fillText('📊 Histogram chart rendering here', 10, 80);
+    ctx.fillText('📊 Histogram chart rendering here', 10, 80);
 }
+
 import React, {useRef, useEffect} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {TimeRange} from "../../types/Graph";
 import type {Candle} from "../../types/Candle";
 import {StyledCanvas} from '../../styles/ChartCanvas.styles';
-import { ChartType } from '../../types/chartStyleOptions';
+import {ChartType} from '../../types/chartStyleOptions';
+import {parseInterval} from "./utils/RangeCalculators";
 
 type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
 interface ChartCanvasProps {
     parentContainerRef: React.RefObject<HTMLDivElement | null>;
-    isDrawing: boolean;
-    setIsDrawing: (value: boolean) => void;
-    startPoint: { x: number; y: number } | null;
-    setStartPoint: (point: { x: number; y: number } | null) => void;
-    currentPoint: { x: number; y: number } | null;
-    setCurrentPoint: (point: { x: number; y: number } | null) => void;
-    drawings: any[];
-    setDrawings: (drawings: any[] | ((prev: any[]) => any[])) => void;
-    selectedIndex: number | null;
-    setSelectedIndex: (index: number | null) => void;
-    visibleRange: TimeRange;
-    setVisibleRange: (range: TimeRange) => void;
-    setCandlesAndVisibleRange: (candles: Candle[], visibleRange: TimeRange) => void;
-    xAxisHeight: number;
-    padding: number;
-    minPrice: number;
-    maxPrice: number;
     intervalsArray: Candle[];
+    currentPoint: DrawingPoint | null;
+    drawings: any[];
+    isDrawing: boolean;
+    maxPrice: number;
+    minPrice: number;
+    padding: number;
+    selectedIndex: number | null;
+    setCurrentPoint: (point: DrawingPoint | null) => void;
+    setDrawings: (drawings: any[] | ((prev: any[]) => any[])) => void;
+    setIsDrawing: (value: boolean) => void;
+    setSelectedIndex: (index: number | null) => void;
+    startPoint: DrawingPoint | null;
+    setStartPoint: (point: DrawingPoint | null) => void;
+    visibleRange: TimeRange;
+    xAxisHeight: number;
     chartType: ChartType;
+    interval?: string;
 }
+
 
 export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             parentContainerRef,
                                                             intervalsArray,
-                                                            setCandlesAndVisibleRange,
-                                                            setVisibleRange,
                                                             visibleRange,
                                                             drawings,
                                                             isDrawing,
@@ -100,66 +105,51 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             setSelectedIndex,
                                                             xAxisHeight,
                                                             chartType,
+                                                            interval,
                                                         }) => {
     const mode = useMode().mode;
     const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    const now = Date.now();
-    const oneYearAgo = now - 365 * 24 * 60 * 60 * 1000;
-    const defaultVisibleRange: TimeRange = {
-        start: oneYearAgo,
-        end: now,
-    };
-
     useEffect(() => {
-        if (!visibleRange || visibleRange.start === 0 || visibleRange.end === 0) {
-            setVisibleRange(defaultVisibleRange);
+        const canvas = canvasRef.current;
+        if (!canvas || intervalsArray.length === 0) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // HiDPI canvas resolution handling
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = canvas.clientWidth * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+        ctx.scale(dpr, dpr);
+
+        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+        ctx.fillStyle = 'black';
+
+        const visibleCandles = intervalsArray;
+        const intervalMs = parseInterval(intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000, interval);
+        console.log('chart type', chartType, ' interval: ', interval, ' intervalMs: ', intervalMs);
+        switch (chartType) {
+            case ChartType.Candlestick:
+                drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
+                break;
+            case ChartType.Line:
+                drawLineChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+                break;
+            case ChartType.Area:
+                drawAreaChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+                break;
+            case ChartType.Bar:
+                drawBarChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+                break;
+            case ChartType.Histogram:
+                drawHistogramChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
+                break;
+            default:
+                ctx.fillText('⚠️ Unknown chart type', 10, 20);
         }
-    }, [intervalsArray, visibleRange, setVisibleRange]);
-
-    useEffect(() => {
-        setCandlesAndVisibleRange(intervalsArray, visibleRange || {start: 0, end: Date.now()});
-    }, [intervalsArray, visibleRange, setCandlesAndVisibleRange]);
-
-    useEffect(() => {
-      const canvas = canvasRef.current;
-      if (!canvas || intervalsArray.length === 0) return;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      // HiDPI canvas resolution handling
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = canvas.clientWidth * dpr;
-      canvas.height = canvas.clientHeight * dpr;
-      ctx.scale(dpr, dpr);
-
-      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-      ctx.fillStyle = 'black';
-
-      const visibleCandles = intervalsArray;
-
-      switch (chartType) {
-        case ChartType.Candlestick:
-          drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
-          break;
-        case ChartType.Line:
-          drawLineChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
-          break;
-        case ChartType.Area:
-          drawAreaChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
-          break;
-        case ChartType.Bar:
-          drawBarChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
-          break;
-        case ChartType.Histogram:
-          drawHistogramChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight);
-          break;
-        default:
-          ctx.fillText('⚠️ Unknown chart type', 10, 20);
-      }
-    }, [intervalsArray, visibleRange,canvasRef.current, chartType]);
+    }, [intervalsArray, visibleRange, canvasRef.current, chartType, interval]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;

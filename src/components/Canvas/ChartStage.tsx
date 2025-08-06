@@ -65,7 +65,7 @@ interface ChartStageProps {
     initialYAxisWidth: number;
     initialTimeDetailLevel: TimeDetailLevel;
     initialTimeFormat12h: boolean;
-    initialVisibleRange: TimeRange;
+    visibleRange: TimeRange;
     initialVisiblePriceRange: PriceRange;
     chartType: ChartType;
 }
@@ -79,7 +79,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           initialYAxisWidth,
                                                           initialTimeDetailLevel,
                                                           initialTimeFormat12h,
-                                                          initialVisibleRange,
+                                                          visibleRange,
                                                           initialVisiblePriceRange,
                                                           chartType
                                                       }) => {
@@ -94,24 +94,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
     const [yAxisWidth, setYAxisWidth] = useState(initialYAxisWidth);
     const [timeDetailLevel, setTimeDetailLevel] = useState<TimeDetailLevel>(initialTimeDetailLevel);
     const [timeFormat12h, setTimeFormat12h] = useState(initialTimeFormat12h);
-    const [visibleRange, setVisibleRange] = useState<TimeRange>(initialVisibleRange ?? {
-        start: Date.now() - 7 * 24 * 60 * 60 * 1000,
-        end: Date.now()
-    });
 
-    useEffect(() => {
-
-        if (intervalsArray.length > 0) {
-            const times = intervalsArray.map(c => c.t);
-            setVisibleRange({start: Math.min(...times), end: Math.max(...times)});
-        } else {
-            setVisibleRange(initialVisibleRange ?? {
-                start: Date.now() - 7 * 24 * 60 * 60 * 1000,
-                end: Date.now()
-            });
-        }
-
-    }, [intervalsArray, initialVisibleRange]);
     const [minPrice, maxPrice] = React.useMemo(() => {
         if (initialVisiblePriceRange) {
             return [initialVisiblePriceRange.min, initialVisiblePriceRange.max];
@@ -202,14 +185,14 @@ export const ChartStage: React.FC<ChartStageProps> = ({
 
                 setCanvasSizes(prev => {
                     if (prev.width !== width || prev.height !== height) {
-                        logger.log('🔄 Updating canvas sizes:', {
-                            from: prev,
-                            to: {width, height},
-                            change: {
-                                width: width - prev.width,
-                                height: height - prev.height
-                            }
-                        });
+                        // logger.log('🔄 Updating canvas sizes:', {
+                        //     from: prev,
+                        //     to: {width, height},
+                        //     change: {
+                        //         width: width - prev.width,
+                        //         height: height - prev.height
+                        //     }
+                        // });
                         return {width, height};
                     }
                     logger.log('🚫 No size change, keeping previous:', prev);
@@ -253,10 +236,6 @@ export const ChartStage: React.FC<ChartStageProps> = ({
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
     const [startPoint, setStartPoint] = useState<null | { x: number; y: number }>(null);
 
-    const setCandlesAndVisibleRange = (newCandles: Candle[], newVisibleRange: TimeRange) => {
-        setVisibleRange(newVisibleRange);
-    };
-
     return (
         <ChartStageContainer className={'chart-stage-container'} ref={containerRef} style={{margin: `${margin}px`}}>
             {yAxisPosition === 'left' && (
@@ -278,8 +257,8 @@ export const ChartStage: React.FC<ChartStageProps> = ({
             <CanvasAxisContainer className={'canvas-axis-container'}
                                  style={{
                                      width: `${canvasSizes.width - (yAxisWidth + 40)}px`,
-                                     marginLeft: `${yAxisPosition === 'left' ? 0 : 40}px`,
-                                     marginRight: `${yAxisPosition === 'right' ? 0 : 40}px`,
+                                     marginLeft: `${yAxisPosition === 'left' ? 0 : 20}px`,
+                                     marginRight: `${yAxisPosition === 'right' ? 0 : 20}px`,
                                  }}
             >
                 <CanvasContainer className={'canvas-container'}>
@@ -293,13 +272,11 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         minPrice={minPrice}
                         padding={10}
                         selectedIndex={selectedIndex}
-                        setCandlesAndVisibleRange={setCandlesAndVisibleRange}
                         setCurrentPoint={setCurrentPoint}
                         setDrawings={setDrawings}
                         setIsDrawing={setIsDrawing}
                         setSelectedIndex={setSelectedIndex}
                         setStartPoint={setStartPoint}
-                        setVisibleRange={setVisibleRange}
                         startPoint={startPoint}
                         visibleRange={visibleRange}
                         xAxisHeight={xAxisHeight}

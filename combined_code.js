@@ -428,7 +428,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           initialYAxisWidth,
                                                           initialTimeDetailLevel,
                                                           initialTimeFormat12h,
-                                                          initialVisibleRange,
+                                                          visibleRange,
                                                       }) => {
     const [canvasSizes, setCanvasSizes] = useState<CanvasSizes>({width: 0, height: 0});
     const [logCount, setLogCount] = useState(0);
@@ -574,10 +574,10 @@ export const ChartStage: React.FC<ChartStageProps> = ({
     }, []);
 
     // Log every render
-    logger.log('🔄 ChartStage render:', {
-        canvasSizes,
-        containerRefCurrent: !!containerRef.current
-    });
+    // logger.log('🔄 ChartStage render:', {
+    //     canvasSizes,
+    //     containerRefCurrent: !!containerRef.current
+    // });
 
     const [currentPoint, setCurrentPoint] = useState<null | {x: number; y: number}>(null);
     const [drawings, setDrawings] = useState<any[]>([]);

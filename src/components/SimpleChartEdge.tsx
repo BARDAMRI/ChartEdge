@@ -72,7 +72,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                             initialYAxisWidth={initialYAxisWidth}
                             initialTimeDetailLevel={initialTimeDetailLevel}
                             initialTimeFormat12h={initialTimeFormat12h}
-                            initialVisibleRange={initialVisibleTimeRange}
+                            visibleRange={initialVisibleTimeRange}
                             initialVisiblePriceRange={initialVisiblePriceRange}
                             chartType={chartType}
                         />
