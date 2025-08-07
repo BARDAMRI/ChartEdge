@@ -19,20 +19,27 @@ interface InnerCanvasContainerProps {
 export const InnerCanvasContainer = styled.div<InnerCanvasContainerProps>`
     position: relative;
     width: 100%;
-    height: ${({ $xAxisHeight }) => `calc(100% - ${$xAxisHeight}px)`};
+    height: ${({$xAxisHeight}) => `calc(100% - ${$xAxisHeight}px)`};
 `;
 
-export const HoverTooltip = styled.div`
+interface HoverTooltipProps {
+    $isPositive: boolean;
+}
+
+export const HoverTooltip = styled.div<HoverTooltipProps>`
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    bottom: 5px;
+    right: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
     padding: 6px 10px;
+    color: ${({ $isPositive }) => ($isPositive ? '#008000' : '#cc0000')};
+    border: 1px solid ${({ $isPositive }) => ($isPositive ? '#008000' : '#cc0000')};
+    border-radius: 4px;
     font-size: 12px;
-    color: #333;
-    pointer-events: none;
+    display: flex;
+    gap: 10px;
     z-index: 10;
     white-space: nowrap;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
 `;
-

@@ -1,3 +1,4 @@
+import {ChartType} from "../../../types/chartStyleOptions";
 import type {Candle} from "../../../types/Candle";
 import {TimeRange} from "../../../types/Graph";
 
@@ -168,4 +169,27 @@ export function drawHistogramChart(
         ctx.fillStyle = candle.c >= candle.o ? 'green' : 'red';
         ctx.fillRect(x + 1, y, candleWidth - 2, barHeight);
     });
+}
+
+export function getTimestampFromOffset(
+    offsetX: number,
+    visibleRange: TimeRange,
+    width: number,
+    chartType: ChartType,
+    intervalMs: number
+): number {
+    const totalDuration = visibleRange.end - visibleRange.start;
+
+    // Define gap logic based on chart type
+    const gapRatio = chartType === ChartType.Candlestick ? 0.1 : 0;
+    const candleCount = Math.ceil(totalDuration / intervalMs);
+    const candleWidthWithGap = width / candleCount;
+    const gap = candleWidthWithGap * gapRatio;
+    const candleWidth = candleWidthWithGap - gap;
+
+    // Find the index based on offset
+    const index = Math.floor(offsetX / candleWidthWithGap);
+    const timestamp = visibleRange.start + index * intervalMs;
+
+    return timestamp;
 }

@@ -28,6 +28,8 @@ export type SimpleChartEdgeProps = {
     initialVisibleTimeRange?: TimeRange;
     initialVisiblePriceRange?: { min: number; max: number };
     chartType?: ChartType;
+    interval?: string;
+
 };
 
 export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
@@ -47,10 +49,11 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                         min: 0,
                                                                         max: 100
                                                                     },
-                                                                    chartType = ChartType.Candlestick
-}) => {
+                                                                    chartType = ChartType.Candlestick,
+                                                                    interval = '1h',
+                                                                }) => {
 
-    console.log('SimpleChartEdge rendered with initialCandles:', intervalsArray )
+    console.log('SimpleChartEdge rendered with initialCandles:', intervalsArray)
     return (
         <ModeProvider>
             <GlobalStyle/>
@@ -75,6 +78,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                             visibleRange={initialVisibleTimeRange}
                             initialVisiblePriceRange={initialVisiblePriceRange}
                             chartType={chartType}
+                            interval={interval}
                         />
                     </ChartStageArea>
                 </LowerContainer>

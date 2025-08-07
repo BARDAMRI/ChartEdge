@@ -1,26 +1,27 @@
 import {DrawingPoint} from "../../types/Drawings";
-import React, {useRef, useEffect} from 'react';
+import React, {useRef, useEffect, useState} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {TimeRange} from "../../types/Graph";
 import type {Candle} from "../../types/Candle";
 import {StyledCanvas, InnerCanvasContainer, HoverTooltip} from '../../styles/ChartCanvas.styles';
 import {ChartType} from '../../types/chartStyleOptions';
 import {parseInterval} from "./utils/RangeCalculators";
-import {drawAreaChart, drawBarChart, drawCandlestickChart, drawHistogramChart, drawLineChart} from "./utils/GraphDraw";
+import {
+    drawAreaChart,
+    drawBarChart,
+    drawCandlestickChart,
+    drawHistogramChart,
+    drawLineChart
+} from "./utils/GraphDraw";
 
 type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
 interface ChartCanvasProps {
     parentContainerRef: React.RefObject<HTMLDivElement | null>;
     intervalsArray: Candle[];
-    currentPoint: DrawingPoint | null;
     drawings: any[];
     isDrawing: boolean;
-    maxPrice: number;
-    minPrice: number;
-    padding: number;
     selectedIndex: number | null;
-    setCurrentPoint: (point: DrawingPoint | null) => void;
     setDrawings: (drawings: any[] | ((prev: any[]) => any[])) => void;
     setIsDrawing: (value: boolean) => void;
     setSelectedIndex: (index: number | null) => void;
@@ -30,7 +31,6 @@ interface ChartCanvasProps {
     xAxisHeight: number;
     chartType: ChartType;
     interval?: string;
-    hoveredCandle: Candle | null;
 }
 
 
@@ -41,24 +41,45 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             drawings,
                                                             isDrawing,
                                                             setIsDrawing,
-                                                            currentPoint,
-                                                            padding,
-                                                            setCurrentPoint,
                                                             setDrawings,
                                                             startPoint,
                                                             setStartPoint,
-                                                            maxPrice,
-                                                            minPrice,
                                                             selectedIndex,
                                                             setSelectedIndex,
                                                             xAxisHeight,
                                                             chartType,
                                                             interval,
-                                                            hoveredCandle,
                                                         }) => {
     const mode = useMode().mode;
     const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const [currentPoint, setCurrentPoint] = useState<null | { x: number; y: number }>(null);
+    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (!e) return;
+        const rect = containerRef.current!.getBoundingClientRect();
+        if (!rect) return;
+
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        setCurrentPoint({x: mouseX, y: mouseY});
+    };
+
+
+    const hoveredCandle = React.useMemo(() => {
+        if (
+            !currentPoint ||
+            intervalsArray.length <= 0 ||
+            !canvasRef?.current ||
+            canvasRef.current!.clientWidth === 0
+        ) return null;
+
+        // Use the new utility function to get the hovered timestamp
+        const candleWidth = canvasRef.current?.clientWidth / intervalsArray.length;
+        const intervalIndex = Math.floor(currentPoint.x / candleWidth);
+        if (intervalIndex < 0 || intervalIndex >= intervalsArray.length) return null;
+        return intervalsArray[intervalIndex];
+    }, [currentPoint, intervalsArray, visibleRange, canvasRef.current, chartType, interval]);
+
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -78,7 +99,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
         const visibleCandles = intervalsArray;
         const intervalMs = parseInterval(intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000, interval);
-        console.log('chart type', chartType, ' interval: ', interval, ' intervalMs: ', intervalMs);
+        console.log('chart type', chartType, ' interval: ', interval, ' intervalMs: ', intervalMs, ' width: ', canvasRef.current?.clientWidth);
         switch (chartType) {
             case ChartType.Candlestick:
                 drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
@@ -138,17 +159,6 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             setStartPoint({x, y});
             setIsDrawing(true);
         }
-    };
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!isDrawing || !startPoint || mode === Mode.none) return;
-        if (!canvasRef.current) return;
-
-        const rect = canvasRef.current!.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        setCurrentPoint({x, y});
     };
 
     const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -216,28 +226,13 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 onMouseUp={handleMouseUp}
             />
             {hoveredCandle && currentPoint && (
-                <HoverTooltip
-                    style={{
-                        position: 'absolute',
-                        bottom: '5px',
-                        right: '10px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        display: 'flex',
-                        gap: '10px',
-                        pointerEvents: 'none'
-                    }}
-                >
-                    <div>
-                        Time: {new Date(hoveredCandle.t).toLocaleString(undefined, {hour12: false})} |
-                        O: {hoveredCandle.o} |
-                        H: {hoveredCandle.h} |
-                        L: {hoveredCandle.l} |
-                        C: {hoveredCandle.c}
-                        {hoveredCandle.v !== undefined && ` | V: ${hoveredCandle.v}`}
-                    </div>
+                <HoverTooltip $isPositive={hoveredCandle.c > hoveredCandle.o}>
+                    Time: {new Date(hoveredCandle.t).toLocaleString(undefined, {hour12: false})} |
+                    O: {hoveredCandle.o} |
+                    H: {hoveredCandle.h} |
+                    L: {hoveredCandle.l} |
+                    C: {hoveredCandle.c}
+                    {hoveredCandle.v !== undefined && ` | V: ${hoveredCandle.v}`}
                 </HoverTooltip>
             )}
         </InnerCanvasContainer>

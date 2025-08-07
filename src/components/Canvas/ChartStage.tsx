@@ -15,6 +15,7 @@ import {PriceRange, TimeRange} from "../../types/Graph";
 import {Candle} from "../../types/Candle";
 import {ChartType, TimeDetailLevel} from "../../types/chartStyleOptions";
 import {AxesPosition} from "../../types/types";
+import {parseInterval} from "./utils/RangeCalculators";
 
 export interface CanvasSizes {
     width: number;
@@ -68,6 +69,7 @@ interface ChartStageProps {
     visibleRange: TimeRange;
     initialVisiblePriceRange: PriceRange;
     chartType: ChartType;
+    interval?: string;
 }
 
 export const ChartStage: React.FC<ChartStageProps> = ({
@@ -81,270 +83,217 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           initialTimeFormat12h,
                                                           visibleRange,
                                                           initialVisiblePriceRange,
-                                                          chartType
+                                                          chartType,
+                                                          interval,
                                                       }) => {
-    const [canvasSizes, setCanvasSizes] = useState<CanvasSizes>({width: 0, height: 0});
-    const [logCount, setLogCount] = useState(0);
-    const containerRef = useRef<HTMLDivElement | null>(null);
+        const [canvasSizes, setCanvasSizes] = useState<CanvasSizes>({width: 0, height: 0});
+        const [logCount, setLogCount] = useState(0);
+        const containerRef = useRef<HTMLDivElement | null>(null);
 
-    const [yAxisPosition, setYAxisPosition] = useState(initialYAxisPosition);
-    const [margin, setMargin] = useState(initialMargin);
-    const [numberOfYTicks, setNumberOfYTicks] = useState(initialNumberOfYTicks);
-    const [xAxisHeight, setXAxisHeight] = useState(initialXAxisHeight);
-    const [yAxisWidth, setYAxisWidth] = useState(initialYAxisWidth);
-    const [timeDetailLevel, setTimeDetailLevel] = useState<TimeDetailLevel>(initialTimeDetailLevel);
-    const [timeFormat12h, setTimeFormat12h] = useState(initialTimeFormat12h);
+        const [yAxisPosition, setYAxisPosition] = useState(initialYAxisPosition);
+        const [margin, setMargin] = useState(initialMargin);
+        const [numberOfYTicks, setNumberOfYTicks] = useState(initialNumberOfYTicks);
+        const [xAxisHeight, setXAxisHeight] = useState(initialXAxisHeight);
+        const [yAxisWidth, setYAxisWidth] = useState(initialYAxisWidth);
+        const [timeDetailLevel, setTimeDetailLevel] = useState<TimeDetailLevel>(initialTimeDetailLevel);
+        const [timeFormat12h, setTimeFormat12h] = useState(initialTimeFormat12h);
 
-    const [minPrice, maxPrice] = React.useMemo(() => {
-        if (initialVisiblePriceRange) {
-            return [initialVisiblePriceRange.min, initialVisiblePriceRange.max];
-        }
+        const [minPrice, maxPrice] = React.useMemo(() => {
+            if (initialVisiblePriceRange) {
+                return [initialVisiblePriceRange.min, initialVisiblePriceRange.max];
+            }
 
-        if (!intervalsArray || intervalsArray.length === 0) return [0, 0];
-        const prices = intervalsArray.flatMap(c => [c.l, c.h]);
-        return [Math.min(...prices), Math.max(...prices)];
-    }, [intervalsArray, initialVisiblePriceRange]);
+            if (!intervalsArray || intervalsArray.length === 0) return [0, 0];
+            const prices = intervalsArray.flatMap(c => [c.l, c.h]);
+            return [Math.min(...prices), Math.max(...prices)];
+        }, [intervalsArray, initialVisiblePriceRange]);
 
-    useEffect(() => {
-        if (!containerRef.current) return;
+        useEffect(() => {
+            if (!containerRef.current) return;
 
-        const element = containerRef.current;
+            const element = containerRef.current;
 
-        if (!element)
-            return;
-        // Initial size logging
-        const initialRect = element.getBoundingClientRect();
-        logger.log('🔷 Initial container size:', {
-            width: initialRect.width,
-            height: initialRect.height,
-            clientWidth: element.clientWidth,
-            clientHeight: element.clientHeight,
-            offsetWidth: element.offsetWidth,
-            offsetHeight: element.offsetHeight
-        });
+            if (!element)
+                return;
+            // Initial size logging
+            const initialRect = element.getBoundingClientRect();
+            // logger.log('🔷 Initial container size:', {
+            //     width: initialRect.width,
+            //     height: initialRect.height,
+            //     clientWidth: element.clientWidth,
+            //     clientHeight: element.clientHeight,
+            //     offsetWidth: element.offsetWidth,
+            //     offsetHeight: element.offsetHeight
+            // });
 
-        // Log computed styles that might affect sizing
-        const computedStyle = window.getComputedStyle(element);
-        // logger.log('🔷 Container computed styles:', {
-        //     width: computedStyle.width,
-        //     height: computedStyle.height,
-        //     minWidth: computedStyle.minWidth,
-        //     minHeight: computedStyle.minHeight,
-        //     maxWidth: computedStyle.maxWidth,
-        //     maxHeight: computedStyle.maxHeight,
-        //     boxSizing: computedStyle.boxSizing,
-        //     display: computedStyle.display,
-        //     flexGrow: computedStyle.flexGrow,
-        //     flexShrink: computedStyle.flexShrink,
-        //     flexBasis: computedStyle.flexBasis,
-        //     overflow: computedStyle.overflow
+            // Log computed styles that might affect sizing
+            const computedStyle = window.getComputedStyle(element);
+            // logger.log('🔷 Container computed styles:', {
+            //     width: computedStyle.width,
+            //     height: computedStyle.height,
+            //     minWidth: computedStyle.minWidth,
+            //     minHeight: computedStyle.minHeight,
+            //     maxWidth: computedStyle.maxWidth,
+            //     maxHeight: computedStyle.maxHeight,
+            //     boxSizing: computedStyle.boxSizing,
+            //     display: computedStyle.display,
+            //     flexGrow: computedStyle.flexGrow,
+            //     flexShrink: computedStyle.flexShrink,
+            //     flexBasis: computedStyle.flexBasis,
+            //     overflow: computedStyle.overflow
+            // });
+
+            // Check parent chain (up to 3 levels)
+            let parent = element.parentElement;
+            let level = 1;
+            while (parent && level <= 3) {
+                const parentRect = parent.getBoundingClientRect();
+                const parentStyle = window.getComputedStyle(parent);
+                // logger.log(`🔷 Parent ${level} (${parent.className}):`, {
+                //     size: {width: parentRect.width, height: parentRect.height},
+                //     minWidth: parentStyle.minWidth,
+                //     maxWidth: parentStyle.maxWidth,
+                //     display: parentStyle.display,
+                //     overflow: parentStyle.overflow,
+                //     flexGrow: parentStyle.flexGrow,
+                //     flexShrink: parentStyle.flexShrink
+                // });
+                parent = parent.parentElement;
+                level++;
+            }
+
+            const resizeObserver = new ResizeObserver(entries => {
+                // logger.log('🟢 ResizeObserver triggered!');
+                setLogCount(prev => prev + 1);
+
+                for (let entry of entries) {
+                    const {width, height} = entry.contentRect;
+
+                    setCanvasSizes(prev => {
+                        if (prev.width !== width || prev.height !== height) {
+                            return {width, height};
+                        }
+                        logger.log('🚫 No size change, keeping previous:', prev);
+                        return prev;
+                    });
+                }
+            });
+
+            // Add window resize listener for comparison
+            const handleWindowResize = () => {
+                const windowSize = {width: window.innerWidth, height: window.innerHeight};
+                const elementRect = element.getBoundingClientRect();
+                logger.log('🌍 Window resize:', {
+                    window: windowSize,
+                    element: {width: elementRect.width, height: elementRect.height}
+                });
+                setLogCount(prev => prev + 1);
+            };
+
+            window.addEventListener('resize', handleWindowResize);
+            resizeObserver.observe(element);
+
+            // logger.log('🔷 ResizeObserver attached to element:', {className: element.className});
+
+            return () => {
+                // logger.log('🔴 Cleaning up ResizeObserver');
+                window.removeEventListener('resize', handleWindowResize);
+                resizeObserver.disconnect();
+            };
+        }, []);
+
+        // Log every render
+        // logger.log('🔄 ChartStage render:', {
+        //     canvasSizes,
+        //     containerRefCurrent: !!containerRef.current
         // });
 
-        // Check parent chain (up to 3 levels)
-        let parent = element.parentElement;
-        let level = 1;
-        while (parent && level <= 3) {
-            const parentRect = parent.getBoundingClientRect();
-            const parentStyle = window.getComputedStyle(parent);
-            // logger.log(`🔷 Parent ${level} (${parent.className}):`, {
-            //     size: {width: parentRect.width, height: parentRect.height},
-            //     minWidth: parentStyle.minWidth,
-            //     maxWidth: parentStyle.maxWidth,
-            //     display: parentStyle.display,
-            //     overflow: parentStyle.overflow,
-            //     flexGrow: parentStyle.flexGrow,
-            //     flexShrink: parentStyle.flexShrink
-            // });
-            parent = parent.parentElement;
-            level++;
-        }
+        const [drawings, setDrawings] = useState<any[]>([]);
+        const [isDrawing, setIsDrawing] = useState(false);
+        const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
 
-        const resizeObserver = new ResizeObserver(entries => {
-            // logger.log('🟢 ResizeObserver triggered!');
-            setLogCount(prev => prev + 1);
 
-            for (let entry of entries) {
-                const {width, height} = entry.contentRect;
-                const {target} = entry;
+        const [startPoint, setStartPoint] = useState<null | { x: number; y: number }>(null);
 
-                // logger.log('🟢 ResizeObserver data:', {
-                //     contentRect: {width, height},
-                //     borderBoxSize: entry.borderBoxSize?.[0],
-                //     contentBoxSize: entry.contentBoxSize?.[0],
-                //     targetClass: (target as HTMLElement).className,
-                //     currentCanvasSizes: canvasSizes
-                // });
+        return (
+            <ChartStageContainer className={'chart-stage-container'} ref={containerRef}
+                                 style={{margin: `${margin}px`}}>
+                {yAxisPosition === 'left' && (
+                    <RightYAxisContainer className={'right-axis-container'} style={{width: `${yAxisWidth}px`}}>
+                        <YAxis
+                            parentContainerRef={containerRef}
+                            intervalsArray={intervalsArray}
+                            canvasSizes={canvasSizes}
+                            maxPrice={maxPrice}
+                            minPrice={minPrice}
+                            numberOfYTicks={numberOfYTicks}
+                            xAxisHeight={xAxisHeight}
+                            yAxisPosition={yAxisPosition}
+                            yAxisWidth={yAxisWidth}
+                            initialVisiblePriceRange={initialVisiblePriceRange}
+                            chartType={chartType}
 
-                // Also log current element measurements
-                const currentRect = element.getBoundingClientRect();
-                // logger.log('🟢 Current element measurements:', {
-                //     getBoundingClientRect: {width: currentRect.width, height: currentRect.height},
-                //     clientSize: {width: element.clientWidth, height: element.clientHeight},
-                //     offsetSize: {width: element.offsetWidth, height: element.offsetHeight}
-                // });
+                        />
+                    </RightYAxisContainer>
+                )}
 
-                setCanvasSizes(prev => {
-                    if (prev.width !== width || prev.height !== height) {
-                        // logger.log('🔄 Updating canvas sizes:', {
-                        //     from: prev,
-                        //     to: {width, height},
-                        //     change: {
-                        //         width: width - prev.width,
-                        //         height: height - prev.height
-                        //     }
-                        // });
-                        return {width, height};
-                    }
-                    logger.log('🚫 No size change, keeping previous:', prev);
-                    return prev;
-                });
-            }
-        });
+                <CanvasAxisContainer className={'canvas-axis-container'}
+                                     style={{
+                                         width: `${canvasSizes.width - (yAxisWidth + 40)}px`,
+                                         marginLeft: `${yAxisPosition === 'left' ? 0 : 20}px`,
+                                         marginRight: `${yAxisPosition === 'right' ? 0 : 20}px`,
+                                     }}
+                >
+                    <CanvasContainer className={'canvas-container'} style={{position: 'relative'}}>
+                        <ChartCanvas
+                            parentContainerRef={containerRef}
+                            intervalsArray={intervalsArray}
+                            drawings={drawings}
+                            isDrawing={isDrawing}
+                            selectedIndex={selectedIndex}
+                            setDrawings={setDrawings}
+                            setIsDrawing={setIsDrawing}
+                            setSelectedIndex={setSelectedIndex}
+                            setStartPoint={setStartPoint}
+                            startPoint={startPoint}
+                            visibleRange={visibleRange}
+                            xAxisHeight={xAxisHeight}
+                            chartType={chartType}
+                            interval={interval}
+                        />
+                    </CanvasContainer>
 
-        // Add window resize listener for comparison
-        const handleWindowResize = () => {
-            const windowSize = {width: window.innerWidth, height: window.innerHeight};
-            const elementRect = element.getBoundingClientRect();
-            logger.log('🌍 Window resize:', {
-                window: windowSize,
-                element: {width: elementRect.width, height: elementRect.height}
-            });
-            setLogCount(prev => prev + 1);
-        };
+                    <XAxisContainer className={'x-axis-container'} style={{height: `${xAxisHeight}px`}}>
+                        <XAxis
+                            canvasSizes={canvasSizes}
+                            parentContainerRef={containerRef}
+                            timeDetailLevel={timeDetailLevel}
+                            timeFormat12h={timeFormat12h}
+                            visibleRange={visibleRange}
+                            xAxisHeight={xAxisHeight}
+                        />
+                    </XAxisContainer>
+                </CanvasAxisContainer>
 
-        window.addEventListener('resize', handleWindowResize);
-        resizeObserver.observe(element);
+                {yAxisPosition === 'right' && (
+                    <LeftYAxisContainer className={'left-axis-container'} style={{width: `${yAxisWidth}px`}}>
+                        <YAxis
+                            parentContainerRef={containerRef}
+                            intervalsArray={intervalsArray}
+                            canvasSizes={canvasSizes}
+                            maxPrice={maxPrice}
+                            minPrice={minPrice}
+                            numberOfYTicks={numberOfYTicks}
+                            xAxisHeight={xAxisHeight}
+                            yAxisPosition={yAxisPosition}
+                            yAxisWidth={yAxisWidth}
+                            initialVisiblePriceRange={initialVisiblePriceRange}
+                            chartType={chartType}
+                        />
+                    </LeftYAxisContainer>
+                )}
 
-        // logger.log('🔷 ResizeObserver attached to element:', {className: element.className});
-
-        return () => {
-            // logger.log('🔴 Cleaning up ResizeObserver');
-            window.removeEventListener('resize', handleWindowResize);
-            resizeObserver.disconnect();
-        };
-    }, []);
-
-    // Log every render
-    // logger.log('🔄 ChartStage render:', {
-    //     canvasSizes,
-    //     containerRefCurrent: !!containerRef.current
-    // });
-
-    const [currentPoint, setCurrentPoint] = useState<null | { x: number; y: number }>(null);
-    const [drawings, setDrawings] = useState<any[]>([]);
-    const [isDrawing, setIsDrawing] = useState(false);
-    const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = containerRef.current!.getBoundingClientRect();
-        if (!rect) return;
-
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        setCurrentPoint({ x: mouseX, y: mouseY });
-    };
-
-    const hoveredCandle = React.useMemo(() => {
-        if (!currentPoint || intervalsArray.length === 0) return null;
-        const totalRange = visibleRange.end - visibleRange.start;
-        const candleCount = intervalsArray.length;
-        const candleWidth = canvasSizes.width / candleCount;
-
-        const hoveredIndex = Math.floor((currentPoint.x / canvasSizes.width) * candleCount);
-        return intervalsArray[hoveredIndex] ?? null;
-    }, [currentPoint, intervalsArray, visibleRange, canvasSizes.width]);
-    const formattedTime = hoveredCandle
-        ? new Date(hoveredCandle.t).toLocaleTimeString(undefined, {
-            hour: 'numeric',
-            minute: 'numeric',
-            hour12: timeFormat12h,
-        })
-        : '';
-
-    const [startPoint, setStartPoint] = useState<null | { x: number; y: number }>(null);
-
-    return (
-        <ChartStageContainer className={'chart-stage-container'} ref={containerRef} onMouseMove={handleMouseMove} style={{margin: `${margin}px`}}>
-            {yAxisPosition === 'left' && (
-                <RightYAxisContainer className={'right-axis-container'} style={{width: `${yAxisWidth}px`}}>
-                    <YAxis
-                        parentContainerRef={containerRef}
-                        intervalsArray={intervalsArray}
-                        canvasSizes={canvasSizes}
-                        maxPrice={maxPrice}
-                        minPrice={minPrice}
-                        numberOfYTicks={numberOfYTicks}
-                        xAxisHeight={xAxisHeight}
-                        yAxisPosition={yAxisPosition}
-                        yAxisWidth={yAxisWidth}
-                        initialVisiblePriceRange={initialVisiblePriceRange}
-                        chartType={chartType}
-
-                    />
-                </RightYAxisContainer>
-            )}
-
-            <CanvasAxisContainer className={'canvas-axis-container'}
-                                 style={{
-                                     width: `${canvasSizes.width - (yAxisWidth + 40)}px`,
-                                     marginLeft: `${yAxisPosition === 'left' ? 0 : 20}px`,
-                                     marginRight: `${yAxisPosition === 'right' ? 0 : 20}px`,
-                                 }}
-            >
-                <CanvasContainer className={'canvas-container'} style={{ position: 'relative' }}>
-                    <ChartCanvas
-                        parentContainerRef={containerRef}
-                        intervalsArray={intervalsArray}
-                        currentPoint={currentPoint}
-                        drawings={drawings}
-                        isDrawing={isDrawing}
-                        maxPrice={maxPrice}
-                        minPrice={minPrice}
-                        padding={10}
-                        selectedIndex={selectedIndex}
-                        setCurrentPoint={setCurrentPoint}
-                        setDrawings={setDrawings}
-                        setIsDrawing={setIsDrawing}
-                        setSelectedIndex={setSelectedIndex}
-                        setStartPoint={setStartPoint}
-                        startPoint={startPoint}
-                        visibleRange={visibleRange}
-                        xAxisHeight={xAxisHeight}
-                        chartType={chartType}
-                        hoveredCandle={hoveredCandle}
-                    />
-                </CanvasContainer>
-
-                <XAxisContainer className={'x-axis-container'} style={{height: `${xAxisHeight}px`}}>
-                    <XAxis
-                        canvasSizes={canvasSizes}
-                        parentContainerRef={containerRef}
-                        timeDetailLevel={timeDetailLevel}
-                        timeFormat12h={timeFormat12h}
-                        visibleRange={visibleRange}
-                        xAxisHeight={xAxisHeight}
-                    />
-                </XAxisContainer>
-            </CanvasAxisContainer>
-
-            {yAxisPosition === 'right' && (
-                <LeftYAxisContainer className={'left-axis-container'} style={{width: `${yAxisWidth}px`}}>
-                    <YAxis
-                        parentContainerRef={containerRef}
-                        intervalsArray={intervalsArray}
-                        canvasSizes={canvasSizes}
-                        maxPrice={maxPrice}
-                        minPrice={minPrice}
-                        numberOfYTicks={numberOfYTicks}
-                        xAxisHeight={xAxisHeight}
-                        yAxisPosition={yAxisPosition}
-                        yAxisWidth={yAxisWidth}
-                        initialVisiblePriceRange={initialVisiblePriceRange}
-                        chartType={chartType}
-                    />
-                </LeftYAxisContainer>
-            )}
-
-        </ChartStageContainer>
-    );
-};
+            </ChartStageContainer>
+        );
+    }
+;
