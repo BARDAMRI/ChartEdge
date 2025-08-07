@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import ModeButton from './ModeButton';
 import {
@@ -10,6 +10,9 @@ import {
 export const Toolbar: React.FC = () => {
     const {mode, setMode} = useMode();
 
+    useEffect(() => {
+        console.log('Toolbar mode changed:', mode);
+    },[mode]);
     return (
         <ToolbarContainer className={'toolbar-container'}>
             <ToolbarContent>

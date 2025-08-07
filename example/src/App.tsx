@@ -37,8 +37,8 @@ const intervalsArray: Candle[] = [
     {t: 1688115200000, o: 240, h: 250, l: 235, c: 245},
 ];
 
-const minPrice = Math.min(...intervalsArray.map(candle => [candle.l,candle.h, candle.c, candle.o]).flat());
-const maxPrice = Math.max(...intervalsArray.map(candle => [candle.l,candle.h, candle.c, candle.o]).flat());
+const minPrice = Math.min(...intervalsArray.map(candle => [candle.l, candle.h, candle.c, candle.o]).flat());
+const maxPrice = Math.max(...intervalsArray.map(candle => [candle.l, candle.h, candle.c, candle.o]).flat());
 
 const exampleVisibleRange = {
     start: intervalsArray[0].t,
@@ -46,7 +46,6 @@ const exampleVisibleRange = {
 };
 
 export default function App() {
-    console.log('array : ', intervalsArray);
     return (
         <div style={{height: '100vh', width: '100vw'}}>
             <SimpleChartEdge
@@ -59,7 +58,7 @@ export default function App() {
                 initialTimeDetailLevel={TimeDetailLevel.Auto}
                 initialTimeFormat12h={false}
                 initialVisibleTimeRange={exampleVisibleRange}
-                initialVisiblePriceRange={{min:minPrice, max: maxPrice}}
+                initialVisiblePriceRange={{min: minPrice, max: maxPrice}}
                 chartType={ChartType.Candlestick}
             />
         </div>

@@ -13,6 +13,10 @@ import {
     drawHistogramChart,
     drawLineChart
 } from "./utils/GraphDraw";
+import {drawDrawings} from './utils/drawDrawings';
+import {LineShape} from '../Drawing/LineShape';
+import {RectangleShape} from "../Drawing/RectangleShape";
+import {CircleShape} from "../Drawing/CircleShape";
 
 type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
@@ -109,7 +113,6 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
         const visibleCandles = intervalsArray;
         const intervalMs = parseInterval(intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000, interval);
-        console.log('chart type', chartType, ' interval: ', interval, ' intervalMs: ', intervalMs, ' width: ', canvasRef.current?.clientWidth);
         switch (chartType) {
             case ChartType.Candlestick:
                 drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
@@ -134,7 +137,43 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
                 break;
         }
-    }, [intervalsArray, visibleRange, canvasRef.current, chartType, interval]);
+
+        drawDrawings(ctx, drawings, selectedIndex, canvas.clientWidth, canvas.clientHeight);
+
+        // Draw preview shape while drawing
+        if (isDrawing && startPoint && currentPoint) {
+            let shape = null;
+
+            switch (mode) {
+                case Mode.drawLine:
+                    shape = new LineShape(startPoint.x, startPoint.y, currentPoint.x, currentPoint.y);
+                    break;
+                case Mode.drawRectangle:
+                    shape = new RectangleShape(
+                        startPoint.x,
+                        startPoint.y,
+                        currentPoint.x - startPoint.x,
+                        currentPoint.y - startPoint.y
+                    );
+                    break;
+                case Mode.drawCircle:
+                    shape = new CircleShape(
+                        startPoint.x,
+                        startPoint.y,
+                        currentPoint.x,
+                        currentPoint.y,
+                        'black',
+                        2
+                    );
+                    break;
+            }
+
+            if (shape) {
+                shape.draw(ctx);
+                ctx.stroke();
+            }
+        }
+    }, [intervalsArray, visibleRange, canvasRef.current, chartType, interval, drawings, selectedIndex, currentPoint, isDrawing, startPoint, mode]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
@@ -188,6 +227,8 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                         startY: startPoint!.y,
                         endX: x,
                         endY: y,
+                        color: 'black', // אפשר להוסיף תמיכה דינמית בהמשך
+                        lineWidth: 2
                     },
                 }),
                 [Mode.drawRectangle]: () => ({
@@ -200,15 +241,15 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                     },
                 }),
                 [Mode.drawCircle]: () => {
-                    const dx = x - startPoint!.x;
-                    const dy = y - startPoint!.y;
-                    const radius = Math.sqrt(dx * dx + dy * dy);
                     return {
                         mode: Mode.drawCircle,
                         args: {
-                            centerX: startPoint!.x,
-                            centerY: startPoint!.y,
-                            radius,
+                            startX: startPoint!.x,
+                            startY: startPoint!.y,
+                            endX: x,
+                            endY: y,
+                            color: 'black',
+                            lineWidth: 2
                         },
                     };
                 }

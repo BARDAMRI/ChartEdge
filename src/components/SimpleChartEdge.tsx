@@ -52,8 +52,6 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                     chartType = ChartType.Candlestick,
                                                                     interval = '1h',
                                                                 }) => {
-
-    console.log('SimpleChartEdge rendered with initialCandles:', intervalsArray)
     return (
         <ModeProvider>
             <GlobalStyle/>

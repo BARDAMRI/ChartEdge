@@ -34,7 +34,6 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, candles: Can
 
         const bodyTop = Math.min(openY, closeY);
         const bodyHeight = Math.abs(openY - closeY);
-        console.log('drawing new candle from x:', x, ' to x: ', x + candleWidth, ' bodyTop:', bodyTop, ' bodyHeight:', bodyHeight);
         ctx.fillRect(x + 1, bodyTop, candleWidth - 2, bodyHeight || 1);
     });
 }

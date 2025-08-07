@@ -11,11 +11,10 @@ interface ModeButtonProps {
 }
 
 const ModeButton: React.FC<ModeButtonProps> = ({mode, currentMode, onClickHandler, label, title}) => {
-    const selected = mode === currentMode;
 
     return (
-        <div style={{cursor:'pointer'}} title={title}>
-            <ToolbarButton $selected={selected} title={title} onClick={onClickHandler(mode)}>
+        <div style={{cursor: 'pointer'}} title={title} onClick={() => onClickHandler(mode)}>
+            <ToolbarButton $selected={mode === currentMode} title={title}>
                 {label}
             </ToolbarButton>
         </div>

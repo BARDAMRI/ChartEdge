@@ -183,10 +183,10 @@ export const ChartStage: React.FC<ChartStageProps> = ({
             const handleWindowResize = () => {
                 const windowSize = {width: window.innerWidth, height: window.innerHeight};
                 const elementRect = element.getBoundingClientRect();
-                logger.log('🌍 Window resize:', {
-                    window: windowSize,
-                    element: {width: elementRect.width, height: elementRect.height}
-                });
+                // logger.log('🌍 Window resize:', {
+                //     window: windowSize,
+                //     element: {width: elementRect.width, height: elementRect.height}
+                // });
                 setLogCount(prev => prev + 1);
             };
 
