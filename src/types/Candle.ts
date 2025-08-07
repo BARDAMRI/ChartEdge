@@ -4,6 +4,7 @@ export interface Candle {
     c: number; // close
     l: number; // low
     h: number; // high
+    v?: number; // volume (optional)
 }
 
 export interface CandleWithIndex extends Candle {

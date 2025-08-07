@@ -6,7 +6,7 @@ const intervalsArray: Candle[] = [
     {t: 1688003600000, o: 105, h: 115, l: 100, c: 110},
     {t: 1688007200000, o: 110, h: 120, l: 105, c: 115},
     {t: 1688010800000, o: 115, h: 125, l: 110, c: 120},
-    {t: 1688014400000, o: 120, h: 125, l: 100, c: 105},
+    {t: 1688014400000, o: 120, h: 125, l: 100, c: 105, v: 5},
     {t: 1688018000000, o: 105, h: 115, l: 95, c: 110},
     {t: 1688021600000, o: 110, h: 120, l: 105, c: 115},
     {t: 1688025200000, o: 115, h: 125, l: 110, c: 120},
@@ -46,6 +46,7 @@ const exampleVisibleRange = {
 };
 
 export default function App() {
+    console.log('array : ', intervalsArray);
     return (
         <div style={{height: '100vh', width: '100vw'}}>
             <SimpleChartEdge

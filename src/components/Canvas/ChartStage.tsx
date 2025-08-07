@@ -125,20 +125,20 @@ export const ChartStage: React.FC<ChartStageProps> = ({
 
         // Log computed styles that might affect sizing
         const computedStyle = window.getComputedStyle(element);
-        logger.log('🔷 Container computed styles:', {
-            width: computedStyle.width,
-            height: computedStyle.height,
-            minWidth: computedStyle.minWidth,
-            minHeight: computedStyle.minHeight,
-            maxWidth: computedStyle.maxWidth,
-            maxHeight: computedStyle.maxHeight,
-            boxSizing: computedStyle.boxSizing,
-            display: computedStyle.display,
-            flexGrow: computedStyle.flexGrow,
-            flexShrink: computedStyle.flexShrink,
-            flexBasis: computedStyle.flexBasis,
-            overflow: computedStyle.overflow
-        });
+        // logger.log('🔷 Container computed styles:', {
+        //     width: computedStyle.width,
+        //     height: computedStyle.height,
+        //     minWidth: computedStyle.minWidth,
+        //     minHeight: computedStyle.minHeight,
+        //     maxWidth: computedStyle.maxWidth,
+        //     maxHeight: computedStyle.maxHeight,
+        //     boxSizing: computedStyle.boxSizing,
+        //     display: computedStyle.display,
+        //     flexGrow: computedStyle.flexGrow,
+        //     flexShrink: computedStyle.flexShrink,
+        //     flexBasis: computedStyle.flexBasis,
+        //     overflow: computedStyle.overflow
+        // });
 
         // Check parent chain (up to 3 levels)
         let parent = element.parentElement;
@@ -146,42 +146,42 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         while (parent && level <= 3) {
             const parentRect = parent.getBoundingClientRect();
             const parentStyle = window.getComputedStyle(parent);
-            logger.log(`🔷 Parent ${level} (${parent.className}):`, {
-                size: {width: parentRect.width, height: parentRect.height},
-                minWidth: parentStyle.minWidth,
-                maxWidth: parentStyle.maxWidth,
-                display: parentStyle.display,
-                overflow: parentStyle.overflow,
-                flexGrow: parentStyle.flexGrow,
-                flexShrink: parentStyle.flexShrink
-            });
+            // logger.log(`🔷 Parent ${level} (${parent.className}):`, {
+            //     size: {width: parentRect.width, height: parentRect.height},
+            //     minWidth: parentStyle.minWidth,
+            //     maxWidth: parentStyle.maxWidth,
+            //     display: parentStyle.display,
+            //     overflow: parentStyle.overflow,
+            //     flexGrow: parentStyle.flexGrow,
+            //     flexShrink: parentStyle.flexShrink
+            // });
             parent = parent.parentElement;
             level++;
         }
 
         const resizeObserver = new ResizeObserver(entries => {
-            logger.log('🟢 ResizeObserver triggered!');
+            // logger.log('🟢 ResizeObserver triggered!');
             setLogCount(prev => prev + 1);
 
             for (let entry of entries) {
                 const {width, height} = entry.contentRect;
                 const {target} = entry;
 
-                logger.log('🟢 ResizeObserver data:', {
-                    contentRect: {width, height},
-                    borderBoxSize: entry.borderBoxSize?.[0],
-                    contentBoxSize: entry.contentBoxSize?.[0],
-                    targetClass: (target as HTMLElement).className,
-                    currentCanvasSizes: canvasSizes
-                });
+                // logger.log('🟢 ResizeObserver data:', {
+                //     contentRect: {width, height},
+                //     borderBoxSize: entry.borderBoxSize?.[0],
+                //     contentBoxSize: entry.contentBoxSize?.[0],
+                //     targetClass: (target as HTMLElement).className,
+                //     currentCanvasSizes: canvasSizes
+                // });
 
                 // Also log current element measurements
                 const currentRect = element.getBoundingClientRect();
-                logger.log('🟢 Current element measurements:', {
-                    getBoundingClientRect: {width: currentRect.width, height: currentRect.height},
-                    clientSize: {width: element.clientWidth, height: element.clientHeight},
-                    offsetSize: {width: element.offsetWidth, height: element.offsetHeight}
-                });
+                // logger.log('🟢 Current element measurements:', {
+                //     getBoundingClientRect: {width: currentRect.width, height: currentRect.height},
+                //     clientSize: {width: element.clientWidth, height: element.clientHeight},
+                //     offsetSize: {width: element.offsetWidth, height: element.offsetHeight}
+                // });
 
                 setCanvasSizes(prev => {
                     if (prev.width !== width || prev.height !== height) {
@@ -215,20 +215,20 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         window.addEventListener('resize', handleWindowResize);
         resizeObserver.observe(element);
 
-        logger.log('🔷 ResizeObserver attached to element:', {className: element.className});
+        // logger.log('🔷 ResizeObserver attached to element:', {className: element.className});
 
         return () => {
-            logger.log('🔴 Cleaning up ResizeObserver');
+            // logger.log('🔴 Cleaning up ResizeObserver');
             window.removeEventListener('resize', handleWindowResize);
             resizeObserver.disconnect();
         };
     }, []);
 
     // Log every render
-    logger.log('🔄 ChartStage render:', {
-        canvasSizes,
-        containerRefCurrent: !!containerRef.current
-    });
+    // logger.log('🔄 ChartStage render:', {
+    //     canvasSizes,
+    //     containerRefCurrent: !!containerRef.current
+    // });
 
     const [currentPoint, setCurrentPoint] = useState<null | { x: number; y: number }>(null);
     const [drawings, setDrawings] = useState<any[]>([]);
@@ -242,6 +242,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                 <RightYAxisContainer className={'right-axis-container'} style={{width: `${yAxisWidth}px`}}>
                     <YAxis
                         parentContainerRef={containerRef}
+                        intervalsArray={intervalsArray}
                         canvasSizes={canvasSizes}
                         maxPrice={maxPrice}
                         minPrice={minPrice}
@@ -250,6 +251,8 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         yAxisPosition={yAxisPosition}
                         yAxisWidth={yAxisWidth}
                         initialVisiblePriceRange={initialVisiblePriceRange}
+                        chartType={chartType}
+
                     />
                 </RightYAxisContainer>
             )}
@@ -300,6 +303,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                 <LeftYAxisContainer className={'left-axis-container'} style={{width: `${yAxisWidth}px`}}>
                     <YAxis
                         parentContainerRef={containerRef}
+                        intervalsArray={intervalsArray}
                         canvasSizes={canvasSizes}
                         maxPrice={maxPrice}
                         minPrice={minPrice}
@@ -308,6 +312,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         yAxisPosition={yAxisPosition}
                         yAxisWidth={yAxisWidth}
                         initialVisiblePriceRange={initialVisiblePriceRange}
+                        chartType={chartType}
                     />
                 </LeftYAxisContainer>
             )}

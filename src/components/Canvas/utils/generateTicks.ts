@@ -120,12 +120,12 @@ export function generateAndDrawTimeTicks(
         const pos = ((tickTime - start) / durationMs) * canvasWidth;
 
         // debug print for each tick
-        console.log('🧪 Tick:', {
-            tickTime,
-            pos,
-            label: format(currentTickDate, formatStr),
-            percent: (tickTime - start) / durationMs
-        });
+        // console.log('🧪 Tick:', {
+        //     tickTime,
+        //     pos,
+        //     label: format(currentTickDate, formatStr),
+        //     percent: (tickTime - start) / durationMs
+        // });
 
         // only add the tick if it is within the canvas width
         if (pos >= 0 && pos <= canvasWidth) {

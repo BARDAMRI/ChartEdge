@@ -564,7 +564,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         window.addEventListener('resize', handleWindowResize);
         resizeObserver.observe(element);
 
-        logger.log('🔷 ResizeObserver attached to element:', {className: element.className});
+        // logger.log('🔷 ResizeObserver attached to element:', {className: element.className});
 
         return () => {
             logger.log('🔴 Cleaning up ResizeObserver');

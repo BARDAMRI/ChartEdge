@@ -1,11 +1,15 @@
+import { getYAxisPriceRange } from '../utils/priceRangeUtils';
 import React, {useEffect, useRef} from 'react';
 import {generateAndDrawYTicks} from '../utils/generateTicks';
 import {CanvasSizes} from "../ChartStage";
 import {StyledYAxisCanvas} from '../../../styles/YAxis.styles';
 import {PriceRange} from "../../../types/Graph";
+import {ChartType} from '../../../types/chartStyleOptions';
+import {Candle} from "../../../types/Candle";
 
 interface YAxisProps {
     parentContainerRef: React.RefObject<HTMLDivElement | null>;
+    intervalsArray: Candle[];
     canvasSizes: CanvasSizes;
     yAxisPosition: 'left' | 'right';
     xAxisHeight: number;
@@ -14,10 +18,13 @@ interface YAxisProps {
     maxPrice: number;
     numberOfYTicks: number;
     initialVisiblePriceRange: PriceRange;
+    chartType: ChartType;
+
 }
 
 export default function YAxis({
                                   parentContainerRef,
+                                  intervalsArray,
                                   canvasSizes,
                                   yAxisWidth,
                                   xAxisHeight,
@@ -25,7 +32,8 @@ export default function YAxis({
                                   minPrice,
                                   maxPrice,
                                   numberOfYTicks,
-                                  initialVisiblePriceRange
+                                  initialVisiblePriceRange,
+                                  chartType
                               }: YAxisProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const dpr = window.devicePixelRatio || 1;
@@ -46,8 +54,11 @@ export default function YAxis({
         ctx.scale(dpr, dpr);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const priceMin = initialVisiblePriceRange?.min ?? minPrice;
-        const priceMax = initialVisiblePriceRange?.max ?? maxPrice;
+        const { min: priceMin, max: priceMax } = getYAxisPriceRange(
+            intervalsArray,
+            chartType
+        );
+
         generateAndDrawYTicks(
             canvas,
             priceMin,
@@ -61,7 +72,7 @@ export default function YAxis({
             5,
             5
         );
-    }, [parentContainerRef, yAxisWidth, minPrice, maxPrice, numberOfYTicks, yAxisPosition, dpr, canvasSizes]);
+    }, [parentContainerRef, yAxisWidth, minPrice, maxPrice, numberOfYTicks, yAxisPosition, dpr, canvasSizes, chartType, initialVisiblePriceRange]);
 
     return (
         <StyledYAxisCanvas ref={canvasRef} $position={yAxisPosition}/>

@@ -150,7 +150,7 @@ export function drawHistogramChart(
     if (candles.length === 0) return;
 
     const padding = 10;
-    const values = candles.map(c => Math.abs(c.c - c.o)); // using price movement magnitude as "volume"
+    const values = candles.map(c => c.v!).filter((v): v is number => v !== undefined);
     const maxValue = Math.max(...values);
     const candleCount = Math.ceil((visibleRange.end - visibleRange.start) / intervalMs);
     const candleWidth = width / candleCount;
@@ -161,7 +161,7 @@ export function drawHistogramChart(
 
         if (x + candleWidth < 0 || x >= width + candleWidth / 2) return;
 
-        const value = Math.abs(candle.c - candle.o);
+        const value = candle.v!;
         const barHeight = (value / maxValue) * (height - padding * 2);
         const y = height - padding - barHeight;
 
