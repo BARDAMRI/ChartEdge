@@ -90,11 +90,17 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             case ChartType.Bar:
                 drawBarChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
                 break;
-            case ChartType.Histogram:
-                drawHistogramChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
-                break;
+            case ChartType.Histogram: {
+                const hasValidVolume = visibleCandles.some(c => typeof c.v === 'number' && c.v > 0);
+                if (hasValidVolume) {
+                    drawHistogramChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
+                    break;
+                }
+            }
             default:
-                ctx.fillText('⚠️ Unknown chart type', 10, 20);
+                console.warn('Unknown chart type:', chartType, '- falling back to Candlestick.');
+                drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
+                break;
         }
     }, [intervalsArray, visibleRange, canvasRef.current, chartType, interval]);
 
