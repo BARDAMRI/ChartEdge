@@ -234,10 +234,37 @@ export const ChartStage: React.FC<ChartStageProps> = ({
     const [drawings, setDrawings] = useState<any[]>([]);
     const [isDrawing, setIsDrawing] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        const rect = containerRef.current!.getBoundingClientRect();
+        if (!rect) return;
+
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        setCurrentPoint({ x: mouseX, y: mouseY });
+    };
+
+    const hoveredCandle = React.useMemo(() => {
+        if (!currentPoint || intervalsArray.length === 0) return null;
+        const totalRange = visibleRange.end - visibleRange.start;
+        const candleCount = intervalsArray.length;
+        const candleWidth = canvasSizes.width / candleCount;
+
+        const hoveredIndex = Math.floor((currentPoint.x / canvasSizes.width) * candleCount);
+        return intervalsArray[hoveredIndex] ?? null;
+    }, [currentPoint, intervalsArray, visibleRange, canvasSizes.width]);
+    const formattedTime = hoveredCandle
+        ? new Date(hoveredCandle.t).toLocaleTimeString(undefined, {
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: timeFormat12h,
+        })
+        : '';
+
     const [startPoint, setStartPoint] = useState<null | { x: number; y: number }>(null);
 
     return (
-        <ChartStageContainer className={'chart-stage-container'} ref={containerRef} style={{margin: `${margin}px`}}>
+        <ChartStageContainer className={'chart-stage-container'} ref={containerRef} onMouseMove={handleMouseMove} style={{margin: `${margin}px`}}>
             {yAxisPosition === 'left' && (
                 <RightYAxisContainer className={'right-axis-container'} style={{width: `${yAxisWidth}px`}}>
                     <YAxis
@@ -264,7 +291,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                      marginRight: `${yAxisPosition === 'right' ? 0 : 20}px`,
                                  }}
             >
-                <CanvasContainer className={'canvas-container'}>
+                <CanvasContainer className={'canvas-container'} style={{ position: 'relative' }}>
                     <ChartCanvas
                         parentContainerRef={containerRef}
                         intervalsArray={intervalsArray}
@@ -284,6 +311,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         visibleRange={visibleRange}
                         xAxisHeight={xAxisHeight}
                         chartType={chartType}
+                        hoveredCandle={hoveredCandle}
                     />
                 </CanvasContainer>
 
@@ -316,6 +344,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                     />
                 </LeftYAxisContainer>
             )}
+
         </ChartStageContainer>
     );
 };

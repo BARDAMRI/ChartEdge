@@ -3,7 +3,7 @@ import React, {useRef, useEffect} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {TimeRange} from "../../types/Graph";
 import type {Candle} from "../../types/Candle";
-import {StyledCanvas} from '../../styles/ChartCanvas.styles';
+import {StyledCanvas, InnerCanvasContainer, HoverTooltip} from '../../styles/ChartCanvas.styles';
 import {ChartType} from '../../types/chartStyleOptions';
 import {parseInterval} from "./utils/RangeCalculators";
 import {drawAreaChart, drawBarChart, drawCandlestickChart, drawHistogramChart, drawLineChart} from "./utils/GraphDraw";
@@ -30,6 +30,7 @@ interface ChartCanvasProps {
     xAxisHeight: number;
     chartType: ChartType;
     interval?: string;
+    hoveredCandle: Candle | null;
 }
 
 
@@ -53,6 +54,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             xAxisHeight,
                                                             chartType,
                                                             interval,
+                                                            hoveredCandle,
                                                         }) => {
     const mode = useMode().mode;
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -90,13 +92,12 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             case ChartType.Bar:
                 drawBarChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
                 break;
-            case ChartType.Histogram: {
+            case ChartType.Histogram:
                 const hasValidVolume = visibleCandles.some(c => typeof c.v === 'number' && c.v > 0);
                 if (hasValidVolume) {
                     drawHistogramChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
                     break;
                 }
-            }
             default:
                 console.warn('Unknown chart type:', chartType, '- falling back to Candlestick.');
                 drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
@@ -206,18 +207,39 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     };
 
     return (
-        <div
-            className="inner-canvas-container relative"
-            style={{width: '100%', height: `calc(100% - ${xAxisHeight}px)`}}
-            ref={containerRef}
-        >
+        <InnerCanvasContainer $xAxisHeight={xAxisHeight} ref={containerRef}>
             <StyledCanvas
-                className="canvas flex relative w-full h-full p-0 m-0 bg-white border-none pointer-events-auto"
+                className="styles-canvas"
                 ref={canvasRef}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
             />
-        </div>
+            {hoveredCandle && currentPoint && (
+                <HoverTooltip
+                    style={{
+                        position: 'absolute',
+                        bottom: '5px',
+                        right: '10px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        display: 'flex',
+                        gap: '10px',
+                        pointerEvents: 'none'
+                    }}
+                >
+                    <div>
+                        Time: {new Date(hoveredCandle.t).toLocaleString(undefined, {hour12: false})} |
+                        O: {hoveredCandle.o} |
+                        H: {hoveredCandle.h} |
+                        L: {hoveredCandle.l} |
+                        C: {hoveredCandle.c}
+                        {hoveredCandle.v !== undefined && ` | V: ${hoveredCandle.v}`}
+                    </div>
+                </HoverTooltip>
+            )}
+        </InnerCanvasContainer>
     );
 };
