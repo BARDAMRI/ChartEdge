@@ -36,9 +36,8 @@ export const ToolbarButton = styled.button<ToolbarButtonProps>`
     margin: 0;
     overflow: hidden;
     text-align: center;
-    font-size: 10px;
+    font-size: 18px;
     flex-grow: 1;
-    border: none;
     background-color: ${({$selected}) => ($selected ? '#333' : 'transparent')};
     color: ${({$selected}) => ($selected ? '#fff' : '#000')};
     border-left: ${({$selected}) => ($selected ? '3px solid #007bff' : 'none')};

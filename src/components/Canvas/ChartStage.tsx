@@ -216,8 +216,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         const [startPoint, setStartPoint] = useState<null | { x: number; y: number }>(null);
 
         return (
-            <ChartStageContainer className={'chart-stage-container'} ref={containerRef}
-                                 style={{margin: `${margin}px`}}>
+            <ChartStageContainer className={'chart-stage-container'} ref={containerRef}>
                 {yAxisPosition === 'left' && (
                     <RightYAxisContainer className={'right-axis-container'} style={{width: `${yAxisWidth}px`}}>
                         <YAxis
@@ -239,9 +238,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
 
                 <CanvasAxisContainer className={'canvas-axis-container'}
                                      style={{
-                                         width: `${canvasSizes.width - (yAxisWidth + 40)}px`,
-                                         marginLeft: `${yAxisPosition === 'left' ? 0 : 20}px`,
-                                         marginRight: `${yAxisPosition === 'right' ? 0 : 20}px`,
+                                         width: `${canvasSizes.width - (yAxisWidth + 40)}px`
                                      }}
                 >
                     <CanvasContainer className={'canvas-container'} style={{position: 'relative'}}>

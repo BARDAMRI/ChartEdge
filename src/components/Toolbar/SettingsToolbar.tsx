@@ -36,8 +36,8 @@ export const SettingsToolbar: React.FC = () => {
                 <option value="candlestick">Candlestick</option>
                 <option value="line">Line</option>
             </select>
-            <button className={'snapshot-button'} onClick={handleDownload}>📸 Snapshot</button>
-            <button className={'more-settings-button'} onClick={openSettingsMenu}>⚙️ Settings</button>
+            <button className={'snapshot-button'} onClick={handleDownload}>📸</button>
+            <button className={'more-settings-button'} onClick={openSettingsMenu}>⚙️</button>
         </SettingsToolbarContainer>
     );
 };

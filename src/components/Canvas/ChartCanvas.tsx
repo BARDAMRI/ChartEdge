@@ -54,6 +54,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [currentPoint, setCurrentPoint] = useState<null | { x: number; y: number }>(null);
+
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!e) return;
         const rect = containerRef.current!.getBoundingClientRect();
@@ -64,13 +65,22 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         setCurrentPoint({x: mouseX, y: mouseY});
     };
 
+    const handleMouseLeave = () => {
+        setCurrentPoint(null);
+    };
+
 
     const hoveredCandle = React.useMemo(() => {
         if (
             !currentPoint ||
+            currentPoint.x >= canvasRef.current!.clientWidth ||
+            currentPoint.x <= 0 ||
+            currentPoint.y >= canvasRef.current!.clientHeight ||
+            currentPoint.y <= 0 ||
             intervalsArray.length <= 0 ||
             !canvasRef?.current ||
-            canvasRef.current!.clientWidth === 0
+            canvasRef.current!.clientWidth === 0 ||
+            canvasRef.current!.clientHeight === 0
         ) return null;
 
         // Use the new utility function to get the hovered timestamp
@@ -224,6 +234,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
             />
             {hoveredCandle && currentPoint && (
                 <HoverTooltip $isPositive={hoveredCandle.c > hoveredCandle.o}>

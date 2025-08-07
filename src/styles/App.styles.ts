@@ -45,13 +45,14 @@ export const ToolbarArea = styled.div`
 `;
 
 export const ChartStageArea = styled.div`
-  flex: 1 1 auto;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
+    flex: 1 1 auto;
+    padding:  10px 20px;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 `;
 
 export const SettingsArea = styled.div`

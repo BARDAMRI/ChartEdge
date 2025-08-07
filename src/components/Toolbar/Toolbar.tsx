@@ -13,13 +13,13 @@ export const Toolbar: React.FC = () => {
     return (
         <ToolbarContainer className={'toolbar-container'}>
             <ToolbarContent>
-                <ModeButton mode={Mode.drawLine} currentMode={mode} onClick={setMode} label="D Line"/>
-                <ModeButton mode={Mode.drawRectangle} currentMode={mode} onClick={setMode} label="D Rect"/>
-                <ModeButton mode={Mode.drawCircle} currentMode={mode} onClick={setMode} label="D Cir"/>
-                <ModeButton mode={Mode.drawTriangle} currentMode={mode} onClick={setMode} label="D Triangle"/>
-                <ModeButton mode={Mode.drawAngle} currentMode={mode} onClick={setMode} label="D Angle"/>
-                <ModeButton mode={Mode.select} currentMode={mode} onClick={setMode} label="Select"/>
-                <ModeButton mode={Mode.editShape} currentMode={mode} onClick={setMode} label="Edit"/>
+                <ModeButton mode={Mode.drawLine} currentMode={mode} onClickHandler={setMode} label="📏" title="Draw Line"/>
+                <ModeButton mode={Mode.drawRectangle} currentMode={mode} onClickHandler={setMode} label="⬛" title="Draw Rectangle"/>
+                <ModeButton mode={Mode.drawCircle} currentMode={mode} onClickHandler={setMode} label="⚪" title="Draw Circle"/>
+                <ModeButton mode={Mode.drawTriangle} currentMode={mode} onClickHandler={setMode} label="🔺" title="Draw Triangle"/>
+                <ModeButton mode={Mode.drawAngle} currentMode={mode} onClickHandler={setMode} label="📐" title="Draw Angle"/>
+                <ModeButton mode={Mode.select} currentMode={mode} onClickHandler={setMode} label="🖱️" title="Select Mode"/>
+                <ModeButton mode={Mode.editShape} currentMode={mode} onClickHandler={setMode} label="✏️" title="Edit Shape"/>
             </ToolbarContent>
         </ToolbarContainer>
     );

@@ -1,22 +1,25 @@
 import React from 'react';
-import { Mode } from '../../contexts/ModeContext';
-import { ToolbarButton } from '../../styles/Toolbar.styles';
+import {Mode} from '../../contexts/ModeContext';
+import {ToolbarButton} from '../../styles/Toolbar.styles';
 
 interface ModeButtonProps {
-  mode: Mode;
-  currentMode: Mode;
-  onClick: (mode: Mode) => void;
-  label: string;
+    mode: Mode;
+    currentMode: Mode;
+    onClickHandler: any;
+    label: string;
+    title: string;
 }
 
-const ModeButton: React.FC<ModeButtonProps> = ({ mode, currentMode, onClick, label }) => {
-  const selected = mode === currentMode;
+const ModeButton: React.FC<ModeButtonProps> = ({mode, currentMode, onClickHandler, label, title}) => {
+    const selected = mode === currentMode;
 
-  return (
-    <ToolbarButton $selected={selected} onClick={() => onClick(mode)}>
-      {label}
-    </ToolbarButton>
-  );
+    return (
+        <div style={{cursor:'pointer'}} title={title}>
+            <ToolbarButton $selected={selected} title={title} onClick={onClickHandler(mode)}>
+                {label}
+            </ToolbarButton>
+        </div>
+    );
 };
 
 export default ModeButton;
