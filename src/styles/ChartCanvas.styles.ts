@@ -10,6 +10,8 @@ export const StyledCanvas = styled.canvas`
     background-color: white;
     border: none;
     pointer-events: auto;
+    touch-action: none;
+    overscroll-behavior: none;
 `;
 
 interface InnerCanvasContainerProps {

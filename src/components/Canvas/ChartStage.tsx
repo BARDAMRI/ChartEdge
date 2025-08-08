@@ -67,6 +67,7 @@ interface ChartStageProps {
     initialTimeDetailLevel: TimeDetailLevel;
     initialTimeFormat12h: boolean;
     visibleRange: TimeRange;
+    setVisibleRange: (range: TimeRange) => void;
     initialVisiblePriceRange: PriceRange;
     chartType: ChartType;
     interval?: string;
@@ -82,6 +83,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           initialTimeDetailLevel,
                                                           initialTimeFormat12h,
                                                           visibleRange,
+                                                          setVisibleRange,
                                                           initialVisiblePriceRange,
                                                           chartType,
                                                           interval,
@@ -251,6 +253,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                             setDrawings={setDrawings}
                             setIsDrawing={setIsDrawing}
                             setSelectedIndex={setSelectedIndex}
+                            setVisibleRange={setVisibleRange}
                             setStartPoint={setStartPoint}
                             startPoint={startPoint}
                             visibleRange={visibleRange}

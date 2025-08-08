@@ -15,34 +15,45 @@ export interface TriangleShapeArgs {
 export class TriangleShape implements IDrawingShape {
 
     constructor(
-        public x1: number,
-        public y1: number,
-        public x2: number,
-        public y2: number,
-        public x3: number,
-        public y3: number,
+        public startX: number,
+        public startY: number,
+        public endX: number,
+        public endY: number,
         public color: string = 'black',
-        public lineWidth: number = 2) {
-    }
+        public lineWidth: number = 2
+    ) {}
 
     draw(ctx: CanvasRenderingContext2D): void {
+        const x1 = this.startX;
+        const y1 = this.endY;
+        const x2 = this.endX;
+        const y2 = this.endY;
+        const x3 = (this.startX + this.endX) / 2;
+        const y3 = this.startY;
 
         ctx.strokeStyle = this.color;
         ctx.lineWidth = this.lineWidth;
         ctx.beginPath();
-        ctx.moveTo(this.x1, this.y1);
-        ctx.lineTo(this.x2, this.y2);
-        ctx.lineTo(this.x3, this.y3);
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineTo(x3, y3);
         ctx.closePath();
         ctx.stroke();
     }
 
     isHit(x: number, y: number): boolean {
         const tolerance = 6;
+        const x1 = this.startX;
+        const y1 = this.endY;
+        const x2 = this.endX;
+        const y2 = this.endY;
+        const x3 = (this.startX + this.endX) / 2;
+        const y3 = this.startY;
+
         return (
-            this.isPointNearLine(x, y, this.x1, this.y1, this.x2, this.y2, tolerance) ||
-            this.isPointNearLine(x, y, this.x2, this.y2, this.x3, this.y3, tolerance) ||
-            this.isPointNearLine(x, y, this.x3, this.y3, this.x1, this.y1, tolerance)
+            this.isPointNearLine(x, y, x1, y1, x2, y2, tolerance) ||
+            this.isPointNearLine(x, y, x2, y2, x3, y3, tolerance) ||
+            this.isPointNearLine(x, y, x3, y3, x1, y1, tolerance)
         );
     }
 

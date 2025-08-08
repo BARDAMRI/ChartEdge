@@ -48,12 +48,12 @@ export function drawDrawings(
                 break;
             case Mode.drawTriangle:
                 shape = new TriangleShape(
-                    d.args.x1,
-                    d.args.y1,
-                    d.args.x2,
-                    d.args.y2,
-                    d.args.x3,
-                    d.args.y3
+                    d.args.startX,
+                    d.args.startY,
+                    d.args.endX,
+                    d.args.endY,
+                    d.args.color,
+                    d.args.lineWidth
                 );
                 break;
             case Mode.drawAngle:
@@ -63,7 +63,9 @@ export function drawDrawings(
                     d.args.x1,
                     d.args.y1,
                     d.args.x2,
-                    d.args.y2
+                    d.args.y2,
+                    d.args.color,
+                    d.args.lineWidth
                 );
                 break;
             case Mode.drawPolyline:

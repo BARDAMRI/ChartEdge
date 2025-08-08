@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {ChartStage} from './Canvas/ChartStage';
 import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
@@ -52,6 +52,13 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                     chartType = ChartType.Candlestick,
                                                                     interval = '1h',
                                                                 }) => {
+
+    const [visibleRange, setVisibleRange] = React.useState<TimeRange>(initialVisibleTimeRange);
+
+    useEffect(() => {
+        setVisibleRange(initialVisibleTimeRange);
+    }, [initialVisibleTimeRange]);
+
     return (
         <ModeProvider>
             <GlobalStyle/>
@@ -73,7 +80,8 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                             initialYAxisWidth={initialYAxisWidth}
                             initialTimeDetailLevel={initialTimeDetailLevel}
                             initialTimeFormat12h={initialTimeFormat12h}
-                            visibleRange={initialVisibleTimeRange}
+                            visibleRange={visibleRange}
+                            setVisibleRange={(range: TimeRange) => setVisibleRange(range)}
                             initialVisiblePriceRange={initialVisiblePriceRange}
                             chartType={chartType}
                             interval={interval}

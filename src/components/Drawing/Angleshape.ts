@@ -26,16 +26,44 @@ export class AngleShape implements IDrawingShape {
     }
 
     draw(ctx: CanvasRenderingContext2D): void {
-
         ctx.strokeStyle = this.color;
         ctx.lineWidth = this.lineWidth;
         ctx.beginPath();
         ctx.moveTo(this.x0, this.y0);
         ctx.lineTo(this.x1, this.y1);
-        ctx.moveTo(this.x0, this.y0);
-        ctx.lineTo(this.x2, this.y2);
         ctx.stroke();
-        const angleDeg = this.calculateAngle();
+
+        // Draw dashed line from (x0,y0) to (x0+10,y0)
+        ctx.setLineDash([3, 2]);
+        ctx.beginPath();
+        ctx.moveTo(this.x0, this.y0);
+        ctx.lineTo(this.x0 + 30, this.y0);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw arc for angle visualization
+        const radius = 20;
+        const v1 = {x: this.x1 - this.x0, y: this.y1 - this.y0};
+        const v2 = {x: this.x2 - this.x0, y: this.y2 - this.y0};
+
+        const angle1 = Math.atan2(v1.y, v1.x);
+        const angle2 = Math.atan2(v2.y, v2.x);
+
+        const anticlockwise = this.y1 > this.y0;
+        ctx.setLineDash([3, 2]);
+        ctx.lineDashOffset = 0;
+        ctx.beginPath();
+        ctx.arc(this.x0, this.y0, radius, angle1, angle2, anticlockwise);
+        ctx.stroke();
+
+        // Draw angle text
+        const angle = this.calculateAngle();
+        const midAngle = (angle1 + angle2) / 2;
+        const textX = this.x0 + 40;
+        const textY = this.y0
+        ctx.fillStyle = this.color;
+        ctx.font = '14px sans-serif';
+        ctx.fillText(angle + '°', textX, textY);
     }
 
     isHit(x: number, y: number): boolean {
@@ -79,6 +107,9 @@ export class AngleShape implements IDrawingShape {
         const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
         const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
         const cos = dot / (mag1 * mag2);
-        return Math.acos(cos) * (100 / Math.PI);
+        const angleRad = Math.acos(cos);
+        const angleDeg = angleRad * (180 / Math.PI);
+        const signedDeg = v2.y < v1.y ?  -angleDeg : angleDeg;
+        return parseFloat(signedDeg.toFixed(1)) || 0;
     }
 }
