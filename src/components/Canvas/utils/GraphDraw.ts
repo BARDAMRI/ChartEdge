@@ -2,8 +2,15 @@ import {ChartType} from "../../../types/chartStyleOptions";
 import type {Candle} from "../../../types/Candle";
 import {TimeRange} from "../../../types/Graph";
 
-export function drawCandlestickChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number, visibleRange: TimeRange, intervalMs: number) {
-    const visibleCandles = candles.filter(candle => candle.t >= visibleRange.start && candle.t <= visibleRange.end);
+
+export type Candlesticks = {
+    XStart: number;
+    XEnd: number;
+    candles: Candle[];
+}
+
+
+export const drawCandlestickChart = (ctx: CanvasRenderingContext2D, visibleCandles: Candle[], width: number, height: number, visibleRange: TimeRange, intervalMs: number) => {
     if (visibleCandles.length === 0) return;
 
     const padding = 10;
@@ -11,13 +18,16 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, candles: Can
     const minPrice = Math.min(...visibleCandles.map(c => c.l));
     const priceRange = maxPrice - minPrice;
 
-    const candleWidth = width / visibleCandles.length;
+    const candleCount = Math.ceil((visibleRange.end - visibleRange.start) / intervalMs);
+    const candleWidth = width / candleCount;
 
     visibleCandles.forEach((candle) => {
         const timeOffset = candle.t - visibleRange.start;
         const x = (timeOffset / intervalMs) * candleWidth;
 
-        if (x + candleWidth < 0 || x >= width + candleWidth / 2) return;
+        if (x >= width || x + candleWidth <= 0) return;
+
+        const drawX = Math.max(x, 0);
 
         const openY = height - ((candle.o - minPrice) / priceRange) * (height - padding * 2) - padding;
         const closeY = height - ((candle.c - minPrice) / priceRange) * (height - padding * 2) - padding;
@@ -29,22 +39,27 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, candles: Can
         ctx.fillStyle = isBullish ? 'green' : 'red';
 
         ctx.beginPath();
-        ctx.moveTo(x + candleWidth / 2, highY);
-        ctx.lineTo(x + candleWidth / 2, lowY);
+        ctx.moveTo(drawX + candleWidth / 2, highY);
+        ctx.lineTo(drawX + candleWidth / 2, lowY);
         ctx.stroke();
 
         const bodyTop = Math.min(openY, closeY);
         const bodyHeight = Math.abs(openY - closeY);
-        ctx.fillRect(x + 1, bodyTop, candleWidth - 2, bodyHeight || 1);
+        ctx.fillRect(drawX + 1, bodyTop, candleWidth - 2, bodyHeight || 1);
     });
+    return {
+        visibleCandles,
+        XStart: visibleCandles[0].t,
+        XEnd: visibleCandles[visibleCandles.length - 1].t + candleWidth
+    };
 }
 
-export function drawLineChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number, visibleRange: TimeRange, intervalMs: number) {
-    if (candles.length === 0) return;
+export function drawLineChart(ctx: CanvasRenderingContext2D, visibleCandles: Candle[], width: number, height: number, visibleRange: TimeRange, intervalMs: number) {
+    if (visibleCandles.length === 0) return;
 
     const padding = 10;
-    const maxPrice = Math.max(...candles.map(c => c.h));
-    const minPrice = Math.min(...candles.map(c => c.l));
+    const maxPrice = Math.max(...visibleCandles.map(c => c.h));
+    const minPrice = Math.min(...visibleCandles.map(c => c.l));
     const priceRange = maxPrice - minPrice;
 
     const candleCount = Math.ceil((visibleRange.end - visibleRange.start) / intervalMs);
@@ -54,7 +69,7 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, candles: Candle[], 
     ctx.lineWidth = 2;
     ctx.strokeStyle = 'blue';
 
-    candles.forEach((candle, index) => {
+    visibleCandles.forEach((candle, index) => {
         const timeOffset = candle.t - visibleRange.start;
         const x = (timeOffset / intervalMs) * candleWidth;
 
@@ -72,12 +87,12 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, candles: Candle[], 
     ctx.stroke();
 }
 
-export function drawAreaChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number, visibleRange: TimeRange, intervalMs: number) {
-    if (candles.length === 0) return;
+export function drawAreaChart(ctx: CanvasRenderingContext2D, visibleCandles: Candle[], width: number, height: number, visibleRange: TimeRange, intervalMs: number) {
+    if (visibleCandles.length === 0) return;
 
     const padding = 10;
-    const maxPrice = Math.max(...candles.map(c => c.h));
-    const minPrice = Math.min(...candles.map(c => c.l));
+    const maxPrice = Math.max(...visibleCandles.map(c => c.h));
+    const minPrice = Math.min(...visibleCandles.map(c => c.l));
     const priceRange = maxPrice - minPrice;
 
     const candleCount = Math.ceil((visibleRange.end - visibleRange.start) / intervalMs);
@@ -86,7 +101,7 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, candles: Candle[], 
     ctx.beginPath();
     ctx.moveTo(0, height);
 
-    candles.forEach((candle) => {
+    visibleCandles.forEach((candle) => {
         const timeOffset = candle.t - visibleRange.start;
         const x = (timeOffset / intervalMs) * candleWidth;
 
@@ -107,23 +122,23 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, candles: Candle[], 
 
 export function drawBarChart(
     ctx: CanvasRenderingContext2D,
-    candles: Candle[],
+    visibleCandles: Candle[],
     width: number,
     height: number,
     visibleRange: TimeRange,
     intervalMs: number
 ) {
-    if (candles.length === 0) return;
+    if (visibleCandles.length === 0) return;
 
     const padding = 10;
-    const maxPrice = Math.max(...candles.map(c => c.h));
-    const minPrice = Math.min(...candles.map(c => c.l));
+    const maxPrice = Math.max(...visibleCandles.map(c => c.h));
+    const minPrice = Math.min(...visibleCandles.map(c => c.l));
     const priceRange = maxPrice - minPrice;
 
     const candleCount = Math.ceil((visibleRange.end - visibleRange.start) / intervalMs);
     const candleWidth = width / candleCount;
 
-    candles.forEach(candle => {
+    visibleCandles.forEach(candle => {
         const timeOffset = candle.t - visibleRange.start;
         const x = (timeOffset / intervalMs) * candleWidth;
 
@@ -142,21 +157,21 @@ export function drawBarChart(
 
 export function drawHistogramChart(
     ctx: CanvasRenderingContext2D,
-    candles: Candle[],
+    visibleCandles: Candle[],
     width: number,
     height: number,
     visibleRange: TimeRange,
     intervalMs: number
 ) {
-    if (candles.length === 0) return;
+    if (visibleCandles.length === 0) return;
 
     const padding = 10;
-    const values = candles.map(c => c.v!).filter((v): v is number => v !== undefined);
+    const values = visibleCandles.map(c => c.v!).filter((v): v is number => v !== undefined);
     const maxValue = Math.max(...values);
     const candleCount = Math.ceil((visibleRange.end - visibleRange.start) / intervalMs);
     const candleWidth = width / candleCount;
 
-    candles.forEach((candle, index) => {
+    visibleCandles.forEach((candle, index) => {
         const timeOffset = candle.t - visibleRange.start;
         const x = (timeOffset / intervalMs) * candleWidth;
 

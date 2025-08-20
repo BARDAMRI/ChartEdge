@@ -7,6 +7,7 @@ import {StyledCanvas, InnerCanvasContainer, HoverTooltip} from '../../styles/Cha
 import {ChartType} from '../../types/chartStyleOptions';
 import {parseInterval} from "./utils/RangeCalculators";
 import {
+    Candlesticks,
     drawAreaChart,
     drawBarChart,
     drawCandlestickChart,
@@ -62,13 +63,13 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [currentPoint, setCurrentPoint] = useState<null | { x: number; y: number }>(null);
-
-    // --- ZOOM STATE ---
-    const [zoomScale, setZoomScale] = useState(1);
-
     const [isPanning, setIsPanning] = useState(false);
     const panStartRef = useRef<number | null>(null);
-
+    const [visibleCandles, setVisibleCandles] = useState<Candlesticks>({
+        candles: intervalsArray,
+        XStart: visibleRange.start,
+        XEnd: visibleRange.end
+    });
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!e) return;
         const rect = containerRef.current!.getBoundingClientRect();
@@ -76,13 +77,20 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
         if (isPanning && panStartRef.current !== null) {
             const deltaX = e.clientX - panStartRef.current;
-            const candleWidth = canvasRef.current!.clientWidth / intervalsArray.length;
+            const candleWidth = canvasRef.current!.clientWidth / visibleCandles.candles.length;
             const offsetCandles = Math.round(-deltaX / candleWidth);
 
             if (offsetCandles !== 0) {
-                const intervalMs = parseInterval(intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000, interval);
+                const intervalMs = parseInterval(visibleCandles.candles.length > 2 ? visibleCandles.candles[1].t - visibleCandles.candles[0].t : 1000, interval);
                 const offsetTime = offsetCandles * (intervalMs * 0.3);
 
+                // don't setVisibleRange if the start less than the minimal t value or if the end is greater than the maximal t value + candle width.
+
+                if (visibleRange.start + offsetTime < visibleCandles.candles[0].t ||
+                    visibleRange.end + offsetTime > visibleCandles.candles[visibleCandles.candles.length - 1].t + candleWidth) {
+                    return;
+                }
+                // Update the visible range based on the offset
                 setVisibleRange({
                     start: visibleRange.start + offsetTime,
                     end: visibleRange.end + offsetTime,
@@ -122,7 +130,6 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         return intervalsArray[intervalIndex];
     }, [currentPoint, intervalsArray, visibleRange, canvasRef.current, chartType, interval]);
 
-
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || intervalsArray.length === 0) return;
@@ -135,50 +142,69 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         canvas.width = canvas.clientWidth * dpr;
         canvas.height = canvas.clientHeight * dpr;
         ctx.scale(dpr, dpr);
+        const intervalMs = parseInterval(
+            intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000,
+            interval
+        );
+        const visibles = intervalsArray.filter(candle => candle.t + intervalMs >= visibleRange.start && candle.t <= visibleRange.end);
+        const candleWidth = visibles.length > 0 ? canvas.clientWidth / visibles.length : 0;
+        if (
+            visibleCandles.candles.length !== visibles.length ||
+            (visibles.length > 0 &&
+                (visibleCandles.XStart !== visibles[0].t ||
+                    visibleCandles.XEnd !== visibles[visibles.length - 1].t + candleWidth))
+        ) {
+            setVisibleCandles({
+                candles: visibles,
+                XStart: visibles[0]?.t ?? 0,
+                XEnd: (visibles[visibles.length - 1]?.t ?? 0) + candleWidth,
+            });
+        }
+    }, [intervalsArray.length, canvasRef.current, visibleRange, chartType, interval, mode]);
 
-        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-        ctx.fillStyle = 'black';
+    // Unified drawing function
+    function drawAll(ctx: CanvasRenderingContext2D) {
+        // Clear the canvas
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-        // --- Calculate visible candles based on zoomScale ---
-        const baseCandleWidth = 8; // base width for 1x zoom
-        const targetCount = Math.floor(canvas.clientWidth / (baseCandleWidth * zoomScale));
-        const startIndex = Math.max(0, intervalsArray.length - targetCount);
-        const visibleCandles = intervalsArray.slice(startIndex);
-        // Optionally, filter by visibleRange if still relevant:
-        // const visibleCandles = intervalsArray.filter(c => c.t >= visibleRange.start && c.t <= visibleRange.end);
-
-        const intervalMs = parseInterval(intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000, interval);
+        // Draw the chart
+        const intervalMs = parseInterval(
+            intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000,
+            interval
+        );
         switch (chartType) {
             case ChartType.Candlestick:
-                drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
+                drawCandlestickChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Line:
-                drawLineChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
+                drawLineChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Area:
-                drawAreaChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
+                drawAreaChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Bar:
-                drawBarChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
+                drawBarChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                 break;
-            case ChartType.Histogram:
-                const hasValidVolume = visibleCandles.some(c => typeof c.v === 'number' && c.v > 0);
+            case ChartType.Histogram: {
+                const hasValidVolume = visibleCandles.candles.some(c => typeof c.v === 'number' && c.v > 0);
                 if (hasValidVolume) {
-                    drawHistogramChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
+                    drawHistogramChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                     break;
                 }
+            }
+            // fallthrough
             default:
                 console.warn('Unknown chart type:', chartType, '- falling back to Candlestick.');
-                drawCandlestickChart(ctx, visibleCandles, canvas.clientWidth, canvas.clientHeight, visibleRange, intervalMs);
+                drawCandlestickChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                 break;
         }
 
-        drawDrawings(ctx, drawings, selectedIndex, canvas.clientWidth, canvas.clientHeight);
+        // Draw existing drawings
+        drawDrawings(ctx, drawings, selectedIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight);
 
         // Draw preview shape while drawing
         if (isDrawing && startPoint && currentPoint) {
             let shape = null;
-
             switch (mode) {
                 case Mode.drawLine:
                     shape = new LineShape(startPoint.x, startPoint.y, currentPoint.x, currentPoint.y);
@@ -217,13 +243,88 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                     );
                     break;
             }
-
             if (shape) {
                 shape.draw(ctx);
                 ctx.stroke();
             }
         }
-    }, [intervalsArray, visibleRange, canvasRef.current, chartType, interval, drawings, selectedIndex, currentPoint, isDrawing, startPoint, mode, zoomScale]);
+    }
+
+    // useEffect for drawing existing drawings and preview
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || intervalsArray.length === 0) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        drawAll(ctx);
+    }, [drawings, selectedIndex, currentPoint, isDrawing, startPoint, visibleCandles, chartType, visibleRange, interval, mode]);
+
+    // useEffect for chart drawing (chartType/visibleCandles change)
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || intervalsArray.length === 0) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        drawAll(ctx);
+    }, [visibleRange, visibleCandles, chartType, drawings, selectedIndex, isDrawing, startPoint, mode, interval, currentPoint]);
+
+    // useEffect for global mouse events: mouseup & mousemove (panning and crosshair)
+    useEffect(() => {
+        const handleGlobalMouseUp = () => {
+            if (isPanning) {
+                setIsPanning(false);
+                panStartRef.current = null;
+            }
+        };
+
+        const handleGlobalMouseMove = (e: MouseEvent) => {
+            if (!canvasRef.current) return;
+            const rect = canvasRef.current!.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (isPanning && panStartRef.current !== null) {
+                const deltaX = e.clientX - panStartRef.current;
+                const candleWidth = canvasRef.current?.clientWidth / visibleCandles.candles.length;
+                const offsetCandles = Math.round(-deltaX / candleWidth);
+
+                if (offsetCandles !== 0) {
+                    const intervalMs = parseInterval(
+                        visibleCandles.candles.length > 2
+                            ? visibleCandles.candles[1].t - visibleCandles.candles[0].t
+                            : 1000,
+                        interval
+                    );
+                    const offsetTime = offsetCandles * (intervalMs * 0.3);
+
+                    // don't setVisibleRange if the start less than the minimal t value or if the end is greater than the maximal t value + candle width.
+                    if (visibleRange.start + offsetTime < visibleCandles.candles[0].t ||
+                        visibleRange.end + offsetTime > visibleCandles.candles[visibleCandles.candles.length - 1].t + candleWidth) {
+                        return;
+                    }
+
+                    setVisibleRange({
+                        start: visibleRange.start + offsetTime,
+                        end: visibleRange.end + offsetTime,
+                    });
+
+                    panStartRef.current = e.clientX;
+                }
+            }
+
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            setCurrentPoint({x: mouseX, y: mouseY});
+        };
+
+        document.addEventListener("mouseup", handleGlobalMouseUp);
+        document.addEventListener("mousemove", handleGlobalMouseMove);
+
+        return () => {
+            document.removeEventListener("mouseup", handleGlobalMouseUp);
+            document.removeEventListener("mousemove", handleGlobalMouseMove);
+        };
+    }, [isPanning, visibleRange, visibleCandles, interval]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
@@ -353,57 +454,77 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         panStartRef.current = null;
     };
 
-    // --- Wheel handler for zooming: update zoomScale and adjust visibleRange center on mouse ---
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const handleWheel = (e: WheelEvent) => {
-            e.preventDefault();
-            const delta = e.deltaY;
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY;
 
-            const ZOOM_AMOUNT_MS = 1000_000;
+                const ZOOM_AMOUNT_MS = 500_000;
+                const rangeDuration = visibleRange.end - visibleRange.start;
+                const offsetX = e.offsetX;
+                const mouseRatio = offsetX / canvas.clientWidth;
+                const mouseTime = visibleRange.start + mouseRatio * rangeDuration;
 
-            const rangeDuration = visibleRange.end - visibleRange.start;
-            const offsetX = e.offsetX;
-            const mouseRatio = offsetX / canvas.clientWidth;
-            const mouseTime = visibleRange.start + mouseRatio * rangeDuration;
+                let newStart, newEnd;
 
-            let newStart, newEnd;
+                if (delta < 0) {
+                    newStart = visibleRange.start + ZOOM_AMOUNT_MS;
+                    newEnd = visibleRange.end - ZOOM_AMOUNT_MS;
+                } else {
+                    newStart = visibleRange.start - ZOOM_AMOUNT_MS;
+                    newEnd = visibleRange.end + ZOOM_AMOUNT_MS;
+                }
 
-            if (delta < 0) {
-                // Zoom in - צמצם טווח
-                newStart = visibleRange.start + ZOOM_AMOUNT_MS;
-                newEnd = visibleRange.end - ZOOM_AMOUNT_MS;
+                const intervalMs = parseInterval(
+                    intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000,
+                    interval
+                );
+                const minDuration = 2 * intervalMs;
+                const maxDuration = (() => {
+                    const canvasWidth = canvas.clientWidth;
+                    const minPixelsPerInterval = chartType === ChartType.Candlestick ? 3 : 1;
+                    const maxVisibleCount = canvasWidth / minPixelsPerInterval;
+                    return maxVisibleCount * intervalMs;
+                })();
+
+                let newRangeDuration = newEnd - newStart;
+                if (newRangeDuration < minDuration) {
+                    newStart = mouseTime - minDuration / 2;
+                    newEnd = mouseTime + minDuration / 2;
+                }
+                if (newRangeDuration > maxDuration) {
+                    newStart = mouseTime - maxDuration / 2;
+                    newEnd = mouseTime + maxDuration / 2;
+                }
+
+                // Ensure the new range does not exceed the bounds of the data
+                newStart = Math.max(newStart, intervalsArray[0].t);
+                newEnd = Math.min(newEnd, intervalsArray[intervalsArray.length - 1].t + (intervalsArray[1]?.t - intervalsArray[0]?.t || 1000));
+
+                setVisibleRange({start: newStart, end: newEnd});
             } else {
-                // Zoom out - הרחב טווח
-                newStart = visibleRange.start - ZOOM_AMOUNT_MS;
-                newEnd = visibleRange.end + ZOOM_AMOUNT_MS;
+                // Scroll רגיל = Pan אופקי
+                e.preventDefault();
+                const deltaX = e.deltaX;
+                const intervalMs = parseInterval(
+                    intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000,
+                    interval
+                );
+                const offsetTime = deltaX * intervalMs * 0.01;
+
+                // don't setVisibleRange if the start less than the minimal t value or if the end is greater than the maximal t value + candle width.
+                if (visibleRange.start + offsetTime < intervalsArray[0].t ||
+                    visibleRange.end + offsetTime > intervalsArray[intervalsArray.length - 1].t + (intervalsArray[1]?.t - intervalsArray[0]?.t || 1000)) {
+                    return;
+                }
+                setVisibleRange({
+                    start: visibleRange.start + offsetTime,
+                    end: visibleRange.end + offsetTime,
+                });
             }
-
-            const intervalMs = parseInterval(
-                intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000,
-                interval
-            );
-            const minDuration = 2 * intervalMs;
-
-            const maxDuration = (() => {
-                const canvasWidth = canvas.clientWidth;
-                const minPixelsPerInterval = chartType === ChartType.Candlestick ? 3 : 1;
-                const maxVisibleCount = canvasWidth / minPixelsPerInterval;
-                return maxVisibleCount * intervalMs;
-            })();
-
-            let newRangeDuration = newEnd - newStart;
-            if (newRangeDuration < minDuration) {
-                newStart = mouseTime - minDuration / 2;
-                newEnd = mouseTime + minDuration / 2;
-            }
-            if (newRangeDuration > maxDuration) {
-                newStart = mouseTime - maxDuration / 2;
-                newEnd = mouseTime + maxDuration / 2;
-            }
-
-            setVisibleRange({ start: newStart, end: newEnd });
         };
         canvas.addEventListener('wheel', handleWheel, {passive: false});
         return () => {

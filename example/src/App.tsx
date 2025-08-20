@@ -1,7 +1,7 @@
 import type {Candle} from 'chartedge';
 import {AxesPosition, ChartType, SimpleChartEdge, TimeDetailLevel} from 'chartedge';
 
-const len = 100;
+const len = 10;
 const numSections = 5;
 const sectionSize = Math.floor(len / numSections);
 const intervalsArray: Candle[] = Array.from({length: len}, (_, i) => {
