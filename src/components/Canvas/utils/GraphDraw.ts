@@ -3,16 +3,17 @@ import type {Candle} from "../../../types/Candle";
 import {TimeRange} from "../../../types/Graph";
 
 export function drawCandlestickChart(ctx: CanvasRenderingContext2D, candles: Candle[], width: number, height: number, visibleRange: TimeRange, intervalMs: number) {
-    if (candles.length === 0) return;
+    const visibleCandles = candles.filter(candle => candle.t >= visibleRange.start && candle.t <= visibleRange.end);
+    if (visibleCandles.length === 0) return;
 
     const padding = 10;
-    const maxPrice = Math.max(...candles.map(c => c.h));
-    const minPrice = Math.min(...candles.map(c => c.l));
+    const maxPrice = Math.max(...visibleCandles.map(c => c.h));
+    const minPrice = Math.min(...visibleCandles.map(c => c.l));
     const priceRange = maxPrice - minPrice;
 
-    const candleWidth = width / candles.length;
+    const candleWidth = width / visibleCandles.length;
 
-    candles.forEach((candle) => {
+    visibleCandles.forEach((candle) => {
         const timeOffset = candle.t - visibleRange.start;
         const x = (timeOffset / intervalMs) * candleWidth;
 

@@ -81,7 +81,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
             if (offsetCandles !== 0) {
                 const intervalMs = parseInterval(intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000, interval);
-                const offsetTime = offsetCandles * intervalMs;
+                const offsetTime = offsetCandles * (intervalMs * 0.3);
 
                 setVisibleRange({
                     start: visibleRange.start + offsetTime,
@@ -361,7 +361,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             e.preventDefault();
             const delta = e.deltaY;
 
-            const ZOOM_AMOUNT_MS = 3000_000;
+            const ZOOM_AMOUNT_MS = 1000_000;
 
             const rangeDuration = visibleRange.end - visibleRange.start;
             const offsetX = e.offsetX;
