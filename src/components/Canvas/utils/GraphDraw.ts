@@ -109,17 +109,54 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, visibleCandles: Can
     ctx.beginPath();
     ctx.moveTo(0, height);
 
-    visibleCandles.forEach((candle) => {
+    let lastValidX = 0;
+    let lastValidY = height;
+
+    visibleCandles.forEach((candle, index) => {
         const timeOffset = candle.t - visibleRange.start;
         const x = (timeOffset / intervalMs) * candleWidth;
 
-        if (x + candleWidth < 0 || x >= width + candleWidth / 2) return;
+        if (x + candleWidth < 0 || x > width) return;
+
+        const candleStart = candle.t;
+        const candleEnd = candle.t + intervalMs;
+        const startOverlap = Math.max(visibleRange.start, candleStart);
+        const endOverlap = Math.min(visibleRange.end, candleEnd);
+        const visibleFraction = (endOverlap - startOverlap) / intervalMs;
 
         const priceY = height - ((candle.c - minPrice) / priceRange) * (height - padding * 2) - padding;
-        ctx.lineTo(x, priceY);
+
+        const drawX = x < 0 ? 0 : x;
+
+        if (index === 0) {
+            // Adjust Y if partial
+            if (visibleFraction < 1) {
+                const nextCandle = visibleCandles[index + 1];
+                if (nextCandle) {
+                    const nextPriceY = height - ((nextCandle.c - minPrice) / priceRange) * (height - padding * 2) - padding;
+                    const adjustedY = priceY + (nextPriceY - priceY) * (1 - visibleFraction);
+                    ctx.lineTo(drawX, adjustedY);
+                } else {
+                    ctx.lineTo(drawX, priceY);
+                }
+            } else {
+                ctx.lineTo(drawX, priceY);
+            }
+        } else {
+            const prevCandle = visibleCandles[index - 1];
+            const prevTimeOffset = prevCandle.t - visibleRange.start;
+            const prevX = (prevTimeOffset / intervalMs) * candleWidth;
+            const expectedX = prevX + candleWidth;
+            const fixedX = Math.min(expectedX, drawX);
+            ctx.lineTo(fixedX, priceY);
+        }
+
+        lastValidX = drawX;
+        lastValidY = priceY;
     });
 
-    ctx.lineTo(width, height);
+    ctx.lineTo(lastValidX, lastValidY);
+    ctx.lineTo(lastValidX, height);
     ctx.closePath();
 
     ctx.fillStyle = 'rgba(0, 123, 255, 0.2)';
