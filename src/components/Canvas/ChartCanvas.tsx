@@ -359,29 +359,57 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         if (!canvas) return;
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-            // Zoom in/out
             const delta = e.deltaY;
-            const newZoom = zoomScale * (delta < 0 ? 1.1 : 0.9);
-            const clampedZoom = Math.min(5, Math.max(0.1, newZoom));
-            // Keep focus around mouse position (relative to canvas)
+
+            const ZOOM_AMOUNT_MS = 3000_000;
+
+            const rangeDuration = visibleRange.end - visibleRange.start;
             const offsetX = e.offsetX;
             const mouseRatio = offsetX / canvas.clientWidth;
-            // Compute current range
-            const rangeDuration = visibleRange.end - visibleRange.start;
-            // After zoom, new range duration would be shorter/longer
-            const newRangeDuration = rangeDuration * (zoomScale / clampedZoom);
-            // Center the zoom around mouse: mouseTime is the center
             const mouseTime = visibleRange.start + mouseRatio * rangeDuration;
-            const newStart = mouseTime - newRangeDuration / 2;
-            const newEnd = mouseTime + newRangeDuration / 2;
-            setZoomScale(clampedZoom);
-            setVisibleRange({start: newStart, end: newEnd});
+
+            let newStart, newEnd;
+
+            if (delta < 0) {
+                // Zoom in - צמצם טווח
+                newStart = visibleRange.start + ZOOM_AMOUNT_MS;
+                newEnd = visibleRange.end - ZOOM_AMOUNT_MS;
+            } else {
+                // Zoom out - הרחב טווח
+                newStart = visibleRange.start - ZOOM_AMOUNT_MS;
+                newEnd = visibleRange.end + ZOOM_AMOUNT_MS;
+            }
+
+            const intervalMs = parseInterval(
+                intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000,
+                interval
+            );
+            const minDuration = 2 * intervalMs;
+
+            const maxDuration = (() => {
+                const canvasWidth = canvas.clientWidth;
+                const minPixelsPerInterval = chartType === ChartType.Candlestick ? 3 : 1;
+                const maxVisibleCount = canvasWidth / minPixelsPerInterval;
+                return maxVisibleCount * intervalMs;
+            })();
+
+            let newRangeDuration = newEnd - newStart;
+            if (newRangeDuration < minDuration) {
+                newStart = mouseTime - minDuration / 2;
+                newEnd = mouseTime + minDuration / 2;
+            }
+            if (newRangeDuration > maxDuration) {
+                newStart = mouseTime - maxDuration / 2;
+                newEnd = mouseTime + maxDuration / 2;
+            }
+
+            setVisibleRange({ start: newStart, end: newEnd });
         };
         canvas.addEventListener('wheel', handleWheel, {passive: false});
         return () => {
             canvas.removeEventListener('wheel', handleWheel);
         };
-    }, [zoomScale, visibleRange, setVisibleRange]);
+    }, [visibleRange, setVisibleRange, intervalsArray, interval, chartType]);
 
     return (
         <InnerCanvasContainer $xAxisHeight={xAxisHeight} ref={containerRef}>

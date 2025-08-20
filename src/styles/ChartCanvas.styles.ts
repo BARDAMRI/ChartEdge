@@ -12,6 +12,7 @@ export const StyledCanvas = styled.canvas`
     pointer-events: auto;
     touch-action: none;
     overscroll-behavior: none;
+    font-size: 12px;
 `;
 
 interface InnerCanvasContainerProps {
