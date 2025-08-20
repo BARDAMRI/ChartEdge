@@ -25,9 +25,16 @@ export const drawCandlestickChart = (ctx: CanvasRenderingContext2D, visibleCandl
         const timeOffset = candle.t - visibleRange.start;
         const x = (timeOffset / intervalMs) * candleWidth;
 
-        if (x >= width || x + candleWidth <= 0) return;
+        let drawX = x;
+        let visibleWidth = candleWidth;
 
-        const drawX = Math.max(x, 0);
+        if (x < 0) {
+            visibleWidth = candleWidth + x;
+            drawX = 0;
+        } else if (x + candleWidth > width) {
+            visibleWidth = width - x;
+        }
+        if (visibleWidth <= 0) return;
 
         const openY = height - ((candle.o - minPrice) / priceRange) * (height - padding * 2) - padding;
         const closeY = height - ((candle.c - minPrice) / priceRange) * (height - padding * 2) - padding;
@@ -39,13 +46,14 @@ export const drawCandlestickChart = (ctx: CanvasRenderingContext2D, visibleCandl
         ctx.fillStyle = isBullish ? 'green' : 'red';
 
         ctx.beginPath();
-        ctx.moveTo(drawX + candleWidth / 2, highY);
-        ctx.lineTo(drawX + candleWidth / 2, lowY);
+        const candleMidX = x + candleWidth / 2;
+        ctx.moveTo(candleMidX, highY);
+        ctx.lineTo(candleMidX, lowY);
         ctx.stroke();
 
         const bodyTop = Math.min(openY, closeY);
         const bodyHeight = Math.abs(openY - closeY);
-        ctx.fillRect(drawX + 1, bodyTop, candleWidth - 2, bodyHeight || 1);
+        ctx.fillRect(drawX + 1, bodyTop, visibleWidth - 2, bodyHeight || 1);
     });
     return {
         visibleCandles,
