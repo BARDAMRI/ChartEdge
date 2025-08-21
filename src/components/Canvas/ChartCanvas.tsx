@@ -12,7 +12,7 @@ import {
     drawBarChart,
     drawCandlestickChart,
     drawHistogramChart,
-    drawLineChart
+    drawLineChart, IndexRangePair
 } from "./utils/GraphDraw";
 import {drawDrawings} from './utils/drawDrawings';
 import {LineShape} from '../Drawing/LineShape';
@@ -20,6 +20,9 @@ import {RectangleShape} from "../Drawing/RectangleShape";
 import {CircleShape} from "../Drawing/CircleShape";
 import {TriangleShape} from "../Drawing/TriangleShape";
 import {AngleShape} from "../Drawing/Angleshape";
+import {
+    startOfHour
+} from 'date-fns';
 
 type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
@@ -65,10 +68,9 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     const [currentPoint, setCurrentPoint] = useState<null | { x: number; y: number }>(null);
     const [isPanning, setIsPanning] = useState(false);
     const panStartRef = useRef<number | null>(null);
-    const [visibleCandles, setVisibleCandles] = useState<Candlesticks>({
-        candles: intervalsArray,
-        XStart: visibleRange.start,
-        XEnd: visibleRange.end
+    const [visibleCandles, setVisibleCandles] = useState<IndexRangePair>({
+        startIndex: 0,
+        endIndex: intervalsArray.length - 1
     });
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!e) return;
@@ -77,17 +79,17 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
         if (isPanning && panStartRef.current !== null) {
             const deltaX = e.clientX - panStartRef.current;
-            const candleWidth = canvasRef.current!.clientWidth / visibleCandles.candles.length;
+            const candleWidth = canvasRef.current!.clientWidth / (visibleCandles.endIndex - visibleCandles.startIndex);
             const offsetCandles = Math.round(-deltaX / candleWidth);
 
             if (offsetCandles !== 0) {
-                const intervalMs = parseInterval(visibleCandles.candles.length > 2 ? visibleCandles.candles[1].t - visibleCandles.candles[0].t : 1000, interval);
+                const intervalMs = parseInterval(intervalsArray.length > 2 ? intervalsArray[1].t - intervalsArray[0].t : 1000, interval);
                 const offsetTime = offsetCandles * (intervalMs * 0.3);
 
                 // don't setVisibleRange if the start less than the minimal t value or if the end is greater than the maximal t value + candle width.
 
-                if (visibleRange.start + offsetTime < visibleCandles.candles[0].t ||
-                    visibleRange.end + offsetTime > visibleCandles.candles[visibleCandles.candles.length - 1].t + candleWidth) {
+                if (visibleRange.start + offsetTime < intervalsArray[visibleCandles.startIndex].t ||
+                    visibleRange.end + offsetTime > intervalsArray[visibleCandles.endIndex].t + candleWidth) {
                     return;
                 }
                 // Update the visible range based on the offset
@@ -146,20 +148,14 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 1000,
             interval
         );
-        const visibles = intervalsArray.filter(candle => candle.t + intervalMs >= visibleRange.start && candle.t <= visibleRange.end);
-        const candleWidth = visibles.length > 0 ? canvas.clientWidth / visibles.length : 0;
-        if (
-            visibleCandles.candles.length !== visibles.length ||
-            (visibles.length > 0 &&
-                (visibleCandles.XStart !== visibles[0].t ||
-                    visibleCandles.XEnd !== visibles[visibles.length - 1].t + candleWidth))
-        ) {
-            setVisibleCandles({
-                candles: visibles,
-                XStart: visibles[0]?.t ?? 0,
-                XEnd: (visibles[visibles.length - 1]?.t ?? 0) + candleWidth,
-            });
+        const chartedIndexes = [];
+        for (let i = 0; i < intervalsArray.length; i++) {
+            const candle = intervalsArray[i];
+            if (candle.t + intervalMs >= visibleRange.start && candle.t < visibleRange.end) {
+                chartedIndexes.push(i);
+            }
         }
+        setVisibleCandles({startIndex: chartedIndexes[0], endIndex: chartedIndexes[chartedIndexes.length - 1]});
     }, [intervalsArray.length, canvasRef.current, visibleRange, chartType, interval, mode]);
 
     // Unified drawing function
@@ -174,28 +170,28 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         );
         switch (chartType) {
             case ChartType.Candlestick:
-                drawCandlestickChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                drawCandlestickChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Line:
-                drawLineChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                drawLineChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Area:
-                drawAreaChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                drawAreaChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Bar:
-                drawBarChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                drawBarChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                 break;
             case ChartType.Histogram: {
-                const hasValidVolume = visibleCandles.candles.some(c => typeof c.v === 'number' && c.v > 0);
+                const hasValidVolume = intervalsArray.some(c => typeof c.v === 'number' && c.v > 0);
                 if (hasValidVolume) {
-                    drawHistogramChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                    drawHistogramChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                     break;
                 }
             }
             // fallthrough
             default:
                 console.warn('Unknown chart type:', chartType, '- falling back to Candlestick.');
-                drawCandlestickChart(ctx, visibleCandles.candles, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                drawCandlestickChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
                 break;
         }
 
@@ -285,21 +281,21 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
             if (isPanning && panStartRef.current !== null) {
                 const deltaX = e.clientX - panStartRef.current;
-                const candleWidth = canvasRef.current?.clientWidth / visibleCandles.candles.length;
+                const candleWidth = canvasRef.current?.clientWidth / (visibleCandles.endIndex - visibleCandles.startIndex);
                 const offsetCandles = Math.round(-deltaX / candleWidth);
 
                 if (offsetCandles !== 0) {
                     const intervalMs = parseInterval(
-                        visibleCandles.candles.length > 2
-                            ? visibleCandles.candles[1].t - visibleCandles.candles[0].t
+                        intervalsArray.length > 2
+                            ? intervalsArray[1].t - intervalsArray[0].t
                             : 1000,
                         interval
                     );
                     const offsetTime = offsetCandles * (intervalMs * 0.3);
 
                     // don't setVisibleRange if the start less than the minimal t value or if the end is greater than the maximal t value + candle width.
-                    if (visibleRange.start + offsetTime < visibleCandles.candles[0].t ||
-                        visibleRange.end + offsetTime > visibleCandles.candles[visibleCandles.candles.length - 1].t + candleWidth) {
+                    if (visibleRange.start + offsetTime < intervalsArray[visibleCandles.startIndex].t ||
+                        visibleRange.end + offsetTime > intervalsArray[visibleCandles.endIndex].t + candleWidth) {
                         return;
                     }
 
