@@ -2,7 +2,7 @@ import {DrawingPoint} from "../../types/Drawings";
 import React, {useRef, useEffect, useState} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {TimeRange} from "../../types/Graph";
-import type {Candle} from "../../types/Candle";
+import type {Interval} from "../../types/Interval";
 import {StyledCanvas, InnerCanvasContainer, HoverTooltip} from '../../styles/ChartCanvas.styles';
 import {ChartType} from '../../types/chartStyleOptions';
 import {parseInterval} from "./utils/RangeCalculators";
@@ -28,7 +28,7 @@ type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
 interface ChartCanvasProps {
     parentContainerRef: React.RefObject<HTMLDivElement | null>;
-    intervalsArray: Candle[];
+    intervalsArray: Interval[];
     drawings: any[];
     isDrawing: boolean;
     selectedIndex: number | null;
@@ -155,7 +155,9 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 chartedIndexes.push(i);
             }
         }
-        setVisibleCandles({startIndex: chartedIndexes[0], endIndex: chartedIndexes[chartedIndexes.length - 1]});
+        if (chartedIndexes[0] !== visibleCandles.startIndex || chartedIndexes[chartedIndexes.length - 1] !== visibleCandles.endIndex) {
+            setVisibleCandles({startIndex: chartedIndexes[0], endIndex: chartedIndexes[chartedIndexes.length - 1]});
+        }
     }, [intervalsArray.length, canvasRef.current, visibleRange, chartType, interval, mode]);
 
     // Unified drawing function
@@ -170,28 +172,28 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         );
         switch (chartType) {
             case ChartType.Candlestick:
-                drawCandlestickChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                drawCandlestickChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, visibleRange, intervalMs);
                 break;
             case ChartType.Line:
-                drawLineChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                drawLineChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, visibleRange, intervalMs);
                 break;
             case ChartType.Area:
-                drawAreaChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                drawAreaChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, visibleRange, intervalMs);
                 break;
             case ChartType.Bar:
-                drawBarChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                drawBarChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, visibleRange, intervalMs);
                 break;
             case ChartType.Histogram: {
                 const hasValidVolume = intervalsArray.some(c => typeof c.v === 'number' && c.v > 0);
                 if (hasValidVolume) {
-                    drawHistogramChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                    drawHistogramChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, visibleRange, intervalMs);
                     break;
                 }
             }
             // fallthrough
             default:
                 console.warn('Unknown chart type:', chartType, '- falling back to Candlestick.');
-                drawCandlestickChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, ctx.canvas.clientWidth, ctx.canvas.clientHeight, visibleRange, intervalMs);
+                drawCandlestickChart(ctx, intervalsArray, visibleCandles.startIndex, visibleCandles.endIndex, visibleRange, intervalMs);
                 break;
         }
 
@@ -458,8 +460,9 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 e.preventDefault();
                 const delta = e.deltaY;
 
-                const ZOOM_AMOUNT_MS = 500_000;
+
                 const rangeDuration = visibleRange.end - visibleRange.start;
+                const ZOOM_AMOUNT_MS = rangeDuration * 0.01; // Zoom in/out by 10% of the current range duration
                 const offsetX = e.offsetX;
                 const mouseRatio = offsetX / canvas.clientWidth;
                 const mouseTime = visibleRange.start + mouseRatio * rangeDuration;

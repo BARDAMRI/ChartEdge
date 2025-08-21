@@ -174,7 +174,7 @@ export default function YAxis({
 import React, {useRef, useEffect} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {TimeRange} from "../../types/Graph";
-import type {Candle} from "../../types/Candle";
+import type {Candle} from "../../types/Interval";
 
 type
 DrawingFactoryMap = Partial < Record < Mode, () => any >>;
@@ -439,7 +439,7 @@ import XAxis from "./Axes/XAxis";
 import YAxis from "./Axes/YAxis";
 import '../../styles/Canvas/ChartStage.scss';
 import {TimeRange} from "../../types/Graph";
-import {Candle} from "../../types/Candle";
+import {Candle} from "../../types/Interval";
 import {TimeDetailLevel} from "../../types/chartStyleOptions";
 import {AxesPosition} from "../../types/types";
 
@@ -778,7 +778,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
 };
 
 // File: src/components/Canvas/utils/drawCandlesticks.ts
-import {Candle} from '../../../types/Candle';
+import {Candle} from '../../../types/Interval';
 
 export function drawCandlesticks(
     ctx: CanvasRenderingContext2D,
@@ -2263,7 +2263,7 @@ import {ChartStage} from './Canvas/ChartStage';
 import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import '../styles/App.scss';
-import {Candle} from "../types/Candle";
+import {Candle} from "../types/Interval";
 import {TimeRange} from "../types/Graph";
 import {AxesPosition} from "../types/types";
 import {TimeDetailLevel} from "../types/chartStyleOptions";
@@ -2497,7 +2497,7 @@ type
     Candle
 }
 from
-'./types/Candle';
+'./types/Interval';
 export
 type
 {
@@ -2943,7 +2943,7 @@ utilities;
 @use
 './styles/Canvas/Grid';
 
-// File: src/types/Candle.ts
+// File: src/types/Interval.ts
 export
 interface
 Candle

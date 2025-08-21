@@ -12,7 +12,7 @@ import {
 } from '../../styles/ChartStage.styles';
 
 import {PriceRange, TimeRange} from "../../types/Graph";
-import {Candle} from "../../types/Candle";
+import {Interval} from "../../types/Interval";
 import {ChartType, TimeDetailLevel} from "../../types/chartStyleOptions";
 import {AxesPosition} from "../../types/types";
 import {parseInterval} from "./utils/RangeCalculators";
@@ -58,7 +58,7 @@ class DebugLogger {
 const logger = new DebugLogger();
 
 interface ChartStageProps {
-    intervalsArray: Candle[];
+    intervalsArray: Interval[];
     initialYAxisPosition: AxesPosition;
     initialMargin: number;
     initialNumberOfYTicks: number;

@@ -1,6 +1,6 @@
-import { Candle } from '../../../types/Candle';
+import { Interval } from '../../../types/Interval';
 
-export function getYAxisPriceRange(candles: Candle[], chartType: string): { min: number; max: number } {
+export function getYAxisPriceRange(candles: Interval[], chartType: string): { min: number; max: number } {
   if (candles.length === 0) return { min: 0, max: 1 };
 
   if (chartType === 'histogram') {

@@ -1,4 +1,4 @@
-export interface Candle {
+export interface Interval {
     t: number; // timestamp
     o: number; // open
     c: number; // close
@@ -7,6 +7,6 @@ export interface Candle {
     v?: number; // volume (optional)
 }
 
-export interface CandleWithIndex extends Candle {
+export interface CandleWithIndex extends Interval {
     index: number; // index in the original array
 }

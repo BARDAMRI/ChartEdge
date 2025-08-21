@@ -2,7 +2,7 @@ import React, {useEffect} from 'react';
 import {ChartStage} from './Canvas/ChartStage';
 import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
-import {Candle} from '../types/Candle';
+import {Interval} from '../types/Interval';
 import {TimeRange} from '../types/Graph';
 import {AxesPosition} from '../types/types';
 import {ChartType, TimeDetailLevel} from '../types/chartStyleOptions';
@@ -17,7 +17,7 @@ import {
 } from '../styles/App.styles';
 
 export type SimpleChartEdgeProps = {
-    intervalsArray?: Candle[];
+    intervalsArray?: Interval[];
     initialYAxisPosition?: AxesPosition;
     initialMargin?: number;
     initialNumberOfYTicks?: number;

@@ -5,11 +5,11 @@ import {CanvasSizes} from "../ChartStage";
 import {StyledYAxisCanvas} from '../../../styles/YAxis.styles';
 import {PriceRange} from "../../../types/Graph";
 import {ChartType} from '../../../types/chartStyleOptions';
-import {Candle} from "../../../types/Candle";
+import {Interval} from "../../../types/Interval";
 
 interface YAxisProps {
     parentContainerRef: React.RefObject<HTMLDivElement | null>;
-    intervalsArray: Candle[];
+    intervalsArray: Interval[];
     canvasSizes: CanvasSizes;
     yAxisPosition: 'left' | 'right';
     xAxisHeight: number;

@@ -91,7 +91,7 @@ function generateAndDrawTicksForLevel(
     canvas: HTMLCanvasElement,
     startDate: Date,
     endDate: Date,
-    durationMs: number,
+    durationSec: number,
     canvasWidth: number,
     level: {
         intervalFn: (date: Date, amount: number) => Date;
@@ -123,9 +123,11 @@ function generateAndDrawTicksForLevel(
         currentTickDate = intervalFn(currentTickDate, step);
     }
 
-    while (currentTickDate.getTime() <= endDate.getTime()) {
+    while (currentTickDate.getTime() / 1000 <= endDate.getTime() / 1000) {
         const tickTime = currentTickDate.getTime();
-        const pos = ((tickTime - startDate.getTime()) / durationMs) * canvasWidth;
+        const tickTimeSec = tickTime / 1000;
+        const startTimeSec = startDate.getTime() / 1000;
+        const pos = ((tickTimeSec - startTimeSec) / durationSec) * canvasWidth;
 
         if (pos >= 0 && pos <= canvasWidth) {
             const label = format(currentTickDate, formatStr);
@@ -168,9 +170,9 @@ export function generateAndDrawTimeTicks(
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Cannot get canvas context');
 
-    const durationMs = end - start;
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+    const durationSec = end - start;
+    const startDate = new Date(start * 1000);
+    const endDate = new Date(end * 1000);
 
     const pixelsPerTick = 150;
     const estimatedTicks = Math.floor(canvasWidth / pixelsPerTick);
@@ -182,7 +184,7 @@ export function generateAndDrawTimeTicks(
         return [];
     }
 
-    return generateAndDrawTicksForLevel(canvas, startDate, endDate, durationMs, canvasWidth, selectedLevel, options, strokeStyle, xAxisHeight);
+    return generateAndDrawTicksForLevel(canvas, startDate, endDate, durationSec, canvasWidth, selectedLevel, options, strokeStyle, xAxisHeight);
 }
 
 
