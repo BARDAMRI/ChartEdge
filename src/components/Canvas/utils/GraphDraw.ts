@@ -1,97 +1,102 @@
 import type {Interval} from "../../../types/Interval";
-import {TimeRange} from "../../../types/Graph";
-import {
-    startOfHour,
-} from 'date-fns';
+import type {ChartRenderContext, ChartStyleOptions} from "../../../types/chartStyleOptions"; // Make sure your context type is also imported
 
-export type IndexRangePair = {
-    startIndex: number;
-    endIndex: number;
-}
-export type Candlesticks = {
-    XStart: number;
-    XEnd: number;
-    candlesIndexes: IndexRangePair;
-}
+// =================================================================================
+// == CONFIGURATION & TYPES
+// =================================================================================
 
-export function calculateEffectiveCandleCount(
-    allCandles: Interval[],
-    visibleStartIndex: number,
-    visibleEndIndex: number,
-    visibleRange: TimeRange,
-    intervalMs: number
-): number {
-    let count = (visibleEndIndex - visibleStartIndex) + 1;
+const DEFAULT_STYLES = {
+    candles: {
+        bullColor: 'green',
+        bearColor: 'red',
+    },
+    line: {
+        color: 'blue',
+        lineWidth: 2,
+    },
+    area: {
+        fillColor: 'rgba(0, 123, 255, 0.2)',
+        strokeColor: 'rgba(0, 123, 255, 1)',
+        lineWidth: 2,
+    },
+    histogram: {
+        bullColor: 'green',
+        bearColor: 'red',
+        opacity: 0.5,
+    },
+    grid: {
+        color: '#CCCCCC',
+        lineWidth: 1,
+    },
+    axes: {
+        labelColor: '#333333',
+        lineColor: '#999999',
+    },
+    backgroundColor: '#FFFFFF',
+};
+// =================================================================================
+// == HELPER FUNCTIONS
+// =================================================================================
 
-    const first = allCandles[visibleStartIndex];
-    const firstStart = first.t;
-    const firstEnd = firstStart + intervalMs;
-
-    if (firstStart < visibleRange.start) {
-        const overlap = firstEnd - visibleRange.start;
-        const visibleFraction = Math.max(0, overlap / intervalMs);
-        count -= 1;
-        count += visibleFraction;
-    }
-
-    const last = allCandles[visibleEndIndex];
-    const lastStart = last.t;
-    const lastEnd = lastStart + intervalMs;
-
-    if (lastEnd > visibleRange.end) {
-        const overlap = visibleRange.end - lastStart;
-        const visibleFraction = Math.max(0, overlap / intervalMs);
-        count -= 1;
-        count += visibleFraction;
-    }
-
-    return count;
-}
-
-export function getIntervalWidth(ctx: CanvasRenderingContext2D, allCandles: Interval[], visibleStartIndex: number, visibleEndIndex: number, visibleRange: TimeRange, intervalMs: number): number {
-    const candleCount = calculateEffectiveCandleCount(allCandles, visibleStartIndex, visibleEndIndex, visibleRange, intervalMs);
-    return ctx.canvas.clientWidth / candleCount;
-}
-
-export const drawCandlestickChart = (ctx: CanvasRenderingContext2D, allCandles: Interval[], visibleStartIndex: number, visibleEndIndex: number, visibleRange: TimeRange, intervalMs: number) => {
-    if (visibleEndIndex < visibleStartIndex) return;
-
+export function findPriceRange(allCandles: Interval[], startIndex: number, endIndex: number): {
+    min: number;
+    max: number;
+    range: number;
+} {
     let maxPrice = -Infinity;
     let minPrice = Infinity;
-    for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
-        const c = allCandles[i];
-        if (c.h > maxPrice) maxPrice = c.h;
-        if (c.l < minPrice) minPrice = c.l;
+    const start = Math.max(0, startIndex);
+    const end = Math.min(allCandles.length - 1, endIndex);
+    for (let i = start; i <= end; i++) {
+        const candle = allCandles[i];
+        if (candle.h > maxPrice) maxPrice = candle.h;
+        if (candle.l < minPrice) minPrice = candle.l;
     }
-    const priceRange = maxPrice - minPrice;
-    const candleWidth = getIntervalWidth(ctx, allCandles, visibleStartIndex, visibleEndIndex, visibleRange, intervalMs);
+    return {min: minPrice, max: maxPrice, range: maxPrice - minPrice || 1};
+}
+
+export function lerp(y1: number, y2: number, t: number): number {
+    return y1 * (1 - t) + y2 * t;
+}
+
+// =================================================================================
+// == CHART DRAWING FUNCTIONS
+// =================================================================================
+
+export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: ChartStyleOptions = {}) {
+    const {allCandles, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
+    if (visibleEndIndex < visibleStartIndex) return;
+
+    const style = {...DEFAULT_STYLES.candles, ...options.candles};
+    const price = findPriceRange(allCandles, visibleStartIndex, visibleEndIndex);
+    const {clientWidth, clientHeight} = ctx.canvas;
+    const priceToY = (p: number) => clientHeight * (1 - (p - price.min) / price.range);
+    const visibleDuration = visibleRange.end - visibleRange.start;
+    if (visibleDuration <= 0) return;
+    const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
 
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
         const candle = allCandles[i];
-        const timeOffset = candle.t - visibleRange.start;
-        const x = (timeOffset / intervalMs) * candleWidth;
-
+        const x = ((candle.t - visibleRange.start) / visibleDuration) * clientWidth;
         let drawX = x;
         let visibleWidth = candleWidth;
-
         if (x < 0) {
-            visibleWidth = candleWidth + x;
+            visibleWidth += x;
             drawX = 0;
-        } else if (x + candleWidth > ctx.canvas.clientWidth) {
-            visibleWidth = ctx.canvas.clientWidth - x;
+        } else if (x + candleWidth > clientWidth) {
+            visibleWidth = clientWidth - x;
         }
         if (visibleWidth <= 0) continue;
 
-        const openY = ctx.canvas.clientHeight - ((candle.o - minPrice) / priceRange) * ctx.canvas.clientHeight;
-        const closeY = ctx.canvas.clientHeight - ((candle.c - minPrice) / priceRange) * ctx.canvas.clientHeight;
-        const highY = ctx.canvas.clientHeight - ((candle.h - minPrice) / priceRange) * ctx.canvas.clientHeight;
-        const lowY = ctx.canvas.clientHeight - ((candle.l - minPrice) / priceRange) * ctx.canvas.clientHeight;
-
-        const isBullish = candle.c > candle.o;
-        ctx.strokeStyle = isBullish ? 'green' : 'red';
-        ctx.fillStyle = isBullish ? 'green' : 'red';
+        const highY = priceToY(candle.h);
+        const lowY = priceToY(candle.l);
+        const openY = priceToY(candle.o);
+        const closeY = priceToY(candle.c);
+        const isBullish = candle.c >= candle.o;
+        const color = isBullish ? style.bullColor : style.bearColor;
 
         ctx.beginPath();
+        ctx.strokeStyle = color;
         const candleMidX = x + candleWidth / 2;
         ctx.moveTo(candleMidX, highY);
         ctx.lineTo(candleMidX, lowY);
@@ -99,234 +104,179 @@ export const drawCandlestickChart = (ctx: CanvasRenderingContext2D, allCandles: 
 
         const bodyTop = Math.min(openY, closeY);
         const bodyHeight = Math.abs(openY - closeY);
-        ctx.fillRect(drawX + 1, bodyTop, visibleWidth - 2, bodyHeight || 1);
+        ctx.fillStyle = color;
+        ctx.fillRect(drawX, bodyTop, visibleWidth, bodyHeight || 1);
     }
-    return {
-        visibleCandles: allCandles.slice(visibleStartIndex, visibleEndIndex + 1),
-        XStart: allCandles[visibleStartIndex].t,
-        XEnd: allCandles[visibleEndIndex].t + candleWidth
-    };
+
+    return {XStart: allCandles[visibleStartIndex]?.t, XEnd: allCandles[visibleEndIndex]?.t + intervalSeconds};
 }
 
-export function drawLineChart(ctx: CanvasRenderingContext2D, allCandles: Interval[], visibleStartIndex: number, visibleEndIndex: number, visibleRange: TimeRange, intervalMs: number) {
-    if (visibleEndIndex < visibleStartIndex) return;
+export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: ChartStyleOptions = {}) {
+    const {allCandles: allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
+    if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
 
-    let maxPrice = -Infinity;
-    let minPrice = Infinity;
-    for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
-        const c = allCandles[i];
-        if (c.h > maxPrice) maxPrice = c.h;
-        if (c.l < minPrice) minPrice = c.l;
-    }
-    const priceRange = maxPrice - minPrice;
-    const candleWidth = getIntervalWidth(ctx, allCandles, visibleStartIndex, visibleEndIndex, visibleRange, intervalMs);
+    const style = {...DEFAULT_STYLES.line, ...options.line};
+    const startIdx = Math.max(0, visibleStartIndex - 1);
+    const endIdx = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
+    const price = findPriceRange(allIntervals, startIdx, endIdx);
+    const {clientWidth, clientHeight} = ctx.canvas;
+    const priceToY = (p: number) => clientHeight * (1 - (p - price.min) / price.range);
+    const timeToX = (time: number) => clientWidth * ((time - visibleRange.start) / (visibleRange.end - visibleRange.start));
 
     ctx.beginPath();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'blue';
+    ctx.lineWidth = style.lineWidth;
+    ctx.strokeStyle = style.color;
 
-    for (let index = visibleStartIndex; index <= visibleEndIndex; index++) {
-        const candle = allCandles[index];
-        const timeOffset = candle.t - visibleRange.start;
-        const x = (timeOffset / intervalMs) * candleWidth;
-
-        if (x + candleWidth < 0 || x >= ctx.canvas.clientWidth + candleWidth / 2) continue;
-
-        const priceY = ctx.canvas.clientHeight - ((candle.c - minPrice) / priceRange) * ctx.canvas.clientHeight;
-
-        if (index === visibleStartIndex || x < 0) {
-            ctx.moveTo(x, priceY);
-        } else {
-            ctx.lineTo(x, priceY);
-        }
-    }
-    ctx.stroke();
-}
-
-
-function calc_linear_interpolation(y1: number, y2: number, t: number): number {
-    return y1 * (1 - t) + y2 * t;
-}
-
-
-export function drawAreaChart(
-    ctx: CanvasRenderingContext2D,
-    allIntervals: Interval[],
-    visibleStartIndex: number,
-    visibleEndIndex: number,
-    visibleRange: TimeRange,
-    intervalMs: number
-) {
-    if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) {
-        return;
-    }
-
-    const {clientWidth: canvasWidth, clientHeight: canvasHeight} = ctx.canvas;
-
-    // 1. Find the min/max price in the visible range to scale the Y-axis
-    let maxPrice = -Infinity;
-    let minPrice = Infinity;
-    // Widen the search slightly to include intervals just off-screen for smoother interpolation
-    const start = Math.max(0, visibleStartIndex - 1);
-    const end = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
-    for (let i = start; i <= end; i++) {
-        const c = allIntervals[i];
-        if (c.h > maxPrice) maxPrice = c.h;
-        if (c.l < minPrice) minPrice = c.l;
-    }
-
-    // Avoid division by zero if all prices are the same
-    const priceRange = maxPrice - minPrice || 1;
-
-    // 2. Helper functions to map data coordinates to canvas pixels
-    function priceToYPixel(price: number): number {
-        const relative = (price - minPrice) / priceRange;
-        return canvasHeight * (1 - relative);
-    }
-
-    function timeToX(time: number): number {
-        const relative = (time - visibleRange.start) / (visibleRange.end - visibleRange.start);
-        return canvasWidth * relative;
-    }
-
-    ctx.beginPath();
-
-    // 3. Calculate the interpolated starting point on the left edge of the canvas
-    const firstVisibleInterval = allIntervals[visibleStartIndex];
-    let startY: number;
-
+    const firstInterval = allIntervals[visibleStartIndex];
+    let startPrice: number;
     if (visibleStartIndex === 0) {
-        // Edge case: No interval before the first one.
-        // Interpolate between the open price (at the start) and close price (at the middle).
-        const time1 = firstVisibleInterval.t;
-        const price1 = firstVisibleInterval.o;
-        const time2 = firstVisibleInterval.t + intervalMs / 2;
-        const price2 = firstVisibleInterval.c;
-        const fraction = (visibleRange.start - time1) / (time2 - time1);
-        startY = calc_linear_interpolation(price1, price2, fraction);
+        startPrice = firstInterval.o;
     } else {
-        // Standard case: Interpolate between the center of the previous interval and the first visible one.
         const prevInterval = allIntervals[visibleStartIndex - 1];
-        const time1 = prevInterval.t + intervalMs / 2;
-        const price1 = prevInterval.c;
-        const time2 = firstVisibleInterval.t + intervalMs / 2;
-        const price2 = firstVisibleInterval.c;
-        const fraction = (visibleRange.start - time1) / (time2 - time1);
-        startY = calc_linear_interpolation(price1, price2, fraction);
+        const fraction = (visibleRange.start - (prevInterval.t + intervalSeconds / 2)) / intervalSeconds;
+        startPrice = lerp(prevInterval.c, firstInterval.c, fraction);
     }
-    ctx.moveTo(0, priceToYPixel(startY));
+    ctx.moveTo(0, priceToY(startPrice));
 
-    // 4. Draw lines to the center of each visible interval
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
         const interval = allIntervals[i];
-        const x = timeToX(interval.t + intervalMs / 2);
-        const y = priceToYPixel(interval.c);
+        const x = timeToX(interval.t + intervalSeconds / 2);
+        const y = priceToY(interval.c);
         ctx.lineTo(x, y);
     }
 
-    // 5. Calculate the interpolated ending point on the right edge of the canvas
-    const lastVisibleInterval = allIntervals[visibleEndIndex];
-    let endY: number;
-
+    const lastInterval = allIntervals[visibleEndIndex];
+    let endPrice: number;
     if (visibleEndIndex >= allIntervals.length - 1) {
-        // Edge case: No interval after the last one. Just hold the last price.
-        endY = lastVisibleInterval.c;
+        endPrice = lastInterval.c;
     } else {
-        // Standard case: Interpolate between the last visible interval and the next one.
         const nextInterval = allIntervals[visibleEndIndex + 1];
-        const time1 = lastVisibleInterval.t + intervalMs / 2;
-        const price1 = lastVisibleInterval.c;
-        const time2 = nextInterval.t + intervalMs / 2;
-        const price2 = nextInterval.c;
-        const fraction = (visibleRange.end - time1) / (time2 - time1);
-        endY = calc_linear_interpolation(price1, price2, fraction);
+        const fraction = (visibleRange.end - (lastInterval.t + intervalSeconds / 2)) / intervalSeconds;
+        endPrice = lerp(lastInterval.c, nextInterval.c, fraction);
     }
-    ctx.lineTo(canvasWidth, priceToYPixel(endY));
+    ctx.lineTo(clientWidth, priceToY(endPrice));
+    ctx.stroke();
+}
 
-    // 6. Close the path to form the "area"
-    ctx.lineTo(canvasWidth, canvasHeight);
-    ctx.lineTo(0, canvasHeight);
+export function drawAreaChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: ChartStyleOptions = {}) {
+    const {allCandles: allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
+    if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
+
+    const style = {...DEFAULT_STYLES.area, ...options.area};
+    const startIdx = Math.max(0, visibleStartIndex - 1);
+    const endIdx = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
+    const price = findPriceRange(allIntervals, startIdx, endIdx);
+    const {clientWidth, clientHeight} = ctx.canvas;
+    const priceToY = (p: number) => clientHeight * (1 - (p - price.min) / price.range);
+    const timeToX = (time: number) => clientWidth * ((time - visibleRange.start) / (visibleRange.end - visibleRange.start));
+
+    ctx.beginPath();
+
+    const firstInterval = allIntervals[visibleStartIndex];
+    let startPrice: number;
+    if (visibleStartIndex === 0) {
+        startPrice = firstInterval.o;
+    } else {
+        const prevInterval = allIntervals[visibleStartIndex - 1];
+        const fraction = (visibleRange.start - (prevInterval.t + intervalSeconds / 2)) / intervalSeconds;
+        startPrice = lerp(prevInterval.c, firstInterval.c, fraction);
+    }
+    ctx.moveTo(0, priceToY(startPrice));
+
+    for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
+        const interval = allIntervals[i];
+        const x = timeToX(interval.t + intervalSeconds / 2);
+        const y = priceToY(interval.c);
+        ctx.lineTo(x, y);
+    }
+
+    const lastInterval = allIntervals[visibleEndIndex];
+    let endPrice: number;
+    if (visibleEndIndex >= allIntervals.length - 1) {
+        endPrice = lastInterval.c;
+    } else {
+        const nextInterval = allIntervals[visibleEndIndex + 1];
+        const fraction = (visibleRange.end - (lastInterval.t + intervalSeconds / 2)) / intervalSeconds;
+        endPrice = lerp(lastInterval.c, nextInterval.c, fraction);
+    }
+    ctx.lineTo(clientWidth, priceToY(endPrice));
+    ctx.lineTo(clientWidth, clientHeight);
+    ctx.lineTo(0, clientHeight);
     ctx.closePath();
 
-    // 7. Style and draw the chart
-    ctx.fillStyle = 'rgba(0, 123, 255, 0.2)';
-    ctx.strokeStyle = 'rgba(0, 123, 255, 1)';
+    ctx.fillStyle = style.fillColor;
+    ctx.strokeStyle = style.strokeColor;
+    ctx.lineWidth = style.lineWidth;
     ctx.fill();
     ctx.stroke();
 }
 
-export function drawBarChart(
-    ctx: CanvasRenderingContext2D,
-    allCandles: Interval[],
-    visibleStartIndex: number,
-    visibleEndIndex: number,
-    visibleRange: TimeRange,
-    intervalMs: number
-) {
+export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: ChartStyleOptions = {}) {
+    const {allCandles, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (visibleEndIndex < visibleStartIndex) return;
 
-    let maxPrice = -Infinity;
-    let minPrice = Infinity;
-    for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
-        const c = allCandles[i];
-        if (c.h > maxPrice) maxPrice = c.h;
-        if (c.l < minPrice) minPrice = c.l;
-    }
-    const priceRange = maxPrice - minPrice;
-
-    const candleWidth = getIntervalWidth(ctx, allCandles, visibleStartIndex, visibleEndIndex, visibleRange, intervalMs);
+    const style = {...DEFAULT_STYLES.candles, ...options.candles};
+    const price = findPriceRange(allCandles, visibleStartIndex, visibleEndIndex);
+    const {clientWidth, clientHeight} = ctx.canvas;
+    const priceToY = (p: number) => clientHeight * (1 - (p - price.min) / price.range);
+    const visibleDuration = visibleRange.end - visibleRange.start;
+    if (visibleDuration <= 0) return;
+    const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
 
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
         const candle = allCandles[i];
-        const timeOffset = candle.t - visibleRange.start;
-        const x = (timeOffset / intervalMs) * candleWidth;
+        const x = ((candle.t - visibleRange.start) / visibleDuration) * clientWidth;
+        if (x + candleWidth < 0 || x > clientWidth) continue;
 
-        if (x + candleWidth < 0 || x >= ctx.canvas.clientWidth + candleWidth / 2) continue;
+        const highY = priceToY(candle.h);
+        const lowY = priceToY(candle.l);
+        const openY = priceToY(candle.o);
+        const closeY = priceToY(candle.c);
+        const color = candle.c >= candle.o ? style.bullColor : style.bearColor;
 
-        const openY = ctx.canvas.clientHeight - ((candle.o - minPrice) / priceRange) * ctx.canvas.clientHeight;
-        const closeY = ctx.canvas.clientHeight - ((candle.c - minPrice) / priceRange) * ctx.canvas.clientHeight;
-
-        ctx.strokeStyle = 'black';
         ctx.beginPath();
-        ctx.moveTo(x + candleWidth / 2, openY);
-        ctx.lineTo(x + candleWidth / 2, closeY);
+        ctx.strokeStyle = color;
+        const midX = x + candleWidth / 2;
+        ctx.moveTo(midX, highY);
+        ctx.lineTo(midX, lowY);
+        ctx.moveTo(x, openY);
+        ctx.lineTo(midX, openY);
+        ctx.moveTo(midX, closeY);
+        ctx.lineTo(x + candleWidth, closeY);
         ctx.stroke();
     }
 }
 
-export function drawHistogramChart(
-    ctx: CanvasRenderingContext2D,
-    allCandles: Interval[],
-    visibleStartIndex: number,
-    visibleEndIndex: number,
-    visibleRange: TimeRange,
-    intervalMs: number
-) {
+export function drawHistogramChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: ChartStyleOptions = {}) {
+    const {allCandles, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (visibleEndIndex < visibleStartIndex) return;
 
-    const values: number[] = [];
+    const style = {...DEFAULT_STYLES.histogram, ...options.histogram};
+    let maxVolume = 0;
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
         const v = allCandles[i].v;
-        if (v != undefined) values.push(v);
+        if (v !== undefined && v > maxVolume) {
+            maxVolume = v;
+        }
     }
-    if (values.length === 0) return;
-    const maxValue = Math.max(...values);
-    const candleWidth = getIntervalWidth(ctx, allCandles, visibleStartIndex, visibleEndIndex, visibleRange, intervalMs);
-    for (let index = visibleStartIndex; index <= visibleEndIndex; index++) {
-        const candle = allCandles[index];
-        const timeOffset = candle.t - visibleRange.start;
-        const x = (timeOffset / intervalMs) * candleWidth;
+    if (maxVolume === 0) return;
 
-        if (x + candleWidth < 0 || x >= ctx.canvas.clientWidth + candleWidth / 2) continue;
+    const {clientWidth, clientHeight} = ctx.canvas;
+    const visibleDuration = visibleRange.end - visibleRange.start;
+    if (visibleDuration <= 0) return;
+    const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
 
-        const value = candle.v!;
-        const barHeight = (value / maxValue) * ctx.canvas.clientHeight;
-        const y = ctx.canvas.clientHeight - barHeight;
+    for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
+        const candle = allCandles[i];
+        if (candle.v === undefined) continue;
+        const x = ((candle.t - visibleRange.start) / visibleDuration) * clientWidth;
+        if (x + candleWidth < 0 || x > clientWidth) continue;
 
-        ctx.fillStyle = candle.c >= candle.o ? 'green' : 'red';
+        const barHeight = (candle.v / maxVolume) * clientHeight;
+        const y = clientHeight - barHeight;
+        const color = candle.c >= candle.o ? style.bullColor : style.bearColor;
+        const opacityHex = Math.round(style.opacity * 255).toString(16).padStart(2, '0');
+        ctx.fillStyle = `${color}${opacityHex}`;
         ctx.fillRect(x + 1, y, candleWidth - 2, barHeight);
     }
-    const lastCandle = allCandles[visibleEndIndex];
-    const lastIntervalStart = startOfHour(new Date(lastCandle.t));
-    console.log('Last histogram chart interval:', lastIntervalStart.toLocaleString());
 }

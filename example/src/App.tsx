@@ -32,7 +32,7 @@ export default function App() {
                 initialTimeFormat12h={false}
                 initialVisibleTimeRange={exampleVisibleRange}
                 initialVisiblePriceRange={{min: minPrice, max: maxPrice}}
-                chartType={ChartType.Area}
+                chartType={ChartType.Candlestick}
             />
         </div>
     );

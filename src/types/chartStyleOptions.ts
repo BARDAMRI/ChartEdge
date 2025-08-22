@@ -2,6 +2,8 @@
 
 // Candles style
 import {AxesPosition} from "./types";
+import type {Interval} from "./Interval";
+import type {TimeRange} from "./Graph";
 
 export interface CandleStyleOptions {
     upColor?: string;
@@ -38,15 +40,6 @@ export interface LineOverlayOptions {
     dashed?: boolean;
 }
 
-// Main Chart style options
-export interface ChartStyleOptions {
-    candles?: CandleStyleOptions;
-    grid?: GridStyleOptions;
-    axes?: AxesStyleOptions;
-    lineOverlay?: LineOverlayOptions;
-    backgroundColor?: string;
-}
-
 
 export enum TimeDetailLevel {
     Auto = 'auto',
@@ -61,4 +54,58 @@ export enum ChartType {
     Area = 'area',
     Bar = 'bar',
     Histogram = 'histogram',
+}
+
+
+export interface ChartRenderContext {
+    allCandles: Interval[];
+    visibleStartIndex: number;
+    visibleEndIndex: number;
+    visibleRange: TimeRange;
+    intervalSeconds: number;
+}
+
+// --- Nested Style Types ---
+export interface CandleStyleOptions {
+    bullColor?: string;
+    bearColor?: string;
+}
+
+export interface LineStyleOptions {
+    color?: string;
+    lineWidth?: number;
+}
+
+export interface AreaStyleOptions {
+    fillColor?: string;
+    strokeColor?: string;
+    lineWidth?: number;
+}
+
+export interface HistogramStyleOptions {
+    bullColor?: string;
+    bearColor?: string;
+    opacity?: number;
+}
+
+// (Placeholders for your existing types)
+export interface GridStyleOptions {
+    color?: string;
+    lineWidth?: number;
+}
+
+export interface AxesStyleOptions {
+    labelColor?: string;
+    lineColor?: string;
+}
+
+// --- Main Combined Interface ---
+export interface ChartStyleOptions {
+    candles?: CandleStyleOptions;
+    line?: LineStyleOptions;
+    area?: AreaStyleOptions;
+    histogram?: HistogramStyleOptions;
+    grid?: GridStyleOptions;
+    axes?: AxesStyleOptions;
+    backgroundColor?: string;
 }

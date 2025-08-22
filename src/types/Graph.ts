@@ -22,3 +22,13 @@ export interface DrawTicksOptions {
     labelOffset: number;     // distance from tick to label in pixels
     axisY: number;          // y position of the axis line in pixels
 }
+
+export type IndexRangePair = {
+    startIndex: number;
+    endIndex: number;
+}
+export type Candlesticks = {
+    XStart: number;
+    XEnd: number;
+    candlesIndexes: IndexRangePair;
+}

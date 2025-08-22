@@ -7,12 +7,11 @@ import {StyledCanvas, InnerCanvasContainer, HoverTooltip} from '../../styles/Cha
 import {ChartType} from '../../types/chartStyleOptions';
 import {parseInterval} from "./utils/RangeCalculators";
 import {
-    Candlesticks,
     drawAreaChart,
     drawBarChart,
     drawCandlestickChart,
     drawHistogramChart,
-    drawLineChart, IndexRangePair
+    drawLineChart
 } from "./utils/GraphDraw";
 import {drawDrawings} from './utils/drawDrawings';
 import {LineShape} from '../Drawing/LineShape';
@@ -20,9 +19,7 @@ import {RectangleShape} from "../Drawing/RectangleShape";
 import {CircleShape} from "../Drawing/CircleShape";
 import {TriangleShape} from "../Drawing/TriangleShape";
 import {AngleShape} from "../Drawing/Angleshape";
-import {
-    startOfHour
-} from 'date-fns';
+import {IndexRangePair } from "../../types/Graph";
 
 type DrawingFactoryMap = Partial<Record<Mode, () => any>>;
 
