@@ -5,42 +5,6 @@ import {AxesPosition} from "./types";
 import type {Interval} from "./Interval";
 import type {TimeRange} from "./Graph";
 
-export interface CandleStyleOptions {
-    upColor?: string;
-    downColor?: string;
-    borderColor?: string;
-    borderWidth?: number;
-    bodyWidthFactor?: number;
-    spacingFactor?: number;
-}
-
-// Grid style
-export interface GridStyleOptions {
-    gridSpacing?: number;
-    lineColor?: string;
-    lineWidth?: number;
-    lineDash?: number[];
-}
-
-// Axes style
-export interface AxesStyleOptions {
-    axisPosition?: AxesPosition;
-    textColor?: string;
-    font?: string;
-    lineColor?: string;
-    lineWidth?: number;
-    numberLocale?: string;
-    dateLocale?: string;
-    numberFractionDigits?: number; // Number of decimal places to format axis values
-}
-
-export interface LineOverlayOptions {
-    color?: string;
-    lineWidth?: number;
-    dashed?: boolean;
-}
-
-
 export enum TimeDetailLevel {
     Auto = 'auto',
     Low = 'low',
@@ -58,7 +22,7 @@ export enum ChartType {
 
 
 export interface ChartRenderContext {
-    allCandles: Interval[];
+    allIntervals: Interval[];
     visibleStartIndex: number;
     visibleEndIndex: number;
     visibleRange: TimeRange;
@@ -67,45 +31,66 @@ export interface ChartRenderContext {
 
 // --- Nested Style Types ---
 export interface CandleStyleOptions {
-    bullColor?: string;
-    bearColor?: string;
+    bullColor: string;
+    bearColor: string;
+    upColor: string;
+    downColor: string;
+    borderColor: string;
+    borderWidth: number;
+    bodyWidthFactor: number;
+    spacingFactor: number;
 }
 
 export interface LineStyleOptions {
-    color?: string;
-    lineWidth?: number;
+    color: string;
+    lineWidth: number;
 }
 
 export interface AreaStyleOptions {
-    fillColor?: string;
-    strokeColor?: string;
-    lineWidth?: number;
+    fillColor: string;
+    strokeColor: string;
+    lineWidth: number;
 }
 
 export interface HistogramStyleOptions {
-    bullColor?: string;
-    bearColor?: string;
-    opacity?: number;
+    bullColor: string;
+    bearColor: string;
+    opacity: number;
 }
 
-// (Placeholders for your existing types)
+export interface BarStyleOptions {
+    bullColor: string;
+    bearColor: string;
+    opacity: number;
+}
+
 export interface GridStyleOptions {
-    color?: string;
-    lineWidth?: number;
+    color: string;
+    lineWidth: number;
+    gridSpacing: number;
+    lineColor: string;
+    lineDash: number[];
 }
 
 export interface AxesStyleOptions {
-    labelColor?: string;
-    lineColor?: string;
+    axisPosition: AxesPosition;
+    textColor: string;
+    font: string;
+    lineColor: string;
+    lineWidth: number;
+    numberLocale: string;
+    dateLocale: string;
+    numberFractionDigits: number; // Number of decimal places to format axis values
 }
 
 // --- Main Combined Interface ---
-export interface ChartStyleOptions {
-    candles?: CandleStyleOptions;
-    line?: LineStyleOptions;
-    area?: AreaStyleOptions;
-    histogram?: HistogramStyleOptions;
-    grid?: GridStyleOptions;
-    axes?: AxesStyleOptions;
-    backgroundColor?: string;
+export type ChartStyleOptions = {
+    candles: CandleStyleOptions;
+    line: LineStyleOptions;
+    area: AreaStyleOptions;
+    histogram: HistogramStyleOptions;
+    bar: BarStyleOptions;
+    grid: GridStyleOptions;
+    axes: AxesStyleOptions;
+    backgroundColor: string;
 }

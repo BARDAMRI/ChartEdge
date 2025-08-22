@@ -12,9 +12,7 @@ import {AngleShape} from "../../Drawing/Angleshape";
 export function drawDrawings(
     ctx: CanvasRenderingContext2D,
     drawings: Drawing[],
-    selectedIndex: number | null,
-    width: number,
-    height: number
+    selectedIndex: number | null
 ): void {
     drawings.forEach((d, index) => {
         ctx.beginPath();

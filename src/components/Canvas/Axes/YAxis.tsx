@@ -1,68 +1,50 @@
-import { getYAxisPriceRange } from '../utils/priceRangeUtils';
 import React, {useEffect, useRef} from 'react';
 import {generateAndDrawYTicks} from '../utils/generateTicks';
-import {CanvasSizes} from "../ChartStage";
 import {StyledYAxisCanvas} from '../../../styles/YAxis.styles';
-import {PriceRange} from "../../../types/Graph";
-import {ChartType} from '../../../types/chartStyleOptions';
-import {Interval} from "../../../types/Interval";
 
 interface YAxisProps {
-    parentContainerRef: React.RefObject<HTMLDivElement | null>;
-    intervalsArray: Interval[];
-    canvasSizes: CanvasSizes;
     yAxisPosition: 'left' | 'right';
     xAxisHeight: number;
-    yAxisWidth: number;
     minPrice: number;
     maxPrice: number;
     numberOfYTicks: number;
-    initialVisiblePriceRange: PriceRange;
-    chartType: ChartType;
-
 }
 
 export default function YAxis({
-                                  parentContainerRef,
-                                  intervalsArray,
-                                  canvasSizes,
-                                  yAxisWidth,
-                                  xAxisHeight,
                                   yAxisPosition,
+                                  xAxisHeight,
                                   minPrice,
                                   maxPrice,
                                   numberOfYTicks,
-                                  initialVisiblePriceRange,
-                                  chartType
                               }: YAxisProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const dpr = window.devicePixelRatio || 1;
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const y_axis_canvas_height = canvas.clientHeight;
-        const y_axis_canvas_width = canvas.clientWidth;
-
-        canvas.height = y_axis_canvas_height * dpr;
-        canvas.width = y_axis_canvas_width * dpr;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+        }
+        // Set the canvas style size to match the logical size for crisp rendering
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${rect.height}px`;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any existing transforms
         ctx.scale(dpr, dpr);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, rect.width, rect.height);
 
-        const { min: priceMin, max: priceMax } = getYAxisPriceRange(
-            intervalsArray,
-            chartType
-        );
-
+        // Directly use the minPrice and maxPrice passed from the parent
         generateAndDrawYTicks(
             canvas,
-            priceMin,
-            priceMax,
+            minPrice,
+            maxPrice,
             numberOfYTicks,
             xAxisHeight,
             yAxisPosition,
@@ -72,7 +54,7 @@ export default function YAxis({
             5,
             5
         );
-    }, [parentContainerRef, yAxisWidth, minPrice, maxPrice, numberOfYTicks, yAxisPosition, dpr, canvasSizes, chartType, initialVisiblePriceRange]);
+    }, [minPrice, maxPrice, numberOfYTicks, yAxisPosition, xAxisHeight]);
 
     return (
         <StyledYAxisCanvas ref={canvasRef} $position={yAxisPosition}/>
