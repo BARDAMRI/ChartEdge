@@ -192,112 +192,96 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
 }
 
 export function drawAreaChart(
-    ctx: CanvasRenderingContext2D,
-    context: ChartRenderContext,
-    style: ChartStyleOptions
+  ctx: CanvasRenderingContext2D,
+  context: ChartRenderContext,
+  style: ChartStyleOptions
 ) {
-    const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
-    if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
+  const { allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds } = context;
+  if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
 
-    // Retain initial calculations
-    const paddedStart = Math.max(0, visibleStartIndex - 1);
-    const paddedEnd = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
-    const price = findPriceRange(allIntervals, paddedStart, paddedEnd);
-    const {clientWidth, clientHeight} = ctx.canvas;
+  // Price range with a small pad to reduce visual jitter
+  const paddedStart = Math.max(0, visibleStartIndex - 1);
+  const paddedEnd   = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
+  const price = findPriceRange(allIntervals, paddedStart, paddedEnd);
 
-    // moving the ctx to the top-left corner where it should start drawing.
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
+  const { clientWidth, clientHeight } = ctx.canvas;
+  const xOf = (t: number) =>
+    clientWidth * ((t - visibleRange.start) / (visibleRange.end - visibleRange.start));
+  const yOf = (p: number) =>
+    clientHeight * (1 - (p - price.min) / price.range);
 
-    // Interpolate line value exactly at the left and right edges for smooth, continuous panning
-    const leftY = priceToY(interpolatedCloseAtTime(allIntervals, intervalSeconds, visibleRange.start), clientHeight, price);
-    ctx.lineTo(0, leftY);
+  // Clip drawing window to actual data bounds (prevents fake “tails”)
+  const dataStart = allIntervals[0].t;
+  const dataEnd   = allIntervals[allIntervals.length - 1].t + intervalSeconds;
+  const clipStartTime = Math.max(visibleRange.start, dataStart);
+  const clipEndTime   = Math.min(visibleRange.end,   dataEnd);
+  if (clipEndTime <= clipStartTime) return;
 
-    // check if the first interval is visible more than 50%.
-    const firstInterval = allIntervals[visibleStartIndex];
-    if (firstInterval && firstInterval.t + intervalSeconds / 2 > visibleRange.start) {
-        // if yes, then the first line should be drawn to the center of the first interval
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 5;
-        ctx.lineTo(timeToX(firstInterval.t + intervalSeconds / 2, clientWidth, visibleRange), priceToY(firstInterval.c, clientHeight, price));
+  // Build polyline points without inventing horizontal edges
+  const centerOf = (i: number) => allIntervals[i].t + intervalSeconds / 2;
+  const first    = allIntervals[0];
+  const lastIdx  = allIntervals.length - 1;
+  const lastCtr  = centerOf(lastIdx);
+
+  const pts: Array<{ x: number; y: number }> = [];
+
+  // Left edge:
+  // If we start inside the first half-candle, interpolate OPEN→CLOSE of the first candle.
+  // Otherwise, interpolate between centers as usual.
+  if (clipStartTime >= first.t && clipStartTime < centerOf(0)) {
+    const t0 = first.t, c0 = centerOf(0);
+    const ratio = (clipStartTime - t0) / (c0 - t0);
+    const val = lerp(first.o, first.c, Math.min(Math.max(ratio, 0), 1));
+    pts.push({ x: xOf(clipStartTime), y: yOf(val) });
+  } else {
+    const val = interpolatedCloseAtTime(allIntervals, intervalSeconds, clipStartTime);
+    pts.push({ x: xOf(clipStartTime), y: yOf(val) });
+  }
+
+  // Visible centers
+  for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
+    const cT = centerOf(i);
+    if (cT >= clipStartTime && cT <= clipEndTime) {
+      pts.push({ x: xOf(cT), y: yOf(allIntervals[i].c) });
     }
-    ctx.stroke();
-    ctx.restore();
-    // Iterate over each visible interval segment
-    for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
-        const a = allIntervals[i];
-        let b;
-        if (i < visibleEndIndex || visibleEndIndex < allIntervals.length - 1) {
-            b = allIntervals[i + 1];
-            const ax = timeToX(a.t + intervalSeconds / 2, clientWidth, visibleRange);
-            const ay = priceToY(a.c, clientHeight, price);
-            const bx = timeToX(b.t + intervalSeconds / 2, clientWidth, visibleRange);
-            const by = priceToY(b.c, clientHeight, price);
+  }
 
-            // Compute unique color (hue by index)
-            const color = `hsl(${(i * 60) % 360}, 70%, 50%)`;
+  // Right edge:
+  // If the window ends before the last center, interpolate there;
+  // if it goes beyond the last center, end at the last center (no horizontal tail).
+  if (clipEndTime < lastCtr) {
+    const val = interpolatedCloseAtTime(allIntervals, intervalSeconds, clipEndTime);
+    pts.push({ x: xOf(clipEndTime), y: yOf(val) });
+  } else {
+    pts.push({ x: xOf(lastCtr), y: yOf(allIntervals[lastIdx].c) });
+  }
 
-            // Draw the line segment with this color and thicker width
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(ax, ay);
-            ctx.lineTo(bx, by);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 4;
-            ctx.stroke();
-            ctx.restore();
+  if (pts.length < 2) return;
 
-            // Draw vertical dashed line at starting x (ax): "end i"
-            ctx.save();
-            ctx.setLineDash([6, 6]);
-            ctx.beginPath();
-            ctx.moveTo(ax, 0);
-            ctx.lineTo(ax, clientHeight);
-            ctx.strokeStyle = '#888';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.font = '11px Arial';
-            ctx.fillStyle = '#888';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText(`end ${i}`, ax, 2);
-            ctx.restore();
+  // PASS 1 — fill under the graph (close to bottom). We do NOT stroke this path.
+  const startX = pts[0].x;
+  const endX   = pts[pts.length - 1].x;
 
-            // Draw vertical dashed line at ending x (bx): "start i+1"
-            ctx.save();
-            ctx.setLineDash([6, 6]);
-            ctx.beginPath();
-            ctx.moveTo(bx, 0);
-            ctx.lineTo(bx, clientHeight);
-            ctx.strokeStyle = '#888';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.font = '11px Arial';
-            ctx.fillStyle = '#888';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText(`start ${i + 1}`, bx, 2);
-            ctx.restore();
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k].x, pts[k].y);
+  ctx.lineTo(endX, clientHeight);
+  ctx.lineTo(startX, clientHeight);
+  ctx.closePath();
+  ctx.fillStyle = style.area.fillColor;
+  ctx.fill();
+  ctx.restore();
 
-            // Above the line midpoint, print two lines of annotation
-            const mx = (ax + bx) / 2;
-            const my = (ay + by) / 2;
-            ctx.save();
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillStyle = '#333';
-            const line1 = `Ind ${i}: c=${a.c} | Int ${i + 1}: c=${b.c}`;
-            const line2 = `(${ax.toFixed(1)},${ay.toFixed(1)}) -> (${bx.toFixed(1)},${by.toFixed(1)})`;
-            ctx.fillText(line1, mx, my - 16);
-            ctx.fillText(line2, mx, my - 2);
-            ctx.restore();
-        }
-    }
-
+  // PASS 2 — stroke only the graph polyline (no bottom closure).
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k].x, pts[k].y);
+  ctx.strokeStyle = style.area.strokeColor;
+  ctx.lineWidth   = style.area.lineWidth;
+  ctx.stroke();
+  ctx.restore();
 }
 
 export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, style: ChartStyleOptions) {
