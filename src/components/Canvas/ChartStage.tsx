@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {ChartCanvas} from './ChartCanvas';
 import XAxis from "./Axes/XAxis";
 import YAxis from "./Axes/YAxis";
@@ -16,13 +16,12 @@ import {ChartStyleOptions, ChartType, TimeDetailLevel} from "../../types/chartSt
 import {AxesPosition} from "../../types/types";
 import {findPriceRange} from "./utils/GraphDraw";
 import {DrawingPoint} from '../../types/Drawings';
-
+import { useElementSize } from '../../hooks/useElementSize';
 export interface CanvasSizes {
     width: number;
     height: number;
 }
 
-// ⭐ 1. The props interface is now corrected to accept drawing state and setters.
 interface ChartStageProps {
     intervalsArray: Interval[];
     yAxisPosition: AxesPosition;
@@ -66,39 +65,62 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           setSelectedIndex,
                                                           setStartPoint,
                                                       }) => {
-    const [canvasSizes, setCanvasSizes] = useState<CanvasSizes>({width: 0, height: 0});
-    const containerRef = useRef<HTMLDivElement | null>(null);
+    const {ref: containerRef, size: canvasSizes} = useElementSize<HTMLDivElement>();
 
     const {min: minPrice, max: maxPrice} = useMemo(() => {
-        if (!intervalsArray || intervalsArray.length === 0) {
-            return {min: 0, max: 100, range: 100};
+        const arr = intervalsArray ?? [];
+        const n = arr.length;
+        if (n === 0) return {min: 0, max: 100, range: 100};
+
+        // Robust intervalSeconds (median of deltas)
+        const deltas: number[] = [];
+        for (let i = 1; i < n; i++) deltas.push(arr[i].t - arr[i - 1].t);
+        deltas.sort((a, b) => a - b);
+        const intervalSeconds = deltas.length
+            ? deltas[Math.floor(deltas.length / 2)]
+            : 3600;
+
+        // Clip visible window to data bounds
+        const dataStart = arr[0].t;
+        const dataEnd = arr[n - 1].t + intervalSeconds;
+        const clipStart = Math.max(visibleRange.start, dataStart);
+        const clipEnd = Math.min(visibleRange.end, dataEnd);
+        if (clipEnd <= clipStart) return findPriceRange(arr, 0, 0); // or early default
+
+        const center = (i: number) => arr[i].t + intervalSeconds / 2;
+
+        // lowerBound: first i with center(i) >= clipStart
+        let lo = 0, hi = n - 1, startIdx = n;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            if (center(mid) >= clipStart) {
+                startIdx = mid;
+                hi = mid - 1;
+            } else {
+                lo = mid + 1;
+            }
         }
 
-        const intervalSeconds = intervalsArray.length > 1 ? intervalsArray[1].t - intervalsArray[0].t : 3600;
-        const startIndex = intervalsArray.findIndex(c => c.t + intervalSeconds >= visibleRange.start);
-        const endIndex = intervalsArray.findLastIndex(c => c.t <= visibleRange.end);
-
-        const visibleStartIndex = Math.max(0, startIndex);
-        const visibleEndIndex = Math.min(intervalsArray.length - 1, endIndex === -1 ? intervalsArray.length - 1 : endIndex);
-
-        return findPriceRange(intervalsArray, visibleStartIndex, visibleEndIndex);
-    }, [intervalsArray, visibleRange]);
-
-    useEffect(() => {
-        const element = containerRef.current;
-        if (!element) return;
-
-        const resizeObserver = new ResizeObserver(entries => {
-            for (let entry of entries) {
-                const {width, height} = entry.contentRect;
-                setCanvasSizes({width, height});
+        // upperBound: first i with center(i) > clipEnd  → endIdx = ub - 1
+        lo = 0;
+        hi = n - 1;
+        let ub = n;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            if (center(mid) > clipEnd) {
+                ub = mid;
+                hi = mid - 1;
+            } else {
+                lo = mid + 1;
             }
-        });
-        resizeObserver.observe(element);
-        return () => resizeObserver.disconnect();
-    }, []);
+        }
+        const endIdx = Math.max(startIdx, ub - 1);
 
-    // ⭐ 2. The local state for drawings has been removed. We now use the props passed from the parent.
+        const visibleStartIndex = Math.max(0, Math.min(startIdx, n - 1));
+        const visibleEndIndex = Math.max(visibleStartIndex, Math.min(endIdx, n - 1));
+
+        return findPriceRange(arr, Math.max(0, visibleStartIndex - 1), Math.min(n - 1, visibleEndIndex + 1));
+    }, [intervalsArray, visibleRange]);
 
     return (
         <ChartStageContainer ref={containerRef}>
@@ -116,7 +138,6 @@ export const ChartStage: React.FC<ChartStageProps> = ({
 
             <CanvasAxisContainer>
                 <CanvasContainer>
-                    {/* ⭐ 3. All drawing-related props are correctly passed down to ChartCanvas */}
                     <ChartCanvas
                         intervalsArray={intervalsArray}
                         drawings={drawings}

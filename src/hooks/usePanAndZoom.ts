@@ -56,7 +56,6 @@ export function usePanAndZoom(
             isPanning.current = false;
         };
 
-        // ⭐ MODIFIED: This function now handles both pinch-to-zoom and two-finger scroll
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
 

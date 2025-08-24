@@ -32,6 +32,8 @@ interface ChartCanvasProps {
     xAxisHeight: number;
     chartType: ChartType;
     styleOptions: ChartStyleOptions;
+    canvasSizes?: { width: number; height: number };
+    parentContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
 export const ChartCanvas: React.FC<ChartCanvasProps> = ({
@@ -49,6 +51,8 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             xAxisHeight,
                                                             chartType,
                                                             styleOptions,
+                                                            canvasSizes,
+                                                            parentContainerRef,
                                                         }) => {
     const {mode} = useMode();
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -59,7 +63,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         intervalsArray,
         visibleRange,
         currentPoint,
-        canvasRef.current?.clientWidth || 0
+        (canvasSizes?.width ?? canvasRef.current?.clientWidth ?? 0)
     );
 
     // HOOK for pan and zoom interactions
@@ -77,10 +81,10 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
             canvas.width = rect.width * dpr;
             canvas.height = rect.height * dpr;
-            ctx.scale(dpr, dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, rect.width, rect.height);
 
         switch (chartType) {
             case ChartType.Candlestick:
@@ -150,7 +154,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 ctx.stroke();
             }
         }
-    }, [renderContext, chartType, styleOptions, drawings, selectedIndex, isDrawing, startPoint, currentPoint]);
+    }, [renderContext, chartType, styleOptions, drawings, selectedIndex, isDrawing, startPoint, currentPoint, canvasSizes]);
 
     useEffect(() => {
         drawAll();

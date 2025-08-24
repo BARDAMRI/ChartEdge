@@ -1,5 +1,23 @@
 import React from 'react';
-import {SettingsToolbarContainer} from '../../styles/SettingsToolbar.styles';
+import {
+    SettingsToolbarContainer,
+    SymbolInput,
+    ChartTypeSelect,
+} from '../../styles/SettingsToolbar.styles';
+
+import {Button} from './Buttons';
+import {
+    IconCamera,
+    IconDownload,
+    IconGear,
+    IconRange,
+    IconRefresh,
+    IconSearch,
+    IconTheme,
+} from './icons';
+import {ChartType} from "../../types/chartStyleOptions";
+import {Placement, TooltipAlign, TooltipAxis} from "../../types/buttons";
+import {Tooltip} from "../Tooltip";
 
 export const SettingsToolbar: React.FC = () => {
     const handleDownload = () => {
@@ -18,26 +36,82 @@ export const SettingsToolbar: React.FC = () => {
         console.log('Opening settings menu...');
     };
 
+    const openSearch = () => {
+        console.log('Opening search...');
+    };
+
+    const openRange = () => {
+        console.log('Opening range selection...');
+    };
+
+    const doDownload = () => {
+        console.log('Downloading data...');
+    };
+
+    const doRefresh = () => {
+        console.log('Refreshing data...');
+    };
+
+    const toggleTheme = () => {
+        console.log('Toggling theme...');
+    };
+
+    const chartTypes = (Object.values(ChartType).filter(v => typeof v === 'string') as string[]);
     return (
-        <SettingsToolbarContainer className={'settings-toolbar'}>
-            <input className={'symbol-name-input'} type="text" placeholder="Symbol"/>
-            <select className={'symbol-interval-select'}>
-                <option value="1m">1 Min</option>
-                <option value="5m">5 Min</option>
-                <option value="1h">1 Hour</option>
-                <option value="1d">1 Day</option>
-            </select>
-            <select className={'symbol-range-select'}>
-                <option value="50">50 Bars</option>
-                <option value="100">100 Bars</option>
-                <option value="200">200 Bars</option>
-            </select>
-            <select className={'symbol-chart-type-select'}>
-                <option value="candlestick">Candlestick</option>
-                <option value="line">Line</option>
-            </select>
-            <button className={'snapshot-button'} onClick={handleDownload}>📸</button>
-            <button className={'more-settings-button'} onClick={openSettingsMenu}>⚙️</button>
+        <SettingsToolbarContainer className="settings-toolbar">
+            <SymbolInput className={'symbol-choose-icon'} placeholder="Symbol"/>
+            <ChartTypeSelect className={'chart-type-select-container'} defaultValue="candlestick"
+                             aria-label="Chart type">
+                {/* iterate the chart types */}
+                {chartTypes.map((type) => (
+                    <option key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </option>
+                ))}
+            </ChartTypeSelect>
+
+            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+                     align={TooltipAlign.center}>
+                <Button onClickHandler={openSettingsMenu}>
+                    <IconGear/>
+                </Button>
+            </Tooltip>
+            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+                     align={TooltipAlign.center}>
+                <Button onClickHandler={handleDownload}>
+                    <IconCamera/>
+                </Button>
+            </Tooltip>
+            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+                     align={TooltipAlign.center}>
+                <Button onClickHandler={openSearch}>
+                    <IconSearch/>
+                </Button>
+            </Tooltip>
+            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+                     align={TooltipAlign.center}>
+                <Button onClickHandler={openRange}>
+                    <IconRange/>
+                </Button>
+            </Tooltip>
+            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+                     align={TooltipAlign.center}>
+                <Button onClickHandler={doDownload}>
+                    <IconDownload/>
+                </Button>
+            </Tooltip>
+            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+                     align={TooltipAlign.center}>
+                <Button onClickHandler={doRefresh}>
+                    <IconRefresh/>
+                </Button>
+            </Tooltip>
+            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+                     align={TooltipAlign.center}>
+                <Button onClickHandler={toggleTheme}>
+                    <IconTheme/>
+                </Button>
+            </Tooltip>
         </SettingsToolbarContainer>
     );
 };

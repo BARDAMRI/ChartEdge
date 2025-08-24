@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "date-fns": "^4.1.0",
+    "lucide-react": "^0.541.0",
     "react-dom": "^19.1.0",
     "styled-components": "^6.1.19"
   },

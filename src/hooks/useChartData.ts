@@ -19,7 +19,6 @@ export function useChartData(
     const visibleCandles = useMemo<IndexRangePair>(() => {
         if (!intervalsArray.length || !visibleRange.end) return {startIndex: 0, endIndex: 0};
 
-        // ⭐ תיקון: שימוש בחישוב אריתמטי יציב במקום חיפוש רגיש
         const firstTime = intervalsArray[0].t;
         const startIndex = Math.floor((visibleRange.start - firstTime) / intervalSeconds);
         const endIndex = Math.ceil((visibleRange.end - firstTime) / intervalSeconds);

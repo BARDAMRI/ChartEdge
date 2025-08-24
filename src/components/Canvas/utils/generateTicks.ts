@@ -113,7 +113,7 @@ function generateAndDrawTicksForLevel(
         labelColor = strokeStyle,
         labelFont = `${TICK_FONT_SIZE_PX}px Arial`,
         labelOffset = 15,
-        axisY = canvas.height - xAxisHeight
+        axisY = canvas.clientHeight - xAxisHeight
     } = options;
 
     const ticks: Tick[] = [];
@@ -144,7 +144,7 @@ function generateAndDrawTicksForLevel(
         );
     }
 
-    drawXTicks(ctx, ticks, tickHeight, tickColor, labelColor, labelFont, labelOffset, axisY);
+    drawXTicks(ctx, canvasWidth, ticks, tickHeight, tickColor, labelColor, labelFont, labelOffset, axisY);
 
     return ticks;
 }
@@ -231,6 +231,7 @@ export function generateAndDrawYTicks(
 
 function drawXTicks(
     ctx: CanvasRenderingContext2D,
+    canvasWidth: number,
     ticks: Tick[],
     tickHeight: number,
     tickColor: string,
@@ -239,29 +240,47 @@ function drawXTicks(
     labelOffset: number,
     axisY: number
 ): void {
+    ctx.save();
+
+    const crisp = (v: number) => Math.round(v) + 0.5;
+
     // drawing the axis line
     ctx.strokeStyle = tickColor;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, axisY);
-    ctx.lineTo(ctx.canvas.clientWidth, axisY);
+    ctx.moveTo(crisp(0), axisY);
+    ctx.lineTo(crisp(canvasWidth), axisY);
     ctx.stroke();
+
+    let lastRight = -Infinity;
 
     // drawing each tick and its label
     ticks.forEach(tick => {
+        const x = crisp(tick.position);
+
         ctx.strokeStyle = tickColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(tick.position, axisY);
-        ctx.lineTo(tick.position, axisY + tickHeight);
+        ctx.moveTo(x, axisY);
+        ctx.lineTo(x, axisY + tickHeight);
         ctx.stroke();
 
         ctx.fillStyle = labelColor;
         ctx.font = labelFont;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText(tick.label, tick.position, axisY + labelOffset + 5);
+
+        const w = ctx.measureText(tick.label).width;
+        const labelLeft = tick.position - w / 2;
+        const labelRight = tick.position + w / 2;
+
+        if (labelLeft > lastRight + 4) {
+            ctx.fillText(tick.label, tick.position, axisY + labelOffset + 5);
+            lastRight = labelRight;
+        }
     });
+
+    ctx.restore();
 }
 
 // Draw Y-axis ticks helper

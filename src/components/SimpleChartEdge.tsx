@@ -115,8 +115,6 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
 
     const finalStyleOptions = useMemo(() => mergeStyles(DEFAULT_STYLES, styleOptions), [styleOptions]);
     const [visibleRange, setVisibleRange] = useState<TimeRange>(initialVisibleTimeRange);
-
-    // ⭐ 1. State for drawings now lives in the top-level component.
     const [drawings, setDrawings] = useState<any[]>([]);
     const [isDrawing, setIsDrawing] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);

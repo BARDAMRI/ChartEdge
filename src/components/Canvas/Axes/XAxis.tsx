@@ -36,7 +36,8 @@ export default function XAxis({
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        ctx.scale(dpr, dpr);
+        // Apply devicePixelRatio in one step for crisp rendering and to avoid accumulating scales
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
 
         //  Call tick generator and drawer

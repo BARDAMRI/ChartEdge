@@ -2327,7 +2327,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
     );
 };
 
-// File: src/components/Toolbar/ModeButton.tsx
+// File: src/components/Toolbar/Buttons.tsx
 
 
 import React from 'react';
@@ -2409,7 +2409,7 @@ export const SettingsToolbar: React.FC = () => {
 // File: src/components/Toolbar/Toolbar.tsx
 import React from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
-import ModeButton from './ModeButton';
+import ModeButton from './Buttons';
 import '../../styles/Toolbar.scss';
 
 export const Toolbar: React.FC = () => {

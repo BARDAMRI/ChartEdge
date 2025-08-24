@@ -75,17 +75,20 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
     const visibleDuration = visibleRange.end - visibleRange.start;
     if (visibleDuration <= 0) return;
     const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
+    const gapFactor = Math.max(0, Math.min(0.4, (options.candles?.spacingFactor ?? 0.2)));
+    const bodyWidth = candleWidth * (1 - gapFactor);
+    const halfPad = (candleWidth - bodyWidth) / 2;
 
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
         const candle = allIntervals[i];
         const x = ((candle.t - visibleRange.start) / visibleDuration) * clientWidth;
-        let drawX = x;
-        let visibleWidth = candleWidth;
-        if (x < 0) {
-            visibleWidth += x;
-            drawX = 0;
-        } else if (x + candleWidth > clientWidth) {
-            visibleWidth = clientWidth - x;
+        let drawX = x + halfPad;
+        let visibleWidth = bodyWidth;
+        if (drawX < 0) {
+          visibleWidth += drawX; // drawX is negative; shrink width
+          drawX = 0;
+        } else if (drawX + visibleWidth > clientWidth) {
+          visibleWidth = clientWidth - drawX;
         }
         if (visibleWidth <= 0) continue;
 
@@ -96,11 +99,15 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         const isBullish = candle.c >= candle.o;
         const color = (isBullish ? options.candles?.bullColor : options.candles?.bearColor) || 'green';
 
+        // Half-pixel sharpness for wicks
+        const crisp = (v: number) => Math.round(v) + 0.5;
+
         ctx.beginPath();
         ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
         const candleMidX = x + candleWidth / 2;
-        ctx.moveTo(candleMidX, highY);
-        ctx.lineTo(candleMidX, lowY);
+        ctx.moveTo(crisp(candleMidX), crisp(highY));
+        ctx.lineTo(crisp(candleMidX), crisp(lowY));
         ctx.stroke();
 
         const bodyTop = Math.min(openY, closeY);
@@ -121,202 +128,206 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
     const price = findPriceRange(allIntervals, startIdx, endIdx);
     const {clientWidth, clientHeight} = ctx.canvas;
 
+    // Clip to actual data bounds to avoid fake tails
+    const dataStart = allIntervals[0].t;
+    const dataEnd   = allIntervals[allIntervals.length - 1].t + intervalSeconds;
+    const clipStart = Math.max(visibleRange.start, dataStart);
+    const clipEnd   = Math.min(visibleRange.end,   dataEnd);
+    if (clipEnd <= clipStart) return;
+
+    const leftX = timeToX(clipStart, clientWidth, visibleRange);
+    const leftY = priceToY(
+        interpolatedCloseAtTime(allIntervals, intervalSeconds, clipStart),
+        clientHeight,
+        price
+    );
+
     ctx.beginPath();
-
-    // Interpolate line value exactly at the left and right edges for smooth, continuous panning
-    const leftTime = visibleRange.start;      // seconds
-    const rightTime = visibleRange.end;       // seconds
-
-    const leftY = priceToY(interpolatedCloseAtTime(allIntervals, intervalSeconds, leftTime), clientHeight, price);
-    ctx.moveTo(0, leftY);
+    ctx.moveTo(leftX, leftY);
 
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
         const it = allIntervals[i];
-        const x = timeToX(it.t + intervalSeconds / 2, clientWidth, visibleRange);
+        const centerT = it.t + intervalSeconds / 2;
+        if (centerT < clipStart || centerT > clipEnd) continue;
+        const x = timeToX(centerT, clientWidth, visibleRange);
         const y = priceToY(it.c, clientHeight, price);
         ctx.lineTo(x, y);
     }
 
-    const rightY = priceToY(interpolatedCloseAtTime(allIntervals, intervalSeconds, rightTime), clientHeight, price);
-    ctx.lineTo(clientWidth, rightY);
+    const rightX = timeToX(clipEnd, clientWidth, visibleRange);
+    const rightY = priceToY(
+        interpolatedCloseAtTime(allIntervals, intervalSeconds, clipEnd),
+        clientHeight,
+        price
+    );
+    ctx.lineTo(rightX, rightY);
     ctx.stroke();
-
-    // --- Segment annotations and endpoint markers ---
-    ctx.save();
-    ctx.font = '10px Arial';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#000000';
-
-    // Mark first and last points with black dots
-    if (visibleStartIndex <= visibleEndIndex) {
-        const firstPt = allIntervals[visibleStartIndex];
-        const lastPt = allIntervals[visibleEndIndex];
-        const fx = timeToX(firstPt.t + intervalSeconds / 2, clientWidth, visibleRange);
-        const fy = priceToY(firstPt.c, clientHeight, price);
-        const lx = timeToX(lastPt.t + intervalSeconds / 2, clientWidth, visibleRange);
-        const ly = priceToY(lastPt.c, clientHeight, price);
-        const r = 3;
-        ctx.beginPath();
-        ctx.arc(fx, fy, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(lx, ly, r, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // For each segment between i and i+1, draw index at start and compact values at midpoint
-    for (let i = visibleStartIndex; i < visibleEndIndex; i++) {
-        const a = allIntervals[i];
-        const b = allIntervals[i + 1];
-        const ax = timeToX(a.t + intervalSeconds / 2, clientWidth, visibleRange);
-        const ay = priceToY(a.c, clientHeight, price);
-        const bx = timeToX(b.t + intervalSeconds / 2, clientWidth, visibleRange);
-        const by = priceToY(b.c, clientHeight, price);
-
-        // Index label at the start of the segment (slight offset)
-        const idxText = `${i}`;
-        ctx.fillText(idxText, ax + 4, ay);
-
-        // Compact values at the segment center
-        const mx = (ax + bx) / 2;
-        const my = (ay + by) / 2;
-        const va = a.c.toFixed(2);
-        const vb = b.c.toFixed(2);
-        const vText = `${va}|${vb}`;
-        ctx.textAlign = 'center';
-        ctx.fillText(vText, mx, my - 8);
-        ctx.textAlign = 'left';
-    }
-    ctx.restore();
 }
 
 export function drawAreaChart(
-  ctx: CanvasRenderingContext2D,
-  context: ChartRenderContext,
-  style: ChartStyleOptions
+    ctx: CanvasRenderingContext2D,
+    context: ChartRenderContext,
+    style: ChartStyleOptions
 ) {
-  const { allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds } = context;
-  if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
+    const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
+    if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
 
-  // Price range with a small pad to reduce visual jitter
-  const paddedStart = Math.max(0, visibleStartIndex - 1);
-  const paddedEnd   = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
-  const price = findPriceRange(allIntervals, paddedStart, paddedEnd);
+    // Price range with a small pad to reduce visual jitter
+    const paddedStart = Math.max(0, visibleStartIndex - 1);
+    const paddedEnd = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
+    const price = findPriceRange(allIntervals, paddedStart, paddedEnd);
 
-  const { clientWidth, clientHeight } = ctx.canvas;
-  const xOf = (t: number) =>
-    clientWidth * ((t - visibleRange.start) / (visibleRange.end - visibleRange.start));
-  const yOf = (p: number) =>
-    clientHeight * (1 - (p - price.min) / price.range);
+    const {clientWidth, clientHeight} = ctx.canvas;
+    const xOf = (t: number) =>
+        clientWidth * ((t - visibleRange.start) / (visibleRange.end - visibleRange.start));
+    const yOf = (p: number) =>
+        clientHeight * (1 - (p - price.min) / price.range);
 
-  // Clip drawing window to actual data bounds (prevents fake “tails”)
-  const dataStart = allIntervals[0].t;
-  const dataEnd   = allIntervals[allIntervals.length - 1].t + intervalSeconds;
-  const clipStartTime = Math.max(visibleRange.start, dataStart);
-  const clipEndTime   = Math.min(visibleRange.end,   dataEnd);
-  if (clipEndTime <= clipStartTime) return;
+    // Clip drawing window to actual data bounds (prevents fake “tails”)
+    const dataStart = allIntervals[0].t;
+    const dataEnd = allIntervals[allIntervals.length - 1].t + intervalSeconds;
+    const clipStartTime = Math.max(visibleRange.start, dataStart);
+    const clipEndTime = Math.min(visibleRange.end, dataEnd);
+    if (clipEndTime <= clipStartTime) return;
 
-  // Build polyline points without inventing horizontal edges
-  const centerOf = (i: number) => allIntervals[i].t + intervalSeconds / 2;
-  const first    = allIntervals[0];
-  const lastIdx  = allIntervals.length - 1;
-  const lastCtr  = centerOf(lastIdx);
+    // Build polyline points without inventing horizontal edges
+    const centerOf = (i: number) => allIntervals[i].t + intervalSeconds / 2;
+    const first = allIntervals[0];
+    const lastIdx = allIntervals.length - 1;
+    const lastCtr = centerOf(lastIdx);
 
-  const pts: Array<{ x: number; y: number }> = [];
+    const pts: Array<{ x: number; y: number }> = [];
 
-  // Left edge:
-  // If we start inside the first half-candle, interpolate OPEN→CLOSE of the first candle.
-  // Otherwise, interpolate between centers as usual.
-  if (clipStartTime >= first.t && clipStartTime < centerOf(0)) {
-    const t0 = first.t, c0 = centerOf(0);
-    const ratio = (clipStartTime - t0) / (c0 - t0);
-    const val = lerp(first.o, first.c, Math.min(Math.max(ratio, 0), 1));
-    pts.push({ x: xOf(clipStartTime), y: yOf(val) });
-  } else {
-    const val = interpolatedCloseAtTime(allIntervals, intervalSeconds, clipStartTime);
-    pts.push({ x: xOf(clipStartTime), y: yOf(val) });
-  }
-
-  // Visible centers
-  for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
-    const cT = centerOf(i);
-    if (cT >= clipStartTime && cT <= clipEndTime) {
-      pts.push({ x: xOf(cT), y: yOf(allIntervals[i].c) });
+    // Left edge:
+    // If we start inside the first half-candle, interpolate OPEN→CLOSE of the first candle.
+    // Otherwise, interpolate between centers as usual.
+    if (clipStartTime >= first.t && clipStartTime < centerOf(0)) {
+        const t0 = first.t, c0 = centerOf(0);
+        const ratio = (clipStartTime - t0) / (c0 - t0);
+        const val = lerp(first.o, first.c, Math.min(Math.max(ratio, 0), 1));
+        pts.push({x: xOf(clipStartTime), y: yOf(val)});
+    } else {
+        const val = interpolatedCloseAtTime(allIntervals, intervalSeconds, clipStartTime);
+        pts.push({x: xOf(clipStartTime), y: yOf(val)});
     }
-  }
 
-  // Right edge:
-  // If the window ends before the last center, interpolate there;
-  // if it goes beyond the last center, end at the last center (no horizontal tail).
-  if (clipEndTime < lastCtr) {
-    const val = interpolatedCloseAtTime(allIntervals, intervalSeconds, clipEndTime);
-    pts.push({ x: xOf(clipEndTime), y: yOf(val) });
-  } else {
-    pts.push({ x: xOf(lastCtr), y: yOf(allIntervals[lastIdx].c) });
-  }
+    // Visible centers
+    for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
+        const cT = centerOf(i);
+        if (cT >= clipStartTime && cT <= clipEndTime) {
+            pts.push({x: xOf(cT), y: yOf(allIntervals[i].c)});
+        }
+    }
 
-  if (pts.length < 2) return;
+    // Right edge:
+    // If the window ends before the last center, interpolate there;
+    // if it goes beyond the last center, end at the last center (no horizontal tail).
+    if (clipEndTime < lastCtr) {
+        const val = interpolatedCloseAtTime(allIntervals, intervalSeconds, clipEndTime);
+        pts.push({x: xOf(clipEndTime), y: yOf(val)});
+    } else {
+        pts.push({x: xOf(lastCtr), y: yOf(allIntervals[lastIdx].c)});
+    }
 
-  // PASS 1 — fill under the graph (close to bottom). We do NOT stroke this path.
-  const startX = pts[0].x;
-  const endX   = pts[pts.length - 1].x;
+    if (pts.length < 2) return;
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k].x, pts[k].y);
-  ctx.lineTo(endX, clientHeight);
-  ctx.lineTo(startX, clientHeight);
-  ctx.closePath();
-  ctx.fillStyle = style.area.fillColor;
-  ctx.fill();
-  ctx.restore();
+    // PASS 1 — fill under the graph (close to bottom). We do NOT stroke this path.
+    const startX = pts[0].x;
+    const endX = pts[pts.length - 1].x;
 
-  // PASS 2 — stroke only the graph polyline (no bottom closure).
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k].x, pts[k].y);
-  ctx.strokeStyle = style.area.strokeColor;
-  ctx.lineWidth   = style.area.lineWidth;
-  ctx.stroke();
-  ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k].x, pts[k].y);
+    ctx.lineTo(endX, clientHeight);
+    ctx.lineTo(startX, clientHeight);
+    ctx.closePath();
+    ctx.fillStyle = style.area.fillColor;
+    ctx.fill();
+    ctx.restore();
+
+    // PASS 2 — stroke only the graph polyline (no bottom closure).
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k].x, pts[k].y);
+    ctx.strokeStyle = style.area.strokeColor;
+    ctx.lineWidth = style.area.lineWidth;
+    ctx.stroke();
+    ctx.restore();
 }
 
-export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, style: ChartStyleOptions) {
+export function drawBarChart(
+    ctx: CanvasRenderingContext2D,
+    context: ChartRenderContext,
+    style: ChartStyleOptions
+) {
     const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
-    if (visibleEndIndex < visibleStartIndex) return;
+    if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
 
-    const price = findPriceRange(allIntervals, visibleStartIndex, visibleEndIndex);
+    // Price mapping for current viewport
+    const price = findPriceRange(allIntervals, Math.max(0, visibleStartIndex - 1), Math.min(allIntervals.length - 1, visibleEndIndex + 1));
     const {clientWidth, clientHeight} = ctx.canvas;
-    const priceToY = (p: number) => clientHeight * (1 - (p - price.min) / price.range);
+    const yOf = (p: number) => clientHeight * (1 - (p - price.min) / price.range);
+
     const visibleDuration = visibleRange.end - visibleRange.start;
     if (visibleDuration <= 0) return;
+
     const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
+    if (candleWidth <= 0) return;
+    const gapFactor = Math.max(0, Math.min(0.4, (style.candles?.spacingFactor ?? 0.2)));
+    const barWidth  = candleWidth * (1 - gapFactor);
+    const halfPad   = (candleWidth - barWidth) / 2;
+
+    // Crisp 1px lines on standard DPR; adapt if you want DPR-aware widths
+    const crisp = (x: number) => Math.round(x) + 0.5;
+
+    ctx.save();
+    ctx.lineWidth = 1;
+    const baseAlpha = Math.max(0, Math.min(1, style.bar.opacity ?? 1));
 
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
-        const candle = allIntervals[i];
-        const x = ((candle.t - visibleRange.start) / visibleDuration) * clientWidth;
-        if (x + candleWidth < 0 || x > clientWidth) continue;
+        const c = allIntervals[i];
 
-        const highY = priceToY(candle.h);
-        const lowY = priceToY(candle.l);
-        const openY = priceToY(candle.o);
-        const closeY = priceToY(candle.c);
-        const color = candle.c >= candle.o ? style.bar.bullColor : style.bar.bearColor;
+        // x positions
+        const xLeftFull  = ((c.t - visibleRange.start) / visibleDuration) * clientWidth;
+        const xLeft = xLeftFull + halfPad;
+        const xRight = xLeft + barWidth;
+        if (xRight < 0 || xLeft > clientWidth) continue; // skip fully off-screen
+
+        const xMid = xLeftFull + candleWidth / 2;
+
+        // y positions
+        const yHigh = yOf(c.h);
+        const yLow = yOf(c.l);
+        const yOpen = yOf(c.o);
+        const yClose = yOf(c.c);
+
+        // Color & opacity per bar
+        const isUp = c.c >= c.o;
+        ctx.strokeStyle = isUp ? style.bar.bullColor : style.bar.bearColor;
+        ctx.globalAlpha = baseAlpha;
+
+        // Tick length proportional to bar width (more prominent), clamped
+        const tickLen = Math.max(3, Math.min(candleWidth * 0.5, 16));
 
         ctx.beginPath();
-        ctx.strokeStyle = color;
-        const midX = x + candleWidth / 2;
-        ctx.moveTo(midX, highY);
-        ctx.lineTo(midX, lowY);
-        ctx.moveTo(x, openY);
-        ctx.lineTo(midX, openY);
-        ctx.moveTo(midX, closeY);
-        ctx.lineTo(x + candleWidth, closeY);
+        // Vertical high-low
+        ctx.moveTo(crisp(xMid), crisp(yHigh));
+        ctx.lineTo(crisp(xMid), crisp(yLow));
+
+        // Open tick (left)
+        ctx.moveTo(crisp(xMid - tickLen), crisp(yOpen));
+        ctx.lineTo(crisp(xMid), crisp(yOpen));
+
+        // Close tick (right)
+        ctx.moveTo(crisp(xMid), crisp(yClose));
+        ctx.lineTo(crisp(xMid + tickLen), crisp(yClose));
+
         ctx.stroke();
     }
+
+    ctx.restore();
 }
 
 export function drawHistogramChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, style: ChartStyleOptions) {
@@ -339,18 +350,22 @@ export function drawHistogramChart(ctx: CanvasRenderingContext2D, context: Chart
     const visibleDuration = visibleRange.end - visibleRange.start;
     if (visibleDuration <= 0) return;
     const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
+    const gapFactor = Math.max(0, Math.min(0.4, (style.candles?.spacingFactor ?? 0.2)));
+    const barWidth  = Math.max(1, candleWidth * (1 - gapFactor));
+    const halfPad   = (candleWidth - barWidth) / 2;
 
     for (let i = paddedStart; i <= paddedEnd; i++) {
         const candle = allIntervals[i];
         if (candle.v === undefined) continue;
-        const x = ((candle.t - visibleRange.start) / visibleDuration) * clientWidth;
-        if (x + candleWidth < 0 || x > clientWidth) continue;
+        const xFull = ((candle.t - visibleRange.start) / visibleDuration) * clientWidth;
+        const x = xFull + halfPad;
+        if (x + barWidth < 0 || x > clientWidth) continue;
 
         const barHeight = (candle.v / maxVolume) * clientHeight;
         const y = clientHeight - barHeight;
         const color = candle.c >= candle.o ? style.histogram.bullColor : style.histogram.bearColor;
         const opacityHex = Math.round(style.histogram.opacity * 255).toString(16).padStart(2, '0');
         ctx.fillStyle = `${color}${opacityHex}`;
-        ctx.fillRect(x + 1, y, candleWidth - 2, barHeight);
+        ctx.fillRect(x, y, Math.max(0, barWidth), barHeight);
     }
 }

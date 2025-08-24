@@ -36,8 +36,8 @@ export default function YAxis({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any existing transforms
-        ctx.scale(dpr, dpr);
+        // Reset transform and apply devicePixelRatio scaling in one step (for crisp Hi-DPI rendering)
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, rect.width, rect.height);
 
         // Directly use the minPrice and maxPrice passed from the parent
