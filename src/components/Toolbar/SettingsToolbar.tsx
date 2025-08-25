@@ -59,8 +59,8 @@ export const SettingsToolbar: React.FC = () => {
     const chartTypes = (Object.values(ChartType).filter(v => typeof v === 'string') as string[]);
     return (
         <SettingsToolbarContainer className="settings-toolbar">
-            <SymbolInput className={'symbol-choose-icon'} placeholder="Symbol"/>
-            <ChartTypeSelect className={'chart-type-select-container'} defaultValue="candlestick"
+            <SymbolInput className={'symbol-choose-icon'} name={'symbol-input'} placeholder="Symbol"/>
+            <ChartTypeSelect className={'chart-type-select-container'} name={'symbol-select'} defaultValue="candlestick"
                              aria-label="Chart type">
                 {/* iterate the chart types */}
                 {chartTypes.map((type) => (

@@ -12,7 +12,7 @@ export const StyledYAxisCanvas = styled.canvas<StyledYAxisCanvasProps>`
     height: 100%;
     padding: 0;
     margin: 0;
-    background-color: transparent;
+    background-color: white;
     border: none;
     pointer-events: none;
     left: ${({$position}) => ($position === AxesPosition.left ? '0' : 'auto')};

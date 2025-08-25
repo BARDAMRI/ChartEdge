@@ -58,51 +58,90 @@ function interpolatedCloseAtTime(all: Interval[], intervalSeconds: number, timeS
 // =================================================================================
 
 export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: DeepRequired<ChartOptions>) {
+    console.log("[DEBUG] ENTERING drawCandlestickChart");
+
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
     const {
-        allIntervals,
+        allIntervals, visibleStartIndex, visibleEndIndex, visibleRange,
+        intervalSeconds, canvasWidth, canvasHeight
+    } = context;
+
+    const loopStartIndex = Math.max(0, visibleStartIndex - 1);
+    const loopEndIndex = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
+
+    if (loopEndIndex < loopStartIndex || allIntervals.length === 0) {
+        console.error("[DEBUG] EXIT: Invalid loop indices or no intervals.", {
+            loopStartIndex,
+            loopEndIndex,
+            count: allIntervals.length
+        });
+        return;
+    }
+
+    console.log("[DEBUG] Received Context:", {
+        canvasWidth,
+        canvasHeight,
         visibleStartIndex,
         visibleEndIndex,
-        visibleRange,
-        intervalSeconds,
-        canvasWidth,
-        canvasHeight
-    } = context; // <-- Use context dimensions
-    if (visibleEndIndex < visibleStartIndex) return;
+        intervalSeconds
+    });
+    console.log("[DEBUG] Loop range:", {loopStartIndex, loopEndIndex});
 
-    const paddedStart = Math.max(0, visibleStartIndex - 1);
-    const paddedEnd = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
-    const price = findPriceRange(allIntervals, paddedStart, paddedEnd);
+    // Let's inspect the first few data points
+    console.log("[DEBUG] First 3 intervals data:");
+    console.table(allIntervals.slice(0, 3));
+
+    const price = findPriceRange(allIntervals, loopStartIndex, loopEndIndex);
+    console.log("[DEBUG] Calculated Price Range:", price);
+
+    if (!isFinite(price.min) || !isFinite(price.max)) {
+        console.error("[DEBUG] EXIT: Price range is not finite. Check your data for invalid values (NaN, Infinity).");
+        return;
+    }
 
     const priceToY = (p: number) => canvasHeight * (1 - (p - price.min) / price.range);
     const visibleDuration = visibleRange.end - visibleRange.start;
-    if (visibleDuration <= 0) return;
+    if (visibleDuration <= 0) {
+        console.error("[DEBUG] EXIT: visibleDuration is zero or negative.");
+        return;
+    }
+
     const candleWidth = (intervalSeconds / visibleDuration) * canvasWidth;
     const gapFactor = Math.max(0, Math.min(0.4, (options?.base?.style?.candles?.spacingFactor ?? 0.2)));
     const bodyWidth = candleWidth * (1 - gapFactor);
-    const halfPad = (candleWidth - bodyWidth) / 2;
 
-    for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
+    console.log("[DEBUG] Calculated widths:", {candleWidth, bodyWidth});
+
+    let candlesDrawn = 0;
+    for (let i = loopStartIndex; i <= loopEndIndex; i++) {
         const candle = allIntervals[i];
+        if (!candle) continue;
+
         const x = ((candle.t - visibleRange.start) / visibleDuration) * canvasWidth;
-        let drawX = x + halfPad;
-        let visibleWidth = bodyWidth;
-        if (drawX < 0) {
-            visibleWidth += drawX;
-            drawX = 0;
-        } else if (drawX + visibleWidth > canvasWidth) {
-            visibleWidth = canvasWidth - drawX;
+
+        if (x + candleWidth < 0 || x > canvasWidth) {
+            continue; // Skip candles that are completely off-screen
         }
-        if (visibleWidth <= 0) continue;
+
+        candlesDrawn++;
 
         const highY = priceToY(candle.h);
         const lowY = priceToY(candle.l);
         const openY = priceToY(candle.o);
         const closeY = priceToY(candle.c);
+
+        // Log the coordinates of the very first candle being drawn
+        if (candlesDrawn === 1) {
+            console.log("[DEBUG] First candle coordinates:", {x, highY, lowY, openY, closeY});
+        }
+
         const isBullish = candle.c >= candle.o;
-        const color = (isBullish ? options?.base?.style?.candles?.bullColor : options?.base?.style?.candles?.bearColor) || 'green';
+        const color = isBullish ? (options?.base?.style?.candles?.bullColor || 'green') : (options?.base?.style?.candles?.bearColor || 'red');
+        const crisp = (v: number) => Math.floor(v) + 0.5;
 
-        const crisp = (v: number) => Math.round(v) + 0.5;
-
+        // Draw wick
         ctx.beginPath();
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
@@ -111,13 +150,14 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         ctx.lineTo(crisp(candleMidX), crisp(lowY));
         ctx.stroke();
 
+        // Draw body
         const bodyTop = Math.min(openY, closeY);
         const bodyHeight = Math.abs(openY - closeY);
         ctx.fillStyle = color;
-        ctx.fillRect(drawX, bodyTop, visibleWidth, bodyHeight || 1);
+        ctx.fillRect(Math.floor(x + (candleWidth - bodyWidth) / 2), Math.floor(bodyTop), Math.ceil(bodyWidth), Math.ceil(bodyHeight) || 1);
     }
 
-    return {XStart: allIntervals[visibleStartIndex]?.t, XEnd: allIntervals[visibleEndIndex]?.t + intervalSeconds};
+    console.log(`[DEBUG] FINISHED drawCandlestickChart. Attempted to draw ${candlesDrawn} candles.`);
 }
 
 export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, style: DeepRequired<ChartOptions>) {

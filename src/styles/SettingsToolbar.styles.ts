@@ -7,7 +7,7 @@ export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-t
     align-items: center;
     gap: 2px;
     /* Transparent surface with subtle frame and depth (matches Toolbar) */
-    background: transparent;
+    background-color: white;
     border-radius: 12px;
     border: 1px solid rgba(128, 140, 255, 0.18);
     box-shadow: 0 10px 28px rgba(17, 19, 39, 0.10),
@@ -116,6 +116,7 @@ export const SymbolInput = styled(Control).attrs({as: 'input', type: 'text'})`
     font-size: 14px;
     color: rgba(0, 0, 0, 0.85);
     font-weight: 600;
+    background-color: white;
 
     &::placeholder {
         color: rgba(50, 60, 90, 0.70);

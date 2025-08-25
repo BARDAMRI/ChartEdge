@@ -58,6 +58,6 @@ export default function YAxis({
     }, [minPrice, maxPrice, numberOfYTicks, yAxisPosition, xAxisHeight]);
 
     return (
-        <StyledYAxisCanvas ref={canvasRef} $position={yAxisPosition}/>
+        <StyledYAxisCanvas className={'Y-AXIS-CANVAS'} ref={canvasRef} $position={yAxisPosition}/>
     );
 }

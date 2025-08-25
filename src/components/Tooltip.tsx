@@ -1,19 +1,19 @@
 const LIGHT_TOKENS = {
-  bg: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(240,246,255,0.96) 100%)',
-  border: 'rgba(123, 97, 255, 0.35)',
-  text: '#1e2a44',
-  shadow: '0 8px 24px rgba(17,19,39,0.18), inset 0 1px 0 rgba(255,255,255,0.45)'
+    bg: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(240,246,255,0.96) 100%)',
+    border: 'rgba(123, 97, 255, 0.35)',
+    text: '#1e2a44',
+    shadow: '0 8px 24px rgba(17,19,39,0.18), inset 0 1px 0 rgba(255,255,255,0.45)'
 };
 const DARK_TOKENS = {
-  bg: 'linear-gradient(180deg, rgba(22,24,36,0.92) 0%, rgba(16,18,30,0.94) 100%)',
-  border: 'rgba(160, 170, 255, 0.40)',
-  text: 'rgba(235,240,255,0.92)',
-  shadow: '0 8px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)'
+    bg: 'linear-gradient(180deg, rgba(22,24,36,0.92) 0%, rgba(16,18,30,0.94) 100%)',
+    border: 'rgba(160, 170, 255, 0.40)',
+    text: 'rgba(235,240,255,0.92)',
+    shadow: '0 8px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)'
 };
 const pickTokens = () => {
-  const prefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const hasDarkClass = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark');
-  return (prefersDark || hasDarkClass) ? DARK_TOKENS : LIGHT_TOKENS;
+    const prefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const hasDarkClass = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark');
+    return (prefersDark || hasDarkClass) ? DARK_TOKENS : LIGHT_TOKENS;
 };
 import React, {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
@@ -225,31 +225,33 @@ export const Tooltip: React.FC<TooltipProps> = ({
             {open &&
                 createPortal(
                     (() => {
-                      const t = pickTokens();
-                      return (
-                        <TooltipBox
-                          ref={tipRef}
-                          id="ce-tooltip"
-                          role="tooltip"
-                          left={(posStyle as any).left as number}
-                          top={(posStyle as any).top as number}
-                          transformCss={(posStyle as any).transform as string}
-                          bg={t.bg}
-                          border={t.border}
-                          text={t.text}
-                          shadow={t.shadow}
-                        >
-                          <TooltipArrow
-                            placement={effectivePlacement}
-                            size={arrowSize}
-                            bg={t.bg}
-                            border={t.border}
-                            shadow={t.shadow}
-                            aria-hidden
-                          />
-                          {content}
-                        </TooltipBox>
-                      );
+                        const t = pickTokens();
+                        return (
+                            <TooltipBox
+                                ref={tipRef}
+                                id="ce-tooltip"
+                                role="tooltip"
+                                left={(posStyle as any).left as number}
+                                top={(posStyle as any).top as number}
+                                // --- START OF FIX ---
+                                $transformCss={(posStyle as any).transform as string}
+                                $bg={t.bg}
+                                $border={t.border}
+                                $text={t.text}
+                                $shadow={t.shadow}
+                                // --- END OF FIX ---
+                            >
+                                <TooltipArrow
+                                    $placement={effectivePlacement}
+                                    $size={arrowSize}
+                                    $bg={t.bg}
+                                    $border={t.border}
+                                    $shadow={t.shadow}
+                                    aria-hidden
+                                />
+                                {content}
+                            </TooltipBox>
+                        );
                     })(),
                     document.body
                 )}

@@ -79,19 +79,19 @@ export function usePanAndZoom(
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
 
-            latestPropsRef.current.handlers.onWheelStart();
-            if (wheelingTimeoutRef.current) {
-                clearTimeout(wheelingTimeoutRef.current!);
-            }
-            wheelingTimeoutRef.current = setTimeout(() => {
-                latestPropsRef.current.handlers.onWheelEnd();
-            }, WHEEL_END_DEBOUNCE);
-
-            const {visibleRange, setVisibleRange, intervalsArray, intervalSeconds} = latestPropsRef.current;
+            const {visibleRange, setVisibleRange, intervalsArray, intervalSeconds, handlers} = latestPropsRef.current;
             const isZoomGesture = e.ctrlKey || e.metaKey;
             const isVerticalScroll = Math.abs(e.deltaY) > Math.abs(e.deltaX);
 
             if (isZoomGesture || isVerticalScroll) { // ZOOM
+                handlers.onWheelStart();
+                if (wheelingTimeoutRef.current) {
+                    clearTimeout(wheelingTimeoutRef.current!);
+                }
+                wheelingTimeoutRef.current = setTimeout(() => {
+                    handlers.onWheelEnd();
+                }, WHEEL_END_DEBOUNCE);
+
                 const duration = visibleRange.end - visibleRange.start;
                 const zoomAmount = -duration * ZOOM_SENSITIVITY * (e.deltaY / 100);
                 if (Math.abs(e.deltaY) < 1) return;
@@ -108,7 +108,7 @@ export function usePanAndZoom(
                 newStart = Math.max(newStart, intervalsArray[0].t);
                 newEnd = Math.min(newEnd, intervalsArray[intervalsArray.length - 1].t);
                 setVisibleRange({start: newStart, end: newEnd});
-            } else { // PAN
+            } else { // PAN with horizontal scroll
                 const duration = visibleRange.end - visibleRange.start;
                 const timePerPixel = duration / canvas.clientWidth;
                 const timeOffset = e.deltaX * timePerPixel;

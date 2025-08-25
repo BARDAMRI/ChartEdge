@@ -1,7 +1,7 @@
 import styled, {css} from 'styled-components';
 import {Placement} from '../types/buttons';
 
-export const TooltipWrapper = styled.span.attrs({ className: 'tooltip-wrapper' })`
+export const TooltipWrapper = styled.span.attrs({className: 'tooltip-wrapper'})`
     position: relative;
     display: contents;
 `;
@@ -25,11 +25,11 @@ const shadowDark =
 export const TooltipBox = styled.span<{
     left: number;
     top: number;
-    transformCss: string;
-    bg: string;
-    border: string;
-    text: string;
-    shadow: string;
+    $transformCss: string;
+    $bg: string;
+    $border: string;
+    $text: string;
+    $shadow: string;
 }>`
     position: fixed;
     z-index: 1000;
@@ -38,67 +38,69 @@ export const TooltipBox = styled.span<{
     font-size: 12px;
     line-height: 1;
     white-space: nowrap;
-    color: ${({text}) => text || textColorLight};
-    background: ${({bg}) => bg || bgGradLight};
-    border: 1px solid ${({border}) => border || borderColorLight};
-    box-shadow: ${({shadow}) => shadow || shadowLight};
+    color: ${({$text}) => $text || textColorLight};
+    background: ${({$bg}) => $bg || bgGradLight};
+    border: 1px solid ${({$border}) => $border || borderColorLight};
+    box-shadow: ${({$shadow}) => $shadow || shadowLight};
     backdrop-filter: blur(6px);
     pointer-events: none;
 
     left: ${({left}) => left}px;
     top: ${({top}) => top}px;
-    transform: ${({transformCss}) => transformCss};
+    transform: ${({$transformCss}) => $transformCss};
 `;
 
+
 export const TooltipArrow = styled.span<{
-    placement: Placement;
-    size: number;
-    bg: string;
-    border: string;
-    shadow: string;
+    $placement: Placement;
+    $size: number;
+    $bg: string;
+    $border: string;
+    $shadow: string;
 }>`
     position: absolute;
-    width: ${({size}) => size}px;
-    height: ${({size}) => size}px;
-    background: ${({bg}) => bg};
-    box-shadow: ${({shadow}) => shadow};
+    width: ${({$size}) => $size}px;
+    height: ${({$size}) => $size}px;
+    background: ${({$bg}) => $bg || bgGradLight};
+    box-shadow: ${({$shadow}) => $shadow || shadowLight};
     pointer-events: none;
     transform: rotate(45deg);
 
-    ${({placement, size, border}) => {
-        const half = size / 2;
-        switch (placement) {
+    ${({$placement, $size, $border}) => {
+        const borderCss = $border || borderColorLight;
+        const half = $size / 2;
+        switch ($placement) {
             case Placement.bottom:
                 return css`
                     top: -${half}px;
                     left: 50%;
                     transform: translateX(-50%) rotate(45deg);
-                    border-left: 1px solid ${border};
-                    border-top: 1px solid ${border};
+                    border-left: 1px solid ${borderCss};
+                    border-top: 1px solid ${borderCss};
                 `;
             case Placement.top:
                 return css`
                     bottom: -${half}px;
                     left: 50%;
                     transform: translateX(-50%) rotate(45deg);
-                    border-right: 1px solid ${border};
-                    border-bottom: 1px solid ${border};
+                    border-right: 1px solid ${borderCss};
+                    border-bottom: 1px solid ${borderCss};
                 `;
             case Placement.left:
                 return css`
                     right: -${half}px;
                     top: 50%;
                     transform: translateY(-50%) rotate(45deg);
-                    border-right: 1px solid ${border};
-                    border-top: 1px solid ${border};
+                    border-right: 1px solid ${borderCss};
+                    border-top: 1px solid ${borderCss};
                 `;
             case Placement.right:
                 return css`
                     left: -${half}px;
                     top: 50%;
                     transform: translateY(-50%) rotate(45deg);
-                    border-left: 1px solid ${border};
-                    border-bottom: 1px solid ${border};
+                    border-left: 1px solid ${borderCss};
+                    border-bottom: 1px solid ${borderCss};
                 `;
         }
     }}

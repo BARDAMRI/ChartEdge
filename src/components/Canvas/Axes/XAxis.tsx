@@ -59,5 +59,5 @@ export default function XAxis({
         );
     }, [xAxisHeight, visibleRange, timeDetailLevel, timeFormat12h, canvasSizes, dpr]);
 
-    return <StyledXAxisCanvas ref={canvasRef} $height={xAxisHeight}/>;
+    return <StyledXAxisCanvas className={'X-Axis-Canvas'} ref={canvasRef} $height={xAxisHeight}/>;
 }

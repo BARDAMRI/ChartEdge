@@ -4,15 +4,16 @@ import styled, { createGlobalStyle } from 'styled-components';
  * Global styles applied to html, body and root element
  */
 export const GlobalStyle = createGlobalStyle`
-  html, body, #root {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    min-height: 0;
-    min-width: 0;
-    box-sizing: border-box;
-  }
+    html, body, #root {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        min-height: 0;
+        min-width: 0;
+        box-sizing: border-box;
+        background-color: white;
+    }
 `;
 
 export const MainAppWindow = styled.div`
