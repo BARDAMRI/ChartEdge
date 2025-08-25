@@ -1,14 +1,17 @@
-import React, {useEffect, useRef} from 'react';
+import {useEffect, useRef} from 'react';
 import {Interval} from "../types/Interval";
 import {TimeRange} from "../types/Graph";
 
 const PAN_SENSITIVITY = 1.0;
 const ZOOM_SENSITIVITY = 0.1;
+const WHEEL_END_DEBOUNCE = 150; // ms to wait after last wheel event to consider it "ended"
 
 interface PanAndZoomHandlers {
     onPanStart: () => void;
     onPan: (dx: number) => void;
     onPanEnd: (dx: number) => void;
+    onWheelStart: () => void;
+    onWheelEnd: () => void;
 }
 
 export function usePanAndZoom(
@@ -20,6 +23,9 @@ export function usePanAndZoom(
     intervalSeconds: number,
     handlers: PanAndZoomHandlers
 ) {
+    const wheelingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Ref to hold latest props/handlers to avoid stale closures in event listeners
     const latestPropsRef = useRef({
         visibleRange,
         setVisibleRange,
@@ -70,14 +76,22 @@ export function usePanAndZoom(
         const handleMouseUp = () => stopPanning();
         const handleMouseLeave = () => stopPanning();
 
-        // --- CORRECTED MOUSE WHEEL LOGIC ---
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
+
+            latestPropsRef.current.handlers.onWheelStart();
+            if (wheelingTimeoutRef.current) {
+                clearTimeout(wheelingTimeoutRef.current!);
+            }
+            wheelingTimeoutRef.current = setTimeout(() => {
+                latestPropsRef.current.handlers.onWheelEnd();
+            }, WHEEL_END_DEBOUNCE);
+
             const {visibleRange, setVisibleRange, intervalsArray, intervalSeconds} = latestPropsRef.current;
-            const isZoomGesture = e.ctrlKey || e.metaKey; // Pinch-to-zoom on trackpads
+            const isZoomGesture = e.ctrlKey || e.metaKey;
             const isVerticalScroll = Math.abs(e.deltaY) > Math.abs(e.deltaX);
 
-            if (isZoomGesture || isVerticalScroll) { // ZOOM on vertical scroll OR pinch-to-zoom
+            if (isZoomGesture || isVerticalScroll) { // ZOOM
                 const duration = visibleRange.end - visibleRange.start;
                 const zoomAmount = -duration * ZOOM_SENSITIVITY * (e.deltaY / 100);
                 if (Math.abs(e.deltaY) < 1) return;
@@ -94,10 +108,10 @@ export function usePanAndZoom(
                 newStart = Math.max(newStart, intervalsArray[0].t);
                 newEnd = Math.min(newEnd, intervalsArray[intervalsArray.length - 1].t);
                 setVisibleRange({start: newStart, end: newEnd});
-            } else { // PAN on horizontal scroll
+            } else { // PAN
                 const duration = visibleRange.end - visibleRange.start;
                 const timePerPixel = duration / canvas.clientWidth;
-                const timeOffset = e.deltaX * timePerPixel; // Use only deltaX for horizontal pan
+                const timeOffset = e.deltaX * timePerPixel;
                 let newStart = visibleRange.start + timeOffset;
 
                 const dataStart = intervalsArray[0].t;
@@ -122,6 +136,9 @@ export function usePanAndZoom(
             window.removeEventListener('mouseup', handleMouseUp);
             canvas.removeEventListener('mouseleave', handleMouseLeave);
             canvas.removeEventListener('wheel', handleWheel);
+            if (wheelingTimeoutRef.current) {
+                clearTimeout(wheelingTimeoutRef.current!);
+            }
         };
     }, [canvasRef, isEnabled]);
 }
