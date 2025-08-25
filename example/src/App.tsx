@@ -97,7 +97,6 @@ export default function App() {
         <div style={{height: '100vh', width: '100vw'}}>
             <SimpleChartEdge
                 intervalsArray={intervalsArray}
-                initialYAxisPosition={AxesPosition.left}
                 initialMargin={20}
                 initialNumberOfYTicks={5}
                 initialXAxisHeight={40}
@@ -107,6 +106,11 @@ export default function App() {
                 initialVisibleTimeRange={exampleVisibleRange}
                 initialVisiblePriceRange={{min: minPrice, max: maxPrice}}
                 chartType={ChartType.Candlestick}
+                chartOptions={{
+                    base: {
+                        showOverlayLine: true
+                    }
+                }}
             />
         </div>
     );

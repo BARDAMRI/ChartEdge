@@ -1,7 +1,7 @@
 import React, {useEffect, useRef} from 'react';
 import {CanvasSizes} from "../ChartStage";
 import {DrawTicksOptions, TimeRange} from "../../../types/Graph";
-import {TimeDetailLevel} from "../../../types/chartStyleOptions";
+import {TimeDetailLevel} from "../../../types/chartOptions";
 import {StyledXAxisCanvas} from "../../../styles/XAxis.styles";
 import {generateAndDrawTimeTicks} from '../utils/generateTicks';
 

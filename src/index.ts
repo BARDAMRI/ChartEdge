@@ -5,7 +5,7 @@ export type {TimeRange} from './types/Graph';
 
 // Enums
 export {AxesPosition} from './types/types';
-export {TimeDetailLevel, ChartType} from './types/chartStyleOptions';
+export {TimeDetailLevel, ChartType} from './types/chartOptions';
 
 // Components
 export {SimpleChartEdge} from './components/SimpleChartEdge';

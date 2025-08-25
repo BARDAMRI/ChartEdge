@@ -1,7 +1,7 @@
 import type {Interval} from "../../../types/Interval";
-import type {ChartRenderContext} from "../../../types/chartStyleOptions";
+import type {ChartOptions, ChartRenderContext} from "../../../types/chartOptions";
 import {PriceRange, TimeRange} from "../../../types/Graph";
-import {ChartOptions} from "../../../types/types"; // Make sure your context type is also imported
+import {DeepRequired} from "../../../types/types"; // Make sure your context type is also imported
 
 // =================================================================================
 // == HELPER FUNCTIONS
@@ -64,7 +64,7 @@ function interpolatedCloseAtTime(all: Interval[], intervalSeconds: number, timeS
 // == CHART DRAWING FUNCTIONS
 // =================================================================================
 
-export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: ChartOptions) {
+export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: DeepRequired<ChartOptions>) {
     const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (visibleEndIndex < visibleStartIndex) return;
 
@@ -120,7 +120,7 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
     return {XStart: allIntervals[visibleStartIndex]?.t, XEnd: allIntervals[visibleEndIndex]?.t + intervalSeconds};
 }
 
-export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, style: ChartOptions) {
+export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, style: DeepRequired<ChartOptions>) {
     const {allIntervals: allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
 
@@ -168,7 +168,7 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
 export function drawAreaChart(
     ctx: CanvasRenderingContext2D,
     context: ChartRenderContext,
-    options: ChartOptions
+    options: DeepRequired<ChartOptions>
 ) {
     const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
@@ -252,8 +252,8 @@ export function drawAreaChart(
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
     for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k].x, pts[k].y);
-    ctx.strokeStyle = options?.base?.style?.area!.strokeColor;
-    ctx.lineWidth = options?.base?.style?.area!.lineWidth;
+    ctx.strokeStyle = options?.base?.style?.area?.strokeColor || 'blue';
+    ctx.lineWidth = options?.base?.style?.area?.lineWidth || 2;
     ctx.stroke();
     ctx.restore();
 }
@@ -261,7 +261,7 @@ export function drawAreaChart(
 export function drawBarChart(
     ctx: CanvasRenderingContext2D,
     context: ChartRenderContext,
-    options: ChartOptions
+    options: DeepRequired<ChartOptions>
 ) {
     const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
@@ -276,7 +276,7 @@ export function drawBarChart(
 
     const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
     if (candleWidth <= 0) return;
-    const gapFactor = Math.max(0, Math.min(0.4, (options.base.style.candles?.spacingFactor ?? 0.2)));
+    const gapFactor = Math.max(0, Math.min(0.4, (options?.base?.style?.candles?.spacingFactor ?? 0.2)));
     const barWidth = candleWidth * (1 - gapFactor);
     const halfPad = (candleWidth - barWidth) / 2;
 
@@ -285,7 +285,7 @@ export function drawBarChart(
 
     ctx.save();
     ctx.lineWidth = 1;
-    const baseAlpha = Math.max(0, Math.min(1, options.base.style.bar!.opacity ?? 1));
+    const baseAlpha = Math.max(0, Math.min(1, options.base.style.bar?.opacity ?? 1));
 
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
         const c = allIntervals[i];
@@ -306,7 +306,7 @@ export function drawBarChart(
 
         // Color & opacity per bar
         const isUp = c.c >= c.o;
-        ctx.strokeStyle = isUp ? options.base.style.bar!.bullColor : options.base.style.bar!.bearColor;
+        ctx.strokeStyle = (isUp ? options?.base?.style?.bar.bullColor : options?.base?.style?.bar.bearColor) || 'green';
         ctx.globalAlpha = baseAlpha;
 
         // Tick length proportional to bar width (more prominent), clamped
@@ -334,7 +334,7 @@ export function drawBarChart(
 export function drawHistogramChart(
     ctx: CanvasRenderingContext2D,
     context: ChartRenderContext,
-    options: ChartOptions
+    options: DeepRequired<ChartOptions>
 ) {
     const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (!allIntervals.length || visibleEndIndex < visibleStartIndex) return;
@@ -346,7 +346,7 @@ export function drawHistogramChart(
     // Column geometry (consistent with other series)
     const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
     // reuse candles.spacingFactor if defined (gives consistent gaps across types)
-    const gapFactor = Math.max(0, Math.min(0.4, options.base.style.candles?.spacingFactor ?? 0.2));
+    const gapFactor = Math.max(0, Math.min(0.4, options?.base?.style?.candles?.spacingFactor ?? 0.2));
     const barWidth = Math.max(1, candleWidth * (1 - gapFactor));
     const halfPad = (candleWidth - barWidth) / 2;
 
@@ -368,7 +368,7 @@ export function drawHistogramChart(
     const xAt = (t: number) => ((t - visibleRange.start) / visibleDuration) * clientWidth;
 
     ctx.save();
-    ctx.globalAlpha = Math.max(0, Math.min(1, options.base.style.histogram?.opacity ?? 0.6));
+    ctx.globalAlpha = Math.max(0, Math.min(1, options?.base?.style?.histogram?.opacity ?? 0.6));
     ctx.lineWidth = 0;
 
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
@@ -389,7 +389,7 @@ export function drawHistogramChart(
 
         // color by up/down
         const up = it.c >= it.o;
-        ctx.fillStyle = up ? options.base.style.histogram!.bullColor : options.base.style.histogram!.bearColor;
+        ctx.fillStyle = (up ? options.base?.style?.histogram.bullColor : options.base?.style?.histogram?.bearColor) || 'green';
 
         ctx.fillRect(x, yTop, barWidth, h);
     }

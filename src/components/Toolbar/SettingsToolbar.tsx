@@ -15,7 +15,7 @@ import {
     IconSearch,
     IconTheme,
 } from './icons';
-import {ChartType} from "../../types/chartStyleOptions";
+import {ChartType} from "../../types/chartOptions";
 import {Placement, TooltipAlign, TooltipAxis} from "../../types/buttons";
 import {Tooltip} from "../Tooltip";
 

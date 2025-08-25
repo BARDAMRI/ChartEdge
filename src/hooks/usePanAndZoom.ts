@@ -1,12 +1,13 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState, useCallback} from 'react';
 import {Interval} from "../types/Interval";
 import {TimeRange} from "../types/Graph";
 
-const PAN_SENSITIVITY = 0.5;
+const PAN_SENSITIVITY = 1.0; // Sensitivity can be adjusted, 1.0 is direct mapping
 const ZOOM_SENSITIVITY = 0.1;
 
 /**
  * Custom hook to manage all pan and zoom logic for the chart.
+ * This version is optimized for back-buffer panning.
  */
 export function usePanAndZoom(
     canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -16,53 +17,75 @@ export function usePanAndZoom(
     setVisibleRange: (range: TimeRange) => void,
     intervalSeconds: number
 ) {
-    const isPanning = useRef(false);
-    const panStart = useRef({x: 0, time: 0});
+    const isPanningRef = useRef(false);
+    const panStartRef = useRef({x: 0});
+
+    // State to communicate pixel offset to the component
+    const [panOffset, setPanOffset] = useState(0);
+
+    const stopPanning = useCallback(() => {
+        if (!isPanningRef.current) return;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        isPanningRef.current = false;
+
+        // On mouse up, calculate the final time range and update the state once
+        const timePerPixel = (visibleRange.end - visibleRange.start) / canvas.clientWidth;
+        const timeOffset = panOffset * timePerPixel * PAN_SENSITIVITY;
+        let newStart = visibleRange.start - timeOffset;
+
+        const duration = visibleRange.end - visibleRange.start;
+        const dataStart = intervalsArray[0].t;
+        const dataEnd = intervalsArray[intervalsArray.length - 1].t + intervalSeconds;
+
+        const minVisibleSpan = intervalSeconds;
+        const minStart = dataStart - (duration - minVisibleSpan);
+        const maxStart = dataEnd - minVisibleSpan;
+
+        if (newStart < minStart) newStart = minStart;
+        if (newStart > maxStart) newStart = maxStart;
+
+        // Finalize the pan
+        setVisibleRange({start: newStart, end: newStart + duration});
+
+        // Reset pixel offset after the state is finalized
+        setPanOffset(0);
+
+    }, [canvasRef, panOffset, visibleRange, setVisibleRange, intervalsArray, intervalSeconds]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || !isEnabled || !intervalsArray.length) return;
 
-        // Mousedown for click-and-drag panning
         const handleMouseDown = (e: MouseEvent) => {
-            isPanning.current = true;
-            panStart.current = {x: e.clientX, time: visibleRange.start};
+            isPanningRef.current = true;
+            panStartRef.current = {x: e.clientX};
         };
 
         const handleMouseMove = (e: MouseEvent) => {
-            if (!isPanning.current) return;
+            if (!isPanningRef.current) return;
 
-            const dx = e.clientX - panStart.current.x;
-            const timePerPixel = (visibleRange.end - visibleRange.start) / canvas.clientWidth;
-            const timeOffset = dx * timePerPixel * PAN_SENSITIVITY;
-            let newStart = panStart.current.time - timeOffset;
-
-            const duration = visibleRange.end - visibleRange.start;
-            const dataStart = intervalsArray[0].t;
-            const dataEnd = intervalsArray[intervalsArray.length - 1].t + intervalSeconds;
-
-            // Allow panning as long as at least one interval remains visible
-            const minVisibleSpan = intervalSeconds;
-            const minStart = dataStart - (duration - minVisibleSpan);
-            const maxStart = dataEnd - minVisibleSpan;
-
-            if (newStart < minStart) newStart = minStart;
-            if (newStart > maxStart) newStart = maxStart;
-
-            setVisibleRange({start: newStart, end: newStart + duration});
+            const dx = e.clientX - panStartRef.current.x;
+            setPanOffset(dx);
         };
 
         const handleMouseUp = () => {
-            isPanning.current = false;
+            stopPanning();
         };
+
+        const handleMouseLeave = () => {
+            // Optional: if mouse leaves canvas, stop panning
+            stopPanning();
+        };
+
 
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-
-            const duration = visibleRange.end - visibleRange.start;
-
-            // Check for pinch-to-zoom gesture (ctrlKey or metaKey is true on trackpads)
+            // Zooming logic remains the same, as it requires a full data recalculation
             if (e.ctrlKey || e.metaKey) {
+                const duration = visibleRange.end - visibleRange.start;
                 const zoomAmount = -duration * ZOOM_SENSITIVITY * (e.deltaY / 100);
                 if (Math.abs(e.deltaY) < 1) return;
                 const rect = canvas.getBoundingClientRect();
@@ -81,27 +104,24 @@ export function usePanAndZoom(
                     newStart = center - minDuration / 2;
                     newEnd = center + minDuration / 2;
                 }
-
                 setVisibleRange({start: newStart, end: newEnd});
-
             } else {
-                // Handle two-finger scroll for panning
+                // Scroll-panning can remain as is, as it's less prone to high-frequency updates than mouse drag
+                const duration = visibleRange.end - visibleRange.start;
                 const timePerPixel = duration / canvas.clientWidth;
-                const timeOffset = (e.deltaX + e.deltaY) * timePerPixel * PAN_SENSITIVITY;
+                const timeOffset = (e.deltaX + e.deltaY) * timePerPixel;
 
                 let newStart = visibleRange.start + timeOffset;
 
                 const dataStart = intervalsArray[0].t;
-                const dataEnd = intervalsArray[intervalsArray.length - 1].t + intervalSeconds; // include last interval end
+                const dataEnd = intervalsArray[intervalsArray.length - 1].t + intervalSeconds;
 
-                // Allow panning as long as at least one interval remains visible
                 const minVisibleSpan = intervalSeconds;
                 const minStart = dataStart - (duration - minVisibleSpan);
                 const maxStart = dataEnd - minVisibleSpan;
 
                 if (newStart < minStart) newStart = minStart;
                 if (newStart > maxStart) newStart = maxStart;
-
                 setVisibleRange({start: newStart, end: newStart + duration});
             }
         };
@@ -109,13 +129,17 @@ export function usePanAndZoom(
         canvas.addEventListener('mousedown', handleMouseDown);
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseleave', handleMouseLeave);
         canvas.addEventListener('wheel', handleWheel, {passive: false});
 
         return () => {
             canvas.removeEventListener('mousedown', handleMouseDown);
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
+            canvas.removeEventListener('mouseleave', handleMouseLeave);
             canvas.removeEventListener('wheel', handleWheel);
         };
-    }, [canvasRef, isEnabled, intervalsArray, visibleRange, setVisibleRange]);
+    }, [canvasRef, isEnabled, intervalsArray, visibleRange, setVisibleRange, stopPanning]);
+
+    return {panOffset, isPanning: isPanningRef.current};
 }

@@ -1,6 +1,6 @@
-# ChartStyleOptions
+# ChartOptions
 
-ChartStyleOptions is a configuration object that centralizes all the design and visual settings of a ChartEdge chart.
+ChartOptions is a configuration object that centralizes all the design and visual settings of a ChartEdge chart.
 
 It allows full and easy control over every visual parameter of the chart — both at the code level and dynamically via a future UI.
 
@@ -99,7 +99,7 @@ Example:
 # 🚀 Example Usage
 
 ```typescript
-const customStyle: ChartStyleOptions = {
+const customStyle: ChartOptions = {
     backgroundColor: '#ffffff',
     grid: {
         lineColor: 'rgba(200,200,200,0.4)',

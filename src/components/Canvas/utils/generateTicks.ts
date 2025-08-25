@@ -14,7 +14,7 @@ import {
     startOfYear,
 } from 'date-fns';
 import {DrawTicksOptions, Tick, TimeRange} from "../../../types/Graph";
-import {TimeDetailLevel} from "../../../types/chartStyleOptions";
+import {TimeDetailLevel} from "../../../types/chartOptions";
 import {AlignOptions, AxesPosition} from "../../../types/types";
 
 const TICK_FONT_SIZE_PX = 12;

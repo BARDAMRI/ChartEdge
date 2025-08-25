@@ -1,7 +1,7 @@
-// chartStyleOptions.ts
+// chartOptions.ts
 
 // Candles style
-import {AxesPosition} from "./types";
+import {AxesOptions, AxesPosition, ChartTheme} from "./types";
 import type {Interval} from "./Interval";
 import type {TimeRange} from "./Graph";
 
@@ -56,6 +56,7 @@ export interface HistogramStyleOptions {
     bullColor: string;
     bearColor: string;
     opacity: number;
+    heightRatio: number;
 }
 
 export interface BarStyleOptions {
@@ -83,14 +84,33 @@ export interface AxesStyleOptions {
     numberFractionDigits: number; // Number of decimal places to format axis values
 }
 
+export interface OverlayOptions {
+    lineColor: string;
+    lineWidth: number;
+}
+
 // --- Main Combined Interface ---
-export type ChartStyleOptions = {
+export type StyleOptions = {
     candles: CandleStyleOptions;
     line: LineStyleOptions;
     area: AreaStyleOptions;
     histogram: HistogramStyleOptions;
     bar: BarStyleOptions;
     grid: GridStyleOptions;
+    overlay: OverlayOptions;
     axes: AxesStyleOptions;
+    showGrid: boolean;
     backgroundColor: string;
+}
+
+interface BaseChartOptions {
+    theme: ChartTheme;
+    showOverlayLine: boolean;
+    showHistogram: boolean;
+    style: StyleOptions;
+}
+
+export type ChartOptions = {
+    base: BaseChartOptions;
+    axes: AxesOptions;
 }

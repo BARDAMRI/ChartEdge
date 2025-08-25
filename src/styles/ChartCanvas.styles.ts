@@ -1,10 +1,14 @@
 import styled from 'styled-components';
 
-export const StyledCanvas = styled.canvas`
+interface CanvasContainerProps {
+    $heightPrecent: number;
+}
+
+export const StyledCanvas = styled.canvas<CanvasContainerProps>`
     display: flex;
     position: relative;
     width: 100% !important;
-    height: 100% !important;
+    height: ${({$heightPrecent}) => `${$heightPrecent}%`} !important;
     padding: 0;
     margin: 0;
     background-color: white;
@@ -36,8 +40,8 @@ export const HoverTooltip = styled.div<HoverTooltipProps>`
     opacity: 0.8;
     background-color: rgba(255, 255, 255, 0.4);
     padding: 6px 10px;
-    color: ${({ $isPositive }) => ($isPositive ? 'rgba(0,128,0,0.8)' : 'rgba(204,0,0,0.8)')};
-    border: 1px solid ${({ $isPositive }) => ($isPositive ? 'rgba(0,128,0,0.8)' : 'rgba(204,0,0,0.8)')};
+    color: ${({$isPositive}) => ($isPositive ? 'rgba(0,128,0,0.8)' : 'rgba(204,0,0,0.8)')};
+    border: 1px solid ${({$isPositive}) => ($isPositive ? 'rgba(0,128,0,0.8)' : 'rgba(204,0,0,0.8)')};
     border-radius: 4px;
     font-size: 12px;
     display: flex;

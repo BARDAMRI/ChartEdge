@@ -1,5 +1,3 @@
-import {ChartStyleOptions} from "./chartStyleOptions";
-
 export enum AxesPosition {
     left,
     right,
@@ -11,25 +9,8 @@ export enum AlignOptions {
     right = 'right',
 }
 
-// Base chart options
-interface BaseChartOptions {
-    theme: 'light' | 'dark' | 'grey' | string;
-    showOverlayLine: boolean;
-    showHistogram: boolean;
-    histogramHeightRatio: number; // Ratio of histogram height to chart height
-    histogramOpacity: number;
-    style: ChartStyleOptions;
-}
+export type ChartTheme = 'light' | 'dark' | 'grey' | string;
 
-
-// Candlestick chart data point (compact)
-export interface CandleDataCompact {
-    t: number;
-    o: number;
-    h: number;
-    l: number;
-    c: number;
-}
 
 export type AxesOptions = {
     yAxisPosition: AxesPosition;
@@ -37,7 +18,11 @@ export type AxesOptions = {
     numberOfYTicks: number;
 }
 
-export type ChartOptions = {
-    base: BaseChartOptions;
-    axes: AxesOptions;
-}
+
+export type DeepPartial<T> = {
+    [K in keyof T]?: T[K] extends object ? DeepPartial<NonNullable<T[K]>> : T[K];
+};
+
+export type DeepRequired<T> = {
+    [K in keyof T]-?: T[K] extends object ? DeepRequired<NonNullable<T[K]>> : NonNullable<T[K]>;
+};

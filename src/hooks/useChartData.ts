@@ -3,7 +3,7 @@
 import {useMemo} from 'react';
 import {IndexRangePair, TimeRange} from "../types/Graph";
 import {Interval} from "../types/Interval";
-import {ChartRenderContext} from "../types/chartStyleOptions";
+import {ChartRenderContext} from "../types/chartOptions";
 
 export function useChartData(
     intervalsArray: Interval[],

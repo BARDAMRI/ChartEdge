@@ -12,8 +12,8 @@ import {
 } from '../../styles/ChartStage.styles';
 import {TimeRange} from "../../types/Graph";
 import {Interval} from "../../types/Interval";
-import {ChartStyleOptions, ChartType, TimeDetailLevel} from "../../types/chartStyleOptions";
-import {AxesPosition, ChartOptions} from "../../types/types";
+import {ChartOptions, ChartType, TimeDetailLevel} from "../../types/chartOptions";
+import {AxesPosition, DeepRequired} from "../../types/types";
 import {findPriceRange} from "./utils/GraphDraw";
 import {DrawingPoint} from '../../types/Drawings';
 import {useElementSize} from '../../hooks/useElementSize';
@@ -25,7 +25,6 @@ export interface CanvasSizes {
 
 interface ChartStageProps {
     intervalsArray: Interval[];
-    yAxisPosition: AxesPosition;
     numberOfYTicks: number;
     xAxisHeight: number;
     yAxisWidth: number;
@@ -42,12 +41,11 @@ interface ChartStageProps {
     setIsDrawing: (value: boolean) => void;
     setSelectedIndex: (index: number | null) => void;
     setStartPoint: (point: DrawingPoint | null) => void;
-    chartOptions: ChartOptions
+    chartOptions: DeepRequired<ChartOptions>
 }
 
 export const ChartStage: React.FC<ChartStageProps> = ({
                                                           intervalsArray,
-                                                          yAxisPosition,
                                                           numberOfYTicks,
                                                           xAxisHeight,
                                                           yAxisWidth,
@@ -125,17 +123,18 @@ export const ChartStage: React.FC<ChartStageProps> = ({
 
     return (
         <ChartStageContainer ref={containerRef}>
-            {yAxisPosition === AxesPosition.left && (
+            {chartOptions.axes.yAxisPosition === AxesPosition.left && (
                 <RightYAxisContainer style={{width: `${yAxisWidth}px`}}>
                     <YAxis
-                        yAxisPosition={chartOptions.axes.yAxisPosition}
+                        yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
                         xAxisHeight={xAxisHeight}
                         minPrice={minPrice}
                         maxPrice={maxPrice}
                         numberOfYTicks={numberOfYTicks}
                     />
                 </RightYAxisContainer>
-            )}
+            )
+            }
 
             <CanvasAxisContainer>
                 <CanvasContainer>
@@ -169,17 +168,20 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                 </XAxisContainer>
             </CanvasAxisContainer>
 
-            {yAxisPosition == AxesPosition.right && (
-                <LeftYAxisContainer style={{width: `${yAxisWidth}px`}}>
-                    <YAxis
-                        yAxisPosition={chartOptions.axes.yAxisPosition}
-                        xAxisHeight={xAxisHeight}
-                        minPrice={minPrice}
-                        maxPrice={maxPrice}
-                        numberOfYTicks={numberOfYTicks}
-                    />
-                </LeftYAxisContainer>
-            )}
+            {
+                chartOptions.axes.yAxisPosition == AxesPosition.right && (
+                    <LeftYAxisContainer style={{width: `${yAxisWidth}px`}}>
+                        <YAxis
+                            yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
+                            xAxisHeight={xAxisHeight}
+                            minPrice={minPrice}
+                            maxPrice={maxPrice}
+                            numberOfYTicks={numberOfYTicks}
+                        />
+                    </LeftYAxisContainer>
+                )
+            }
         </ChartStageContainer>
-    );
+    )
+        ;
 };

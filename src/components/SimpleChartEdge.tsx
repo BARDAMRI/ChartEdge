@@ -5,9 +5,10 @@ import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {Interval} from '../types/Interval';
 import {TimeRange} from '../types/Graph';
 import {DrawingPoint} from '../types/Drawings';
-import {AxesOptions, AxesPosition, ChartOptions} from '../types/types';
-import {ChartStyleOptions, ChartType, TimeDetailLevel} from '../types/chartStyleOptions';
+import {AxesPosition, DeepPartial, DeepRequired} from '../types/types';
+import {ChartOptions, ChartType, StyleOptions, TimeDetailLevel} from '../types/chartOptions';
 import {ModeProvider} from '../contexts/ModeContext';
+import {deepMerge} from "../utils/deepMerge";
 import {
     GlobalStyle,
     MainAppWindow,
@@ -19,7 +20,6 @@ import {
 
 export type SimpleChartEdgeProps = {
     intervalsArray?: Interval[];
-    initialYAxisPosition?: AxesPosition;
     initialMargin?: number;
     initialNumberOfYTicks?: number;
     initialXAxisHeight?: number;
@@ -28,10 +28,10 @@ export type SimpleChartEdgeProps = {
     initialTimeFormat12h?: boolean;
     initialVisibleTimeRange?: TimeRange;
     chartType?: ChartType;
-    chartOptions?: Partial<ChartOptions>
+    chartOptions?: DeepPartial<ChartOptions>
 };
 
-const DEFAULT_STYLES: ChartStyleOptions = {
+const DEFAULT_STYLES: DeepRequired<StyleOptions> = {
     candles: {
         bullColor: "#26a69a",
         bearColor: "#ef5350",
@@ -55,6 +55,7 @@ const DEFAULT_STYLES: ChartStyleOptions = {
         bullColor: "#26a69a",
         bearColor: "#ef5350",
         opacity: 0.5,
+        heightRatio: 0.3,
     },
     bar: {
         bullColor: "#26a69a",
@@ -68,6 +69,10 @@ const DEFAULT_STYLES: ChartStyleOptions = {
         lineColor: "#e0e0e0",
         lineDash: [],
     },
+    overlay: {
+        lineColor: "#ff9800",
+        lineWidth: 1
+    },
     axes: {
         axisPosition: AxesPosition.left,
         textColor: "#424242",
@@ -79,15 +84,14 @@ const DEFAULT_STYLES: ChartStyleOptions = {
         numberFractionDigits: 2,
     },
     backgroundColor: "#ffffff",
+    showGrid: true,
 };
 
-export const DEFAULT_GRAPH_OPTIONS: ChartOptions = {
+export const DEFAULT_GRAPH_OPTIONS: DeepRequired<ChartOptions> = {
     base: {
         theme: 'light',
         showOverlayLine: true,
         showHistogram: true,
-        histogramHeightRatio: 0.3,
-        histogramOpacity: 0.3,
         style: DEFAULT_STYLES,
     },
     axes: {
@@ -98,26 +102,8 @@ export const DEFAULT_GRAPH_OPTIONS: ChartOptions = {
 
 };
 
-function mergeStyles(defaults: ChartOptions, overrides: Partial<ChartOptions>): ChartOptions {
-    return {
-        base: {
-            ...defaults.base,
-            ...overrides.base,
-            style: {
-                ...defaults.base.style,
-                ...overrides.base?.style,
-            } as ChartStyleOptions,
-        },
-        axes: {
-            ...defaults.axes,
-            ...overrides.axes,
-        }
-    };
-}
-
 export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                     intervalsArray = [],
-                                                                    initialYAxisPosition = AxesPosition.left,
                                                                     initialMargin = 20,
                                                                     initialNumberOfYTicks = 5,
                                                                     initialXAxisHeight = 40,
@@ -129,10 +115,10 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                         end: Math.floor(Date.now() / 1000)
                                                                     },
                                                                     chartType = ChartType.Candlestick,
-                                                                    chartOptions = DEFAULT_GRAPH_OPTIONS
+                                                                    chartOptions = {} as DeepPartial<ChartOptions>
                                                                 }) => {
 
-    const finalStyleOptions = useMemo(() => mergeStyles(DEFAULT_GRAPH_OPTIONS, chartOptions), [chartOptions]);
+    const finalStyleOptions: DeepRequired<ChartOptions> = useMemo(() => deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions), [chartOptions]);
     const [visibleRange, setVisibleRange] = useState<TimeRange>(initialVisibleTimeRange);
     const [drawings, setDrawings] = useState<any[]>([]);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -158,7 +144,6 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                     <ChartStageArea>
                         <ChartStage
                             intervalsArray={intervalsArray}
-                            yAxisPosition={initialYAxisPosition}
                             numberOfYTicks={initialNumberOfYTicks}
                             xAxisHeight={initialXAxisHeight}
                             yAxisWidth={initialYAxisWidth}
