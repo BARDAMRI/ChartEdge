@@ -27,6 +27,8 @@ export interface ChartRenderContext {
     visibleEndIndex: number;
     visibleRange: TimeRange;
     intervalSeconds: number;
+    canvasWidth: number;
+    canvasHeight: number;
 }
 
 // --- Nested Style Types ---
