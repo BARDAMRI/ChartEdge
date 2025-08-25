@@ -1,7 +1,7 @@
 import React, {useRef, useEffect, useState, useCallback} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {StyledCanvas, InnerCanvasContainer, HoverTooltip} from '../../styles/ChartCanvas.styles';
-import {ChartStyleOptions, ChartType} from "../../types/chartStyleOptions";
+import {ChartType} from "../../types/chartStyleOptions";
 import {drawAreaChart, drawBarChart, drawCandlestickChart, drawHistogramChart, drawLineChart} from "./utils/GraphDraw";
 import {drawDrawings} from './utils/drawDrawings';
 import {useChartData} from '../../hooks/useChartData';
@@ -14,8 +14,8 @@ import {RectangleShape} from "../Drawing/RectangleShape";
 import {CircleShape} from "../Drawing/CircleShape";
 import {TriangleShape} from "../Drawing/TriangleShape";
 import {AngleShape} from "../Drawing/Angleshape";
+import {ChartOptions} from "../../types/types";
 
-// Your drawing shape class imports (LineShape, RectangleShape, etc.) go here
 
 interface ChartCanvasProps {
     intervalsArray: Interval[];
@@ -31,7 +31,7 @@ interface ChartCanvasProps {
     setVisibleRange: (range: TimeRange) => void;
     xAxisHeight: number;
     chartType: ChartType;
-    styleOptions: ChartStyleOptions;
+    chartOptions: ChartOptions;
     canvasSizes?: { width: number; height: number };
     parentContainerRef?: React.RefObject<HTMLDivElement>;
 }
@@ -50,12 +50,21 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             setSelectedIndex,
                                                             xAxisHeight,
                                                             chartType,
-                                                            styleOptions,
+                                                            chartOptions,
                                                             canvasSizes,
                                                             parentContainerRef,
                                                         }) => {
     const {mode} = useMode();
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const histCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    // Controlled/uncontrolled support for histogram visibility
+    const [internalShowHistogram, setInternalShowHistogram] = useState<boolean>(chartOptions?.base?.showHistogram ?? true);
+
+    useEffect(() => {
+        setInternalShowHistogram(chartOptions?.base?.showHistogram ?? false);
+    }, [chartOptions?.base?.showHistogram]);
+
     const [currentPoint, setCurrentPoint] = useState<{ x: number; y: number } | null>(null);
 
     // HOOK for data calculations
@@ -88,23 +97,42 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
         switch (chartType) {
             case ChartType.Candlestick:
-                drawCandlestickChart(ctx, renderContext, styleOptions);
+                drawCandlestickChart(ctx, renderContext, chartOptions);
                 break;
             case ChartType.Line:
-                drawLineChart(ctx, renderContext, styleOptions);
+                drawLineChart(ctx, renderContext, chartOptions);
                 break;
             case ChartType.Area:
-                drawAreaChart(ctx, renderContext, styleOptions);
+                drawAreaChart(ctx, renderContext, chartOptions);
                 break;
             case ChartType.Bar:
-                drawBarChart(ctx, renderContext, styleOptions);
+                drawBarChart(ctx, renderContext, chartOptions);
                 break;
-            case ChartType.Histogram:
-                drawHistogramChart(ctx, renderContext, styleOptions);
-                break;
+            // case ChartType.Histogram:
+            //     drawHistogramChart(ctx, renderContext, chartOptions);
+            //     break;
             default:
-                drawCandlestickChart(ctx, renderContext, styleOptions);
+                drawCandlestickChart(ctx, renderContext, chartOptions);
                 break;
+        }
+
+        // --- Histogram layer (separate canvas stacked below) ---
+        if (internalShowHistogram) {
+            const histCanvas = histCanvasRef.current;
+            if (histCanvas) {
+                const hctx = histCanvas.getContext('2d');
+                if (hctx) {
+                    const hDpr = window.devicePixelRatio || 1;
+                    const hRect = histCanvas.getBoundingClientRect();
+                    if (histCanvas.width !== hRect.width * hDpr || histCanvas.height !== hRect.height * hDpr) {
+                        histCanvas.width = hRect.width * hDpr;
+                        histCanvas.height = hRect.height * hDpr;
+                        hctx.setTransform(hDpr, 0, 0, hDpr, 0, 0);
+                    }
+                    hctx.clearRect(0, 0, hRect.width, hRect.height);
+                    drawHistogramChart(hctx, renderContext, chartOptions);
+                }
+            }
         }
 
         drawDrawings(ctx, drawings, selectedIndex);
@@ -154,7 +182,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 ctx.stroke();
             }
         }
-    }, [renderContext, chartType, styleOptions, drawings, selectedIndex, isDrawing, startPoint, currentPoint, canvasSizes]);
+    }, [renderContext, chartType, chartOptions, drawings, selectedIndex, isDrawing, startPoint, currentPoint, canvasSizes, internalShowHistogram]);
 
     useEffect(() => {
         drawAll();
@@ -199,13 +227,43 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
     return (
         <InnerCanvasContainer $xAxisHeight={xAxisHeight}>
-            <StyledCanvas
-                ref={canvasRef}
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-                onMouseDown={handleMouseDown}
-                onMouseUp={handleMouseUp}
-            />
+            {(() => {
+                // Clamp ratio between 0.1 and 0.6
+                const ratioRaw = chartOptions?.base?.histogramHeightRatio ?? 0.30;
+                const ratio = Math.max(0.1, Math.min(0.6, ratioRaw));
+                const histHeight = `${Math.round(ratio * 100)}%`;
+                const histOpacity = chartOptions?.base?.histogramOpacity ?? 0.5;
+                return (
+                    <div style={{position: "relative", width: "100%", height: "100%"}}>
+                        {/* Main chart fills all available space */}
+                        <StyledCanvas
+                            ref={canvasRef}
+                            onMouseMove={handleMouseMove}
+                            onMouseLeave={handleMouseLeave}
+                            onMouseDown={handleMouseDown}
+                            onMouseUp={handleMouseUp}
+                            style={{position: "absolute", backgroundColor:'transparent', inset: 0, width: "100%", height: "100%", zIndex: 1}}
+                        />
+
+                        {/* Histogram canvas overlays the bottom part only */}
+                        {internalShowHistogram && (
+                            <StyledCanvas
+                                ref={histCanvasRef}
+                                style={{
+                                    position: "absolute",
+                                    opacity: histOpacity,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    height: histHeight,
+                                    width: "100%",
+                                    pointerEvents: "none" // don't block interactions on main canvas
+                                }}
+                            />
+                        )}
+                    </div>
+                );
+            })()}
             {hoveredCandle && (
                 <HoverTooltip $isPositive={hoveredCandle.c > hoveredCandle.o}>
                     Time: {new Date(hoveredCandle.t * 1000).toLocaleString()} |

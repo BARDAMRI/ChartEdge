@@ -1,11 +1,11 @@
-import React, {useLayoutEffect, useMemo, useRef, useState} from 'react';
+import React, {useMemo} from 'react';
 import {ChartCanvas} from './ChartCanvas';
 import XAxis from "./Axes/XAxis";
 import YAxis from "./Axes/YAxis";
 import {
-    ChartStageContainer,
     CanvasAxisContainer,
     CanvasContainer,
+    ChartStageContainer,
     LeftYAxisContainer,
     RightYAxisContainer,
     XAxisContainer
@@ -13,10 +13,11 @@ import {
 import {TimeRange} from "../../types/Graph";
 import {Interval} from "../../types/Interval";
 import {ChartStyleOptions, ChartType, TimeDetailLevel} from "../../types/chartStyleOptions";
-import {AxesPosition} from "../../types/types";
+import {AxesPosition, ChartOptions} from "../../types/types";
 import {findPriceRange} from "./utils/GraphDraw";
 import {DrawingPoint} from '../../types/Drawings';
-import { useElementSize } from '../../hooks/useElementSize';
+import {useElementSize} from '../../hooks/useElementSize';
+
 export interface CanvasSizes {
     width: number;
     height: number;
@@ -33,7 +34,6 @@ interface ChartStageProps {
     visibleRange: TimeRange;
     setVisibleRange: (range: TimeRange) => void;
     chartType: ChartType;
-    styleOptions: ChartStyleOptions;
     drawings: any[];
     isDrawing: boolean;
     selectedIndex: number | null;
@@ -42,6 +42,7 @@ interface ChartStageProps {
     setIsDrawing: (value: boolean) => void;
     setSelectedIndex: (index: number | null) => void;
     setStartPoint: (point: DrawingPoint | null) => void;
+    chartOptions: ChartOptions
 }
 
 export const ChartStage: React.FC<ChartStageProps> = ({
@@ -55,7 +56,6 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           visibleRange,
                                                           setVisibleRange,
                                                           chartType,
-                                                          styleOptions,
                                                           drawings,
                                                           isDrawing,
                                                           selectedIndex,
@@ -64,6 +64,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           setIsDrawing,
                                                           setSelectedIndex,
                                                           setStartPoint,
+                                                          chartOptions
                                                       }) => {
     const {ref: containerRef, size: canvasSizes} = useElementSize<HTMLDivElement>();
 
@@ -124,10 +125,10 @@ export const ChartStage: React.FC<ChartStageProps> = ({
 
     return (
         <ChartStageContainer ref={containerRef}>
-            {yAxisPosition === 'left' && (
+            {yAxisPosition === AxesPosition.left && (
                 <RightYAxisContainer style={{width: `${yAxisWidth}px`}}>
                     <YAxis
-                        yAxisPosition={yAxisPosition}
+                        yAxisPosition={chartOptions.axes.yAxisPosition}
                         xAxisHeight={xAxisHeight}
                         minPrice={minPrice}
                         maxPrice={maxPrice}
@@ -152,7 +153,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                         visibleRange={visibleRange}
                         xAxisHeight={xAxisHeight}
                         chartType={chartType}
-                        styleOptions={styleOptions}
+                        chartOptions={chartOptions}
                     />
                 </CanvasContainer>
 
@@ -168,10 +169,10 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                 </XAxisContainer>
             </CanvasAxisContainer>
 
-            {yAxisPosition === 'right' && (
+            {yAxisPosition == AxesPosition.right && (
                 <LeftYAxisContainer style={{width: `${yAxisWidth}px`}}>
                     <YAxis
-                        yAxisPosition={yAxisPosition}
+                        yAxisPosition={chartOptions.axes.yAxisPosition}
                         xAxisHeight={xAxisHeight}
                         minPrice={minPrice}
                         maxPrice={maxPrice}

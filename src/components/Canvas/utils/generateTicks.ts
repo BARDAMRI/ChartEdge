@@ -1,20 +1,21 @@
 import {
-    startOfHour,
-    startOfDay,
-    startOfMonth,
-    startOfYear,
-    addHours,
     addDays,
+    addHours,
     addMonths,
     addYears,
-    format,
-    differenceInHours,
     differenceInDays,
+    differenceInHours,
     differenceInMonths,
     differenceInYears,
+    format,
+    startOfDay,
+    startOfHour,
+    startOfMonth,
+    startOfYear,
 } from 'date-fns';
 import {DrawTicksOptions, Tick, TimeRange} from "../../../types/Graph";
 import {TimeDetailLevel} from "../../../types/chartStyleOptions";
+import {AlignOptions, AxesPosition} from "../../../types/types";
 
 const TICK_FONT_SIZE_PX = 12;
 
@@ -195,7 +196,7 @@ export function generateAndDrawYTicks(
     maxValue: number,
     numberOfYTicks: number,
     xAxisHeight: number,
-    yAxisPosition: 'left' | 'right',
+    yAxisPosition: AxesPosition,
     tickColor: string = 'black',
     labelColor: string = 'black',
     labelFont: string = '12px Arial',
@@ -289,7 +290,7 @@ function drawYTicks(
     ticks: { y: number; label: string }[],
     width: number,
     xAxisHeight: number,
-    yAxisPosition: 'left' | 'right',
+    yAxisPosition: AxesPosition,
     tickColor: string,
     labelColor: string,
     labelFont: string,
@@ -299,20 +300,20 @@ function drawYTicks(
     ctx.strokeStyle = tickColor;
     ctx.fillStyle = labelColor;
     ctx.font = labelFont;
-    ctx.textAlign = yAxisPosition === 'left' ? 'right' : 'left';
+    ctx.textAlign = yAxisPosition == AxesPosition.left ? AlignOptions.right : AlignOptions.left;
     ctx.textBaseline = 'middle';
 
     // draw Y-axis line
-    const axisX = yAxisPosition === 'left' ? width : 0;
+    const axisX = yAxisPosition == AxesPosition.left ? width : 0;
     ctx.beginPath();
     ctx.moveTo(axisX, 0);
     ctx.lineTo(axisX, ctx.canvas.clientHeight - xAxisHeight);
     ctx.stroke();
 
     for (const tick of ticks) {
-        const x = yAxisPosition === 'left' ? width : 0;
-        const tickEndX = yAxisPosition === 'left' ? width - tickLength : tickLength;
-        const labelX = yAxisPosition === 'left' ? tickEndX - labelOffset : tickEndX + labelOffset;
+        const x = yAxisPosition == AxesPosition.left ? width : 0;
+        const tickEndX = yAxisPosition == AxesPosition.left ? width - tickLength : tickLength;
+        const labelX = yAxisPosition == AxesPosition.left ? tickEndX - labelOffset : tickEndX + labelOffset;
 
         ctx.beginPath();
         ctx.moveTo(x, tick.y);

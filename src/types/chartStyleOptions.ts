@@ -13,11 +13,11 @@ export enum TimeDetailLevel {
 }
 
 export enum ChartType {
-    Candlestick ,
+    Candlestick,
     Line,
-    Area ,
+    Area,
     Bar,
-    Histogram ,
+    // Histogram , // // moved to another canvas
 }
 
 

@@ -5,7 +5,7 @@ import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {Interval} from '../types/Interval';
 import {TimeRange} from '../types/Graph';
 import {DrawingPoint} from '../types/Drawings';
-import {AxesPosition} from '../types/types';
+import {AxesOptions, AxesPosition, ChartOptions} from '../types/types';
 import {ChartStyleOptions, ChartType, TimeDetailLevel} from '../types/chartStyleOptions';
 import {ModeProvider} from '../contexts/ModeContext';
 import {
@@ -28,7 +28,7 @@ export type SimpleChartEdgeProps = {
     initialTimeFormat12h?: boolean;
     initialVisibleTimeRange?: TimeRange;
     chartType?: ChartType;
-    styleOptions?: Partial<ChartStyleOptions>;
+    chartOptions?: Partial<ChartOptions>
 };
 
 const DEFAULT_STYLES: ChartStyleOptions = {
@@ -81,18 +81,37 @@ const DEFAULT_STYLES: ChartStyleOptions = {
     backgroundColor: "#ffffff",
 };
 
-export default DEFAULT_STYLES;
+export const DEFAULT_GRAPH_OPTIONS: ChartOptions = {
+    base: {
+        theme: 'light',
+        showOverlayLine: true,
+        showHistogram: true,
+        histogramHeightRatio: 0.3,
+        histogramOpacity: 0.3,
+        style: DEFAULT_STYLES,
+    },
+    axes: {
+        yAxisPosition: AxesPosition.left,
+        currency: 'USD',
+        numberOfYTicks: 5,
+    }
 
-function mergeStyles(defaults: ChartStyleOptions, overrides: Partial<ChartStyleOptions>): ChartStyleOptions {
+};
+
+function mergeStyles(defaults: ChartOptions, overrides: Partial<ChartOptions>): ChartOptions {
     return {
-        candles: {...defaults.candles, ...overrides.candles},
-        line: {...defaults.line, ...overrides.line},
-        area: {...defaults.area, ...overrides.area},
-        histogram: {...defaults.histogram, ...overrides.histogram},
-        bar: {...defaults.bar, ...overrides.bar},
-        grid: {...defaults.grid, ...overrides.grid},
-        axes: {...defaults.axes, ...overrides.axes},
-        backgroundColor: overrides.backgroundColor ?? defaults.backgroundColor,
+        base: {
+            ...defaults.base,
+            ...overrides.base,
+            style: {
+                ...defaults.base.style,
+                ...overrides.base?.style,
+            } as ChartStyleOptions,
+        },
+        axes: {
+            ...defaults.axes,
+            ...overrides.axes,
+        }
     };
 }
 
@@ -110,10 +129,10 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                         end: Math.floor(Date.now() / 1000)
                                                                     },
                                                                     chartType = ChartType.Candlestick,
-                                                                    styleOptions = {},
+                                                                    chartOptions = DEFAULT_GRAPH_OPTIONS
                                                                 }) => {
 
-    const finalStyleOptions = useMemo(() => mergeStyles(DEFAULT_STYLES, styleOptions), [styleOptions]);
+    const finalStyleOptions = useMemo(() => mergeStyles(DEFAULT_GRAPH_OPTIONS, chartOptions), [chartOptions]);
     const [visibleRange, setVisibleRange] = useState<TimeRange>(initialVisibleTimeRange);
     const [drawings, setDrawings] = useState<any[]>([]);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -123,6 +142,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
     useEffect(() => {
         setVisibleRange(initialVisibleTimeRange);
     }, [initialVisibleTimeRange]);
+
 
     return (
         <ModeProvider>
@@ -147,7 +167,6 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                             visibleRange={visibleRange}
                             setVisibleRange={setVisibleRange}
                             chartType={chartType}
-                            styleOptions={finalStyleOptions}
                             drawings={drawings}
                             isDrawing={isDrawing}
                             selectedIndex={selectedIndex}
@@ -156,6 +175,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                             setIsDrawing={setIsDrawing}
                             setSelectedIndex={setSelectedIndex}
                             setStartPoint={setStartPoint}
+                            chartOptions={finalStyleOptions}
                         />
                     </ChartStageArea>
                 </LowerContainer>

@@ -1,32 +1,26 @@
 import {ChartStyleOptions} from "./chartStyleOptions";
 
-// Enum for Axis position
 export enum AxesPosition {
+    left,
+    right,
+}
+
+export enum AlignOptions {
     left = 'left',
+    center = 'center',
     right = 'right',
 }
 
 // Base chart options
 interface BaseChartOptions {
-    theme?: 'light' | 'dark' | 'grey' | string;
-    showOverlayLine?: boolean;
-    style?: Partial<ChartStyleOptions>;
+    theme: 'light' | 'dark' | 'grey' | string;
+    showOverlayLine: boolean;
+    showHistogram: boolean;
+    histogramHeightRatio: number; // Ratio of histogram height to chart height
+    histogramOpacity: number;
+    style: ChartStyleOptions;
 }
 
-// Line chart data point
-export interface LineData {
-    time: number;
-    value: number;
-}
-
-// Candlestick chart data point (full)
-export interface CandleData {
-    time: number;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-}
 
 // Candlestick chart data point (compact)
 export interface CandleDataCompact {
@@ -37,17 +31,13 @@ export interface CandleDataCompact {
     c: number;
 }
 
-// Line chart options
-export interface LineChartOptions extends BaseChartOptions {
-    type: 'line';
-    data: LineData[];
+export type AxesOptions = {
+    yAxisPosition: AxesPosition;
+    currency: string;
+    numberOfYTicks: number;
 }
 
-// Candlestick chart options
-export interface CandleChartOptions extends BaseChartOptions {
-    type: 'candlestick';
-    data: (CandleData | CandleDataCompact)[];
+export type ChartOptions = {
+    base: BaseChartOptions;
+    axes: AxesOptions;
 }
-
-// Unified ChartOptions type
-export type ChartOptions = LineChartOptions | CandleChartOptions;

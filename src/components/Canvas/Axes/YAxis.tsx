@@ -1,9 +1,10 @@
 import React, {useEffect, useRef} from 'react';
 import {generateAndDrawYTicks} from '../utils/generateTicks';
 import {StyledYAxisCanvas} from '../../../styles/YAxis.styles';
+import {AxesPosition} from "../../../types/types";
 
 interface YAxisProps {
-    yAxisPosition: 'left' | 'right';
+    yAxisPosition: AxesPosition;
     xAxisHeight: number;
     minPrice: number;
     maxPrice: number;

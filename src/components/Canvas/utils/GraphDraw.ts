@@ -1,6 +1,7 @@
 import type {Interval} from "../../../types/Interval";
-import type {ChartRenderContext, ChartStyleOptions} from "../../../types/chartStyleOptions";
-import {PriceRange, TimeRange} from "../../../types/Graph"; // Make sure your context type is also imported
+import type {ChartRenderContext} from "../../../types/chartStyleOptions";
+import {PriceRange, TimeRange} from "../../../types/Graph";
+import {ChartOptions} from "../../../types/types"; // Make sure your context type is also imported
 
 // =================================================================================
 // == HELPER FUNCTIONS
@@ -63,7 +64,7 @@ function interpolatedCloseAtTime(all: Interval[], intervalSeconds: number, timeS
 // == CHART DRAWING FUNCTIONS
 // =================================================================================
 
-export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: ChartStyleOptions) {
+export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: ChartOptions) {
     const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (visibleEndIndex < visibleStartIndex) return;
 
@@ -75,7 +76,7 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
     const visibleDuration = visibleRange.end - visibleRange.start;
     if (visibleDuration <= 0) return;
     const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
-    const gapFactor = Math.max(0, Math.min(0.4, (options.candles?.spacingFactor ?? 0.2)));
+    const gapFactor = Math.max(0, Math.min(0.4, (options?.base?.style?.candles?.spacingFactor ?? 0.2)));
     const bodyWidth = candleWidth * (1 - gapFactor);
     const halfPad = (candleWidth - bodyWidth) / 2;
 
@@ -85,10 +86,10 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         let drawX = x + halfPad;
         let visibleWidth = bodyWidth;
         if (drawX < 0) {
-          visibleWidth += drawX; // drawX is negative; shrink width
-          drawX = 0;
+            visibleWidth += drawX; // drawX is negative; shrink width
+            drawX = 0;
         } else if (drawX + visibleWidth > clientWidth) {
-          visibleWidth = clientWidth - drawX;
+            visibleWidth = clientWidth - drawX;
         }
         if (visibleWidth <= 0) continue;
 
@@ -97,7 +98,7 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         const openY = priceToY(candle.o);
         const closeY = priceToY(candle.c);
         const isBullish = candle.c >= candle.o;
-        const color = (isBullish ? options.candles?.bullColor : options.candles?.bearColor) || 'green';
+        const color = (isBullish ? options?.base?.style?.candles?.bullColor : options?.base?.style?.candles?.bearColor) || 'green';
 
         // Half-pixel sharpness for wicks
         const crisp = (v: number) => Math.round(v) + 0.5;
@@ -119,7 +120,7 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
     return {XStart: allIntervals[visibleStartIndex]?.t, XEnd: allIntervals[visibleEndIndex]?.t + intervalSeconds};
 }
 
-export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, style: ChartStyleOptions) {
+export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, style: ChartOptions) {
     const {allIntervals: allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
 
@@ -130,9 +131,9 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
 
     // Clip to actual data bounds to avoid fake tails
     const dataStart = allIntervals[0].t;
-    const dataEnd   = allIntervals[allIntervals.length - 1].t + intervalSeconds;
+    const dataEnd = allIntervals[allIntervals.length - 1].t + intervalSeconds;
     const clipStart = Math.max(visibleRange.start, dataStart);
-    const clipEnd   = Math.min(visibleRange.end,   dataEnd);
+    const clipEnd = Math.min(visibleRange.end, dataEnd);
     if (clipEnd <= clipStart) return;
 
     const leftX = timeToX(clipStart, clientWidth, visibleRange);
@@ -167,7 +168,7 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
 export function drawAreaChart(
     ctx: CanvasRenderingContext2D,
     context: ChartRenderContext,
-    style: ChartStyleOptions
+    options: ChartOptions
 ) {
     const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
@@ -242,7 +243,7 @@ export function drawAreaChart(
     ctx.lineTo(endX, clientHeight);
     ctx.lineTo(startX, clientHeight);
     ctx.closePath();
-    ctx.fillStyle = style.area.fillColor;
+    ctx.fillStyle = options?.base?.style?.area!.fillColor;
     ctx.fill();
     ctx.restore();
 
@@ -251,8 +252,8 @@ export function drawAreaChart(
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
     for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k].x, pts[k].y);
-    ctx.strokeStyle = style.area.strokeColor;
-    ctx.lineWidth = style.area.lineWidth;
+    ctx.strokeStyle = options?.base?.style?.area!.strokeColor;
+    ctx.lineWidth = options?.base?.style?.area!.lineWidth;
     ctx.stroke();
     ctx.restore();
 }
@@ -260,7 +261,7 @@ export function drawAreaChart(
 export function drawBarChart(
     ctx: CanvasRenderingContext2D,
     context: ChartRenderContext,
-    style: ChartStyleOptions
+    options: ChartOptions
 ) {
     const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
     if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
@@ -275,22 +276,22 @@ export function drawBarChart(
 
     const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
     if (candleWidth <= 0) return;
-    const gapFactor = Math.max(0, Math.min(0.4, (style.candles?.spacingFactor ?? 0.2)));
-    const barWidth  = candleWidth * (1 - gapFactor);
-    const halfPad   = (candleWidth - barWidth) / 2;
+    const gapFactor = Math.max(0, Math.min(0.4, (options.base.style.candles?.spacingFactor ?? 0.2)));
+    const barWidth = candleWidth * (1 - gapFactor);
+    const halfPad = (candleWidth - barWidth) / 2;
 
     // Crisp 1px lines on standard DPR; adapt if you want DPR-aware widths
     const crisp = (x: number) => Math.round(x) + 0.5;
 
     ctx.save();
     ctx.lineWidth = 1;
-    const baseAlpha = Math.max(0, Math.min(1, style.bar.opacity ?? 1));
+    const baseAlpha = Math.max(0, Math.min(1, options.base.style.bar!.opacity ?? 1));
 
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
         const c = allIntervals[i];
 
         // x positions
-        const xLeftFull  = ((c.t - visibleRange.start) / visibleDuration) * clientWidth;
+        const xLeftFull = ((c.t - visibleRange.start) / visibleDuration) * clientWidth;
         const xLeft = xLeftFull + halfPad;
         const xRight = xLeft + barWidth;
         if (xRight < 0 || xLeft > clientWidth) continue; // skip fully off-screen
@@ -305,7 +306,7 @@ export function drawBarChart(
 
         // Color & opacity per bar
         const isUp = c.c >= c.o;
-        ctx.strokeStyle = isUp ? style.bar.bullColor : style.bar.bearColor;
+        ctx.strokeStyle = isUp ? options.base.style.bar!.bullColor : options.base.style.bar!.bearColor;
         ctx.globalAlpha = baseAlpha;
 
         // Tick length proportional to bar width (more prominent), clamped
@@ -330,42 +331,68 @@ export function drawBarChart(
     ctx.restore();
 }
 
-export function drawHistogramChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, style: ChartStyleOptions) {
+export function drawHistogramChart(
+    ctx: CanvasRenderingContext2D,
+    context: ChartRenderContext,
+    options: ChartOptions
+) {
     const {allIntervals, visibleStartIndex, visibleEndIndex, visibleRange, intervalSeconds} = context;
-    if (visibleEndIndex < visibleStartIndex) return;
-
-    const paddedStart = Math.max(0, visibleStartIndex - 1);
-    const paddedEnd = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
-
-    let maxVolume = 0;
-    for (let i = paddedStart; i <= paddedEnd; i++) {
-        const v = allIntervals[i].v;
-        if (v !== undefined && v > maxVolume) {
-            maxVolume = v;
-        }
-    }
-    if (maxVolume === 0) return;
+    if (!allIntervals.length || visibleEndIndex < visibleStartIndex) return;
 
     const {clientWidth, clientHeight} = ctx.canvas;
     const visibleDuration = visibleRange.end - visibleRange.start;
     if (visibleDuration <= 0) return;
+
+    // Column geometry (consistent with other series)
     const candleWidth = (intervalSeconds / visibleDuration) * clientWidth;
-    const gapFactor = Math.max(0, Math.min(0.4, (style.candles?.spacingFactor ?? 0.2)));
-    const barWidth  = Math.max(1, candleWidth * (1 - gapFactor));
-    const halfPad   = (candleWidth - barWidth) / 2;
+    // reuse candles.spacingFactor if defined (gives consistent gaps across types)
+    const gapFactor = Math.max(0, Math.min(0.4, options.base.style.candles?.spacingFactor ?? 0.2));
+    const barWidth = Math.max(1, candleWidth * (1 - gapFactor));
+    const halfPad = (candleWidth - barWidth) / 2;
 
-    for (let i = paddedStart; i <= paddedEnd; i++) {
-        const candle = allIntervals[i];
-        if (candle.v === undefined) continue;
-        const xFull = ((candle.t - visibleRange.start) / visibleDuration) * clientWidth;
-        const x = xFull + halfPad;
-        if (x + barWidth < 0 || x > clientWidth) continue;
+    // Pass 1: find max "volume" in slightly padded window
+    let maxVolume = 0;
+    let hasRealVolume = false;
+    const padStart = Math.max(0, visibleStartIndex - 1);
+    const padEnd = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
 
-        const barHeight = (candle.v / maxVolume) * clientHeight;
-        const y = clientHeight - barHeight;
-        const color = candle.c >= candle.o ? style.histogram.bullColor : style.histogram.bearColor;
-        const opacityHex = Math.round(style.histogram.opacity * 255).toString(16).padStart(2, '0');
-        ctx.fillStyle = `${color}${opacityHex}`;
-        ctx.fillRect(x, y, Math.max(0, barWidth), barHeight);
+    for (let i = padStart; i <= padEnd; i++) {
+        const it = allIntervals[i];
+        const v = it.v ?? Math.max(0, it.h - it.l); // fallback if v missing
+        if (it.v !== undefined) hasRealVolume = true;
+        if (v > maxVolume) maxVolume = v;
     }
+    if (maxVolume <= 0) return;
+
+    // Helper: x position by time
+    const xAt = (t: number) => ((t - visibleRange.start) / visibleDuration) * clientWidth;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, options.base.style.histogram?.opacity ?? 0.6));
+    ctx.lineWidth = 0;
+
+    for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
+        const it = allIntervals[i];
+
+        // off‑screen skip (fast)
+        const xFull = xAt(it.t);
+        const x = xFull + halfPad;
+        if (x > clientWidth || x + barWidth < 0) continue;
+
+        // choose volume or fallback
+        const vol = hasRealVolume ? (it.v ?? 0) : Math.max(0, it.h - it.l);
+        if (vol <= 0) continue;
+
+        // bar height mapped to canvas height (full‑height panel)
+        const h = (vol / maxVolume) * clientHeight;
+        const yTop = clientHeight - h;
+
+        // color by up/down
+        const up = it.c >= it.o;
+        ctx.fillStyle = up ? options.base.style.histogram!.bullColor : options.base.style.histogram!.bearColor;
+
+        ctx.fillRect(x, yTop, barWidth, h);
+    }
+
+    ctx.restore();
 }
