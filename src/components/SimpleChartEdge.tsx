@@ -20,7 +20,6 @@ import {
 
 export type SimpleChartEdgeProps = {
     intervalsArray?: Interval[];
-    initialMargin?: number;
     initialNumberOfYTicks?: number;
     initialXAxisHeight?: number;
     initialYAxisWidth?: number;
@@ -104,62 +103,40 @@ export const DEFAULT_GRAPH_OPTIONS: DeepRequired<ChartOptions> = {
 
 export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                     intervalsArray = [],
-                                                                    initialMargin = 20,
                                                                     initialNumberOfYTicks = 5,
-                                                                    initialXAxisHeight = 40,
-                                                                    initialYAxisWidth = 50,
                                                                     initialTimeDetailLevel = TimeDetailLevel.Auto,
                                                                     initialTimeFormat12h = false,
-                                                                    initialVisibleTimeRange = {
-                                                                        start: Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000),
-                                                                        end: Math.floor(Date.now() / 1000)
-                                                                    },
                                                                     chartType = ChartType.Candlestick,
                                                                     chartOptions = {} as DeepPartial<ChartOptions>
                                                                 }) => {
 
     const finalStyleOptions: DeepRequired<ChartOptions> = useMemo(() => deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions), [chartOptions]);
-    const [visibleRange, setVisibleRange] = useState<TimeRange>(initialVisibleTimeRange);
     const [drawings, setDrawings] = useState<any[]>([]);
     const [isDrawing, setIsDrawing] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
-    const [startPoint, setStartPoint] = useState<DrawingPoint | null>(null);
-
-    useEffect(() => {
-        setVisibleRange(initialVisibleTimeRange);
-    }, [initialVisibleTimeRange]);
-
 
     return (
         <ModeProvider>
             <GlobalStyle/>
             <MainAppWindow>
-                <SettingsArea>
+                <SettingsArea className={"settings-area"}>
                     <SettingsToolbar/>
                 </SettingsArea>
-                <LowerContainer>
-                    <ToolbarArea>
+                <LowerContainer className={"lower-container"}>
+                    <ToolbarArea className={"toolbar-area"}>
                         <Toolbar/>
                     </ToolbarArea>
-                    <ChartStageArea>
+                    <ChartStageArea className={"chart-stage-area"}>
                         <ChartStage
                             intervalsArray={intervalsArray}
                             numberOfYTicks={initialNumberOfYTicks}
-                            xAxisHeight={initialXAxisHeight}
-                            yAxisWidth={initialYAxisWidth}
                             timeDetailLevel={initialTimeDetailLevel}
                             timeFormat12h={initialTimeFormat12h}
-                            visibleRange={visibleRange}
-                            setVisibleRange={setVisibleRange}
                             chartType={chartType}
                             drawings={drawings}
                             isDrawing={isDrawing}
                             selectedIndex={selectedIndex}
-                            startPoint={startPoint}
-                            setDrawings={setDrawings}
                             setIsDrawing={setIsDrawing}
-                            setSelectedIndex={setSelectedIndex}
-                            setStartPoint={setStartPoint}
                             chartOptions={finalStyleOptions}
                         />
                     </ChartStageArea>

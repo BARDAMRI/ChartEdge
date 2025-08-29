@@ -3,7 +3,7 @@
 // Candles style
 import {AxesOptions, AxesPosition, ChartTheme} from "./types";
 import type {Interval} from "./Interval";
-import type {TimeRange} from "./Graph";
+import type {PriceRange, TimeRange} from "./Graph";
 
 export enum TimeDetailLevel {
     Auto = 'auto',

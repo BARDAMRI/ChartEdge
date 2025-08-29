@@ -11,7 +11,7 @@ export const StyledCanvas = styled.canvas<CanvasContainerProps>`
     height: ${({$heightPrecent}) => `${$heightPrecent}%`} !important;
     padding: 0;
     margin: 0;
-    background-color: white;
+    background-color: transparent;
     border: none;
     pointer-events: auto;
     touch-action: none;

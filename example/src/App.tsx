@@ -1,5 +1,6 @@
 import type {Interval} from 'chartedge';
 import {AxesPosition, ChartType, SimpleChartEdge, TimeDetailLevel} from 'chartedge';
+import './App.css';
 
 // ---- Simple, deterministic OHLC generator (random-walk with small drift) ----
 function simplePRNG(seed = 12345) {
@@ -78,7 +79,7 @@ const intervalsArray: Interval[] = makeSimpleIntervals({
     startTime: 1688000000,
     startPrice: 100,
     intervalSec: 300,
-    count: 200,
+    count: 20,
     seed: 4242,
     driftPerBar: 0.03,
     vol: 0.7,
@@ -94,10 +95,10 @@ const exampleVisibleRange = {
 
 export default function App() {
     return (
-        <div style={{height: '100vh', width: '100vw'}}>
+        <div className={'app-root'}>
             <SimpleChartEdge
+                className="simple-chart-edge"
                 intervalsArray={intervalsArray}
-                initialMargin={20}
                 initialNumberOfYTicks={5}
                 initialXAxisHeight={40}
                 initialYAxisWidth={50}

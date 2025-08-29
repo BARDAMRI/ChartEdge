@@ -18,6 +18,11 @@ export type AxesOptions = {
     numberOfYTicks: number;
 }
 
+export type CanvasSizes = {
+    width: number;
+    height: number;
+}
+
 
 export type DeepPartial<T> = {
     [K in keyof T]?: T[K] extends object ? DeepPartial<NonNullable<T[K]>> : T[K];
