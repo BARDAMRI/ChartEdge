@@ -69,7 +69,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     const [startPoint, setStartPoint] = useState<DrawingPoint | null>(null);
 
     // Chart dimension state and ref
-    const [chartDimensions, setChartDimensions] = React.useState<ChartDimensionsData | null>(null);
+    const [_, setChartDimensions] = React.useState<ChartDimensionsData | null>(null);
     const chartDimensionsRef = React.useRef<ChartDimensionsData | null>(null);
 
 
@@ -90,7 +90,6 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             clientWidth: cssWidth,
             clientHeight: cssHeight,
         };
-        // Avoid useless state updates
         setChartDimensions(prev => {
             if (
                 prev &&
