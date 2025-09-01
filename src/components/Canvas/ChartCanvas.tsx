@@ -77,8 +77,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         intervalsArray, visibleRange, hoverPoint, canvasSizes.width, canvasSizes.height
     );
 
-    // Effect to compute and update chartDimensions when measured canvas size or DPR change
-    React.useEffect(() => {
+    useEffect(() => {
         const dpr = window.devicePixelRatio || 1;
         const cssWidth = Math.max(0, canvasSizes?.width || 0);
         const cssHeight = Math.max(0, canvasSizes?.height || 0);
@@ -109,8 +108,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         });
     }, [canvasSizes?.width, canvasSizes?.height]);
 
-    // Effect to update on window resize (e.g. DPR/zoom switches)
-    React.useEffect(() => {
+    useEffect(() => {
         const onResize = () => {
             const dpr = window.devicePixelRatio || 1;
             const cssWidth = Math.max(0, canvasSizes?.width || 0);
@@ -190,7 +188,13 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 }
                 histBackBufferCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 histBackBufferCtx.clearRect(0, 0, hRect.width, hRect.height);
-                drawHistogramChart(histBackBufferCtx, renderContext, chartOptions);
+
+                const histogramRenderContext = {
+                    ...renderContext,
+                    canvasWidth: renderContext.canvasWidth,
+                    canvasHeight: hRect.height
+                };
+                drawHistogramChart(histBackBufferCtx, histogramRenderContext, chartOptions);
             }
         }
     }, [renderContext, chartType, chartOptions, drawings, selectedIndex, canvasSizes, visiblePriceRange]);
@@ -239,7 +243,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 }
                 hctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 hctx.clearRect(0, 0, hRect.width, hRect.height);
-                hctx.drawImage(histBackBuffer, panOffset, 0);
+                hctx.drawImage(histBackBuffer, -panOffset, 0, hRect.width, hRect.height);
             }
         }
 

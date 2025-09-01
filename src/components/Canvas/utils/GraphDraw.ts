@@ -389,3 +389,4 @@ export function drawHistogramChart(ctx: CanvasRenderingContext2D, context: Chart
     }
     ctx.restore();
 }
+
