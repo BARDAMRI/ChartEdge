@@ -2,22 +2,43 @@ import styled from 'styled-components';
 
 interface CanvasContainerProps {
     $heightPrecent: number;
+    $zIndex?: number;
 }
 
-export const StyledCanvas = styled.canvas<CanvasContainerProps>`
+export const StyledCanvasNonResponsive = styled.canvas<CanvasContainerProps>`
     display: flex;
-    position: relative;
     width: 100% !important;
     height: ${({$heightPrecent}) => `${$heightPrecent}%`} !important;
     padding: 0;
     margin: 0;
+    bottom: 0;
     background-color: transparent;
     border: none;
-    pointer-events: auto;
     touch-action: none;
     overscroll-behavior: none;
     font-size: 12px;
+    position: absolute;
+    z-index: ${({$zIndex}) => ($zIndex !== undefined ? $zIndex : 0)};
+    pointer-events: none;
 `;
+
+export const StyledCanvasResponsive = styled.canvas<CanvasContainerProps>`
+    display: flex;
+    width: 100% !important;
+    height: ${({$heightPrecent}) => `${$heightPrecent}%`} !important;
+    padding: 0;
+    margin: 0;
+    bottom: 0;
+    background-color: transparent;
+    border: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    font-size: 12px;
+    position: absolute;
+    z-index: ${({$zIndex}) => ($zIndex !== undefined ? $zIndex : 0)};
+    pointer-events: auto;
+`;
+
 
 interface InnerCanvasContainerProps {
     $xAxisHeight: number;
@@ -26,7 +47,12 @@ interface InnerCanvasContainerProps {
 export const InnerCanvasContainer = styled.div<InnerCanvasContainerProps>`
     position: relative;
     width: 100%;
-    height: ${({$xAxisHeight}) => `calc(100% - ${$xAxisHeight}px)`};
+    height: 100%;
+`;
+export const ChartingContainer = styled.div`
+    position: relative;
+    width: 100%;
+    height: 100%;
 `;
 
 interface HoverTooltipProps {

@@ -1,4 +1,6 @@
 import styled from 'styled-components';
+import {windowSpread} from "../types/types";
+import XAxis from "../components/Canvas/Axes/XAxis";
 
 export const ChartStageContainer = styled.div`
     display: grid;
@@ -18,18 +20,30 @@ export const LeftBar = styled.div`
     grid-column: 1;
 `;
 
-export const ChartView = styled.div`
+interface StageViewProps {
+    $yAxisWidth: number,
+    $xAxisHeight: number
+}
+
+export const ChartView = styled.div<StageViewProps>`
     display: grid;
-    grid-template-columns: var(--yAxisWidth, 50px) 1fr;
-    grid-template-rows: 1fr;
+    grid-template-columns: ${({$yAxisWidth}) => `${$yAxisWidth}px`} 1fr;
+    grid-template-rows: 1fr ${({$xAxisHeight}) => `${$xAxisHeight}px`};
     position: relative;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
 `;
-export const CanvasAxisContainer = styled.div`
+
+interface XAxisProps {
+    xAxisHeight?: number;
+}
+
+export const CanvasAxisContainer = styled.div<XAxisProps>`
     display: grid;
-    grid-template-rows: 1fr var(--xAxisHeight, 40px);
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    grid-template-rows: 1fr ${({xAxisHeight}) => (xAxisHeight ? `${xAxisHeight}px` : '40px')};
     grid-template-columns: 1fr;
     height: 100%;
     min-width: 0;
@@ -44,6 +58,8 @@ export const LeftYAxisContainer = styled.div`
     min-width: 0;
     min-height: 0;
     box-sizing: border-box;
+    grid-column: 1;
+    grid-row: 1 / span 1;
 `;
 
 export const RightYAxisContainer = styled.div`
@@ -52,12 +68,15 @@ export const RightYAxisContainer = styled.div`
     min-width: 0;
     min-height: 0;
     box-sizing: border-box;
+    grid-column: 2;
+    grid-row: 1
 `;
 
-export const XAxisContainer = styled.div`
+
+export const XAxisContainer = styled.div<XAxisProps>`
     grid-row: 2;
     grid-column: 1;
-    height: var(--xAxisHeight, 40px);
+    height: ${({xAxisHeight}) => (xAxisHeight ? `${xAxisHeight}px` : '40px')};
     box-sizing: border-box;
 `;
 

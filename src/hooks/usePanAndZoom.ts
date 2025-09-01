@@ -21,7 +21,8 @@ export function usePanAndZoom(
     visibleRange: TimeRange,
     setVisibleRange: (range: TimeRange) => void,
     intervalSeconds: number,
-    handlers: PanAndZoomHandlers
+    handlers: PanAndZoomHandlers,
+    getCssWidth?: () => number, // optional external CSS width provider
 ) {
     const wheelingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -32,6 +33,7 @@ export function usePanAndZoom(
         intervalsArray,
         intervalSeconds,
         handlers,
+        getCssWidth,
     });
 
     useEffect(() => {
@@ -41,6 +43,7 @@ export function usePanAndZoom(
             intervalsArray,
             intervalSeconds,
             handlers,
+            getCssWidth,
         };
     });
 
@@ -96,8 +99,9 @@ export function usePanAndZoom(
                 const zoomAmount = -duration * ZOOM_SENSITIVITY * (e.deltaY / 100);
                 if (Math.abs(e.deltaY) < 1) return;
                 const rect = canvas.getBoundingClientRect();
+                const cssWidth = latestPropsRef.current.getCssWidth?.() ?? rect.width;
                 const mouseX = e.clientX - rect.left;
-                const mouseRatio = mouseX / canvas.clientWidth;
+                const mouseRatio = cssWidth > 0 ? (mouseX / cssWidth) : 0.5;
 
                 let newStart = visibleRange.start + zoomAmount * mouseRatio;
                 let newEnd = visibleRange.end - zoomAmount * (1 - mouseRatio);
@@ -110,7 +114,9 @@ export function usePanAndZoom(
                 setVisibleRange({start: newStart, end: newEnd});
             } else { // PAN with horizontal scroll
                 const duration = visibleRange.end - visibleRange.start;
-                const timePerPixel = duration / canvas.clientWidth;
+                const cssWidth = latestPropsRef.current.getCssWidth?.() ?? canvas.getBoundingClientRect().width;
+                const timePerPixel = cssWidth > 0 ? (duration / cssWidth) : 0;
+                if (!isFinite(timePerPixel) || timePerPixel === 0) return;
                 const timeOffset = e.deltaX * timePerPixel;
                 let newStart = visibleRange.start + timeOffset;
 

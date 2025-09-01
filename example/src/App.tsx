@@ -79,7 +79,7 @@ const intervalsArray: Interval[] = makeSimpleIntervals({
     startTime: 1688000000,
     startPrice: 100,
     intervalSec: 300,
-    count: 20,
+    count: 200,
     seed: 4242,
     driftPerBar: 0.03,
     vol: 0.7,
@@ -87,12 +87,11 @@ const intervalsArray: Interval[] = makeSimpleIntervals({
 });
 const minPrice = Math.min(...intervalsArray.map(candle => [candle.l, candle.h, candle.c, candle.o]).flat());
 const maxPrice = Math.max(...intervalsArray.map(candle => [candle.l, candle.h, candle.c, candle.o]).flat());
-
+const lastCandleTime = intervalsArray[intervalsArray.length - 1].t;
 const exampleVisibleRange = {
     start: intervalsArray[0].t,
-    end: intervalsArray[intervalsArray.length - 1].t + 3601 // Add one hour to the end,
+    end: lastCandleTime + 300 // Use the intervalSec value
 };
-
 export default function App() {
     return (
         <div className={'app-root'}>

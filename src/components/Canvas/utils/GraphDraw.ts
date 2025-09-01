@@ -3,11 +3,23 @@ import type {ChartOptions, ChartRenderContext} from "../../../types/chartOptions
 import {PriceRange, TimeRange} from "../../../types/Graph";
 import {DeepRequired} from "../../../types/types";
 
+// -----------------------------------------------------------------------------
+// TIME SEMANTICS: We assume throughout this file that Interval.t is the
+// **START** time of the interval (candle).When a center timestamp is needed
+// (e.g., for line/area interpolation), we explicitly add intervalSeconds/2.
+// -----------------------------------------------------------------------------
+const xFromStart = (tStart: number, clientWidth: number, visibleRange: TimeRange) =>
+    clientWidth * ((tStart - visibleRange.start) / (visibleRange.end - visibleRange.start));
+const xFromCenter = (tStart: number, intervalSeconds: number, clientWidth: number, visibleRange: TimeRange) =>
+    clientWidth * (((tStart + intervalSeconds / 2) - visibleRange.start) / (visibleRange.end - visibleRange.start));
+
 // =================================================================================
 // == HELPER FUNCTIONS (Unchanged)
 // =================================================================================
 
-const priceToY = (p: number, clientHeight: number, price: PriceRange) => clientHeight * (1 - (p - price.min) / price.range);
+const priceToY = (p: number, clientHeight: number, price: PriceRange) => {
+    return clientHeight * (1 - (p - price.min) / price.range);
+}
 const timeToX = (time: number, clientWidth: number, visibleRange: TimeRange) => clientWidth * ((time - visibleRange.start) / (visibleRange.end - visibleRange.start));
 
 
@@ -54,11 +66,6 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
     const loopEndIndex = Math.min(allIntervals.length - 1, visibleEndIndex + 1);
 
     if (loopEndIndex < loopStartIndex || allIntervals.length === 0) {
-        // console.error("[DEBUG] EXIT: Invalid loop indices or no intervals.", {
-        //     loopStartIndex,
-        //     loopEndIndex,
-        //     count: allIntervals.length
-        // });
         return;
     }
 
@@ -69,8 +76,6 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         visibleEndIndex,
         intervalSeconds
     });
-    console.log("[DEBUG] Loop range:", {loopStartIndex, loopEndIndex});
-
     if (!isFinite(visiblePriceRange.min) || !isFinite(visiblePriceRange.max)) {
         console.error("[DEBUG] EXIT: Price range is not finite. Check your data for invalid values (NaN, Infinity).");
         return;
@@ -79,7 +84,6 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         return;
     }
 
-    const priceToY = (p: number) => canvasHeight * (1 - (p - visiblePriceRange.min) / visiblePriceRange.range);
     const visibleDuration = visibleRange.end - visibleRange.start;
     if (visibleDuration <= 0) {
         console.error("[DEBUG] EXIT: visibleDuration is zero or negative.");
@@ -95,34 +99,45 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         const candle = allIntervals[i];
         if (!candle) continue;
 
-        const x = ((candle.t - visibleRange.start) / visibleDuration) * canvasWidth;
+        // t is the START of the candle. xLeft is the start edge in CSS px.
+        const xLeft = xFromStart(candle.t, canvasWidth, visibleRange);
+        const xRight = xLeft + candleWidth;
 
-        if (x + candleWidth < 0 || x > canvasWidth) {
+        // Skip if completely outside the viewport
+        if (xRight < 0 || xLeft > canvasWidth) {
             continue;
         }
 
         candlesDrawn++;
 
-        const highY = priceToY(candle.h);
-        const lowY = priceToY(candle.l);
-        const openY = priceToY(candle.o);
-        const closeY = priceToY(candle.c);
+        // Y positions from price to canvas Y (CSS px)
+        const highY = priceToY(candle.h, canvasHeight, visiblePriceRange);
+        const lowY = priceToY(candle.l, canvasHeight, visiblePriceRange);
+        const openY = priceToY(candle.o, canvasHeight, visiblePriceRange);
+        const closeY = priceToY(candle.c, canvasHeight, visiblePriceRange);
 
-        // Log the coordinates of the very first candle being drawn
+        if (candlesDrawn === 1) {
+            console.log('[CANDLE0]', {
+                i,
+                xLeft,
+                candleWidth,
+                candleMidX: xLeft + candleWidth / 2,
+                y: {highY, lowY, openY, closeY},
+                canvas: {canvasWidth, canvasHeight},
+                visibleRange,
+            });
+        }
 
         const isBullish = candle.c >= candle.o;
         const color = isBullish ? (options?.base?.style?.candles?.bullColor || 'green') : (options?.base?.style?.candles?.bearColor || 'red');
         const crisp = (v: number) => Math.floor(v) + 0.5;
 
-        // Draw wick
+        // Draw wick (centered horizontally on the candle)
+        const candleMidX = xLeft + candleWidth / 2;
         ctx.beginPath();
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
-        const candleMidX = x + candleWidth / 2;
         ctx.moveTo(crisp(candleMidX), crisp(highY));
-        if (crisp(lowY) < 0) {
-            console.error("[DEBUG] WARNING: lowY is out of bounds:", {lowY, candle, i});
-        }
         ctx.lineTo(crisp(candleMidX), crisp(lowY));
         ctx.stroke();
 
@@ -130,7 +145,8 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         const bodyTop = Math.min(openY, closeY);
         const bodyHeight = Math.abs(openY - closeY);
         ctx.fillStyle = color;
-        ctx.fillRect(Math.floor(x + (candleWidth - bodyWidth) / 2), Math.floor(bodyTop), Math.ceil(bodyWidth), Math.ceil(bodyHeight) || 1);
+        const bodyLeft = Math.floor(xLeft + (candleWidth - bodyWidth) / 2);
+        ctx.fillRect(bodyLeft, Math.floor(bodyTop), Math.ceil(bodyWidth), Math.ceil(bodyHeight) || 1);
     }
 
 }
@@ -157,7 +173,7 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
     const localTimeToX = (t: number) => timeToX(t, canvasWidth, visibleRange);
     const localPriceToY = (p: number) => priceToY(p, canvasHeight, visiblePriceRange);
 
-    const leftX = localTimeToX(clipStart);
+    const leftX = xFromStart(clipStart, canvasWidth, visibleRange);
     const leftY = localPriceToY(interpolatedCloseAtTime(allIntervals, intervalSeconds, clipStart));
 
     ctx.beginPath();
@@ -167,12 +183,12 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
         const it = allIntervals[i];
         const centerT = it.t + intervalSeconds / 2;
         if (centerT < clipStart || centerT > clipEnd) continue;
-        const x = localTimeToX(centerT);
+        const x = xFromCenter(it.t, intervalSeconds, canvasWidth, visibleRange);
         const y = localPriceToY(it.c);
         ctx.lineTo(x, y);
     }
 
-    const rightX = localTimeToX(clipEnd);
+    const rightX = xFromStart(clipEnd, canvasWidth, visibleRange);
     const rightY = localPriceToY(interpolatedCloseAtTime(allIntervals, intervalSeconds, clipEnd));
     ctx.lineTo(rightX, rightY);
     ctx.stroke();
@@ -191,7 +207,8 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, context: ChartRende
     if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
     if (!isFinite(visiblePriceRange.range) || visiblePriceRange.range <= 0) return;
 
-    const xOf = (t: number) => canvasWidth * ((t - visibleRange.start) / (visibleRange.end - visibleRange.start));
+    const xOf = (t: number) => xFromStart(t, canvasWidth, visibleRange);
+    const xCenterOf = (tStart: number) => xFromCenter(tStart, intervalSeconds, canvasWidth, visibleRange);
     const yOf = (p: number) => canvasHeight * (1 - (p - visiblePriceRange.min) / visiblePriceRange.range);
 
     const dataStart = allIntervals[0].t;
@@ -219,7 +236,7 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, context: ChartRende
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
         const cT = centerOf(i);
         if (cT >= clipStartTime && cT <= clipEndTime) {
-            pts.push({x: xOf(cT), y: yOf(allIntervals[i].c)});
+            pts.push({x: xCenterOf(allIntervals[i].t), y: yOf(allIntervals[i].c)});
         }
     }
 
@@ -227,7 +244,7 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, context: ChartRende
         const val = interpolatedCloseAtTime(allIntervals, intervalSeconds, clipEndTime);
         pts.push({x: xOf(clipEndTime), y: yOf(val)});
     } else {
-        pts.push({x: xOf(lastCtr), y: yOf(allIntervals[lastIdx].c)});
+        pts.push({x: xCenterOf(allIntervals[lastIdx].t), y: yOf(allIntervals[lastIdx].c)});
     }
 
     if (pts.length < 2) return;
@@ -350,15 +367,13 @@ export function drawHistogramChart(ctx: CanvasRenderingContext2D, context: Chart
     }
     if (maxVolume <= 0) return;
 
-    const xAt = (t: number) => ((t - visibleRange.start) / visibleDuration) * canvasWidth;
-
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, options?.base?.style?.histogram?.opacity ?? 0.6));
     ctx.lineWidth = 0;
 
     for (let i = visibleStartIndex; i <= visibleEndIndex; i++) {
         const it = allIntervals[i];
-        const xFull = xAt(it.t);
+        const xFull = xFromStart(it.t, canvasWidth, visibleRange);
         const x = xFull + halfPad;
         if (x > canvasWidth || x + barWidth < 0) continue;
 

@@ -195,8 +195,7 @@ export function generateAndDrawYTicks(
     minValue: number,
     maxValue: number,
     numberOfYTicks: number,
-    xAxisHeight: number,
-    yAxisPosition: AxesPosition,
+    yAxisPosition: AxesPosition = AxesPosition.left,
     tickColor: string = 'black',
     labelColor: string = 'black',
     labelFont: string = '12px Arial',
@@ -212,7 +211,7 @@ export function generateAndDrawYTicks(
     const height = canvas.clientHeight;
     const paddingTop = 10;
     const paddingBottom = 10;
-    const effectiveHeight = height - xAxisHeight - paddingTop - paddingBottom;
+    const effectiveHeight = height - paddingTop - paddingBottom;
     const range = maxValue - minValue;
 
     ctx.clearRect(0, 0, width, height);
@@ -227,7 +226,7 @@ export function generateAndDrawYTicks(
         };
     });
 
-    drawYTicks(ctx, ticks, width, xAxisHeight, yAxisPosition, tickColor, labelColor, labelFont, tickLength, labelOffset);
+    drawYTicks(ctx, ticks, width, yAxisPosition, tickColor, labelColor, labelFont, tickLength, labelOffset);
 }
 
 function drawXTicks(
@@ -289,7 +288,6 @@ function drawYTicks(
     ctx: CanvasRenderingContext2D,
     ticks: { y: number; label: string }[],
     width: number,
-    xAxisHeight: number,
     yAxisPosition: AxesPosition,
     tickColor: string,
     labelColor: string,
@@ -307,7 +305,7 @@ function drawYTicks(
     const axisX = yAxisPosition == AxesPosition.left ? width : 0;
     ctx.beginPath();
     ctx.moveTo(axisX, 0);
-    ctx.lineTo(axisX, ctx.canvas.clientHeight - xAxisHeight);
+    ctx.lineTo(axisX, ctx.canvas.clientHeight);
     ctx.stroke();
 
     for (const tick of ticks) {

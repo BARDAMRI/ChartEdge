@@ -13,14 +13,10 @@ import {
 import {PriceRange, TimeRange} from "../../types/Graph";
 import {Interval} from "../../types/Interval";
 import {ChartOptions, ChartType, TimeDetailLevel} from "../../types/chartOptions";
-import {AxesPosition, DeepRequired} from "../../types/types";
+import {AxesPosition, DeepRequired, windowSpread} from "../../types/types";
 import {useElementSize} from '../../hooks/useElementSize';
 import {findPriceRange} from "./utils/helpers";
 
-const TOP_BAR_PX = 40;
-const LEFT_BAR_PX = 40;
-const INITIAL_X_AXIS_HEIGHT = 40;
-const INITIAL_Y_AXIS_WIDTH = 50;
 // --- Simple helpers ---
 const median = (nums: number[]): number => {
     if (nums.length === 0) return 0;
@@ -112,7 +108,11 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         startIndex: number,
         endIndex: number
     }>({start: 0, end: 0, startIndex: 0, endIndex: 0});
-    const [visiblePriceRange, setVisiblePriceRange] = React.useState<PriceRange>({min: 0, max: 100, range: 100});
+    const [visiblePriceRange, setVisiblePriceRange] = React.useState<PriceRange>({
+        min: Math.min(...intervalsArray.map(inter => inter?.l || 0)),
+        max: Math.max(...intervalsArray.map(inter => inter?.h || 0)),
+        range: Math.max(...intervalsArray.map(inter => inter?.h || 0)) - Math.min(...intervalsArray.map(inter => inter?.l || 0))
+    });
 
     function updateVisibleRange(newRangeTime: TimeRange) {
         if (!intervalsArray || intervalsArray.length === 0) return;
@@ -170,8 +170,8 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         }
     }, [visibleRange, intervalsArray]);
 
-    const gridRows = useMemo(() => (showTopBar ? `${TOP_BAR_PX}px 1fr` : `1fr`), [showTopBar]);
-    const gridCols = useMemo(() => (showLeftBar ? `${LEFT_BAR_PX}px 1fr` : `1fr`), [showLeftBar]);
+    const gridRows = useMemo(() => (showTopBar ? `${windowSpread.TOP_BAR_PX}px 1fr` : `1fr`), [showTopBar]);
+    const gridCols = useMemo(() => (showLeftBar ? `${windowSpread.LEFT_BAR_PX}px 1fr` : `1fr`), [showLeftBar]);
 
     return (
         <ChartStageContainer
@@ -185,35 +185,35 @@ export const ChartStage: React.FC<ChartStageProps> = ({
             {showTopBar && (
                 <TopBar
                     className="top-toolbar"
-                    style={{gridColumn: showLeftBar ? '1 / span 2' : '1', height: TOP_BAR_PX}}
+                    style={{gridColumn: showLeftBar ? '1 / span 2' : '1', height: windowSpread.TOP_BAR_PX}}
                 />
             )}
 
             {showLeftBar && (
                 <LeftBar
                     className="left-toolbar"
-                    style={{gridRow: showTopBar ? 2 : 1, width: LEFT_BAR_PX}}
+                    style={{gridRow: showTopBar ? 2 : 1, width: windowSpread.LEFT_BAR_PX}}
                 />
             )}
 
             <ChartView
                 className="chart-main-cell"
+                $yAxisWidth={windowSpread.INITIAL_Y_AXIS_WIDTH}
+                $xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
                 style={{
                     gridRow: showTopBar ? 2 : 1,
                     gridColumn: showLeftBar ? 2 : 1,
-                    ['--yAxisWidth' as any]: `${INITIAL_Y_AXIS_WIDTH}px`,
-                    ['--xAxisHeight' as any]: `${INITIAL_X_AXIS_HEIGHT}px`,
                 }}
             >
                 {chartOptions.axes.yAxisPosition === AxesPosition.left ? (
                     <>
                         <LeftYAxisContainer
                             className="left-y-axis-container"
-                            style={{ gridColumn: 1, width: `${INITIAL_Y_AXIS_WIDTH}px` }}
+                            style={{width: `${windowSpread.INITIAL_Y_AXIS_WIDTH}px`}}
                         >
                             <YAxis
                                 yAxisPosition={AxesPosition.left}
-                                xAxisHeight={INITIAL_X_AXIS_HEIGHT}
+                                xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
                                 minPrice={visiblePriceRange.min}
                                 maxPrice={visiblePriceRange.max}
                                 numberOfYTicks={numberOfYTicks}
@@ -222,7 +222,6 @@ export const ChartStage: React.FC<ChartStageProps> = ({
 
                         <CanvasAxisContainer
                             className="canvas-axis-container"
-                            style={{ gridColumn: 2 }}
                         >
                             <CanvasContainer ref={canvasAreaRef} className="canvas-container">
                                 {canvasSizes?.width > 0 && canvasSizes?.height > 0 && (
@@ -235,10 +234,10 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                         setIsDrawing={setIsDrawing}
                                         setVisibleRange={updateVisibleRange}
                                         visiblePriceRange={visiblePriceRange}
-                                        xAxisHeight={INITIAL_X_AXIS_HEIGHT}
                                         chartType={chartType}
                                         chartOptions={chartOptions}
                                         canvasSizes={canvasSizes}
+                                        windowSpread={windowSpread}
                                     />
                                 )}
                             </CanvasContainer>
@@ -250,7 +249,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                     timeDetailLevel={timeDetailLevel}
                                     timeFormat12h={timeFormat12h}
                                     visibleRange={visibleRange}
-                                    xAxisHeight={INITIAL_X_AXIS_HEIGHT}
+                                    xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
                                 />
                             </XAxisContainer>
                         </CanvasAxisContainer>
@@ -259,7 +258,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                     <>
                         <CanvasAxisContainer
                             className="canvas-axis-container"
-                            style={{ gridColumn: 1 }}
+                            style={{gridColumn: 1, gridRow: '1 / span 2'}}
                         >
                             <CanvasContainer ref={canvasAreaRef} className="canvas-container">
                                 {canvasSizes?.width > 0 && canvasSizes?.height > 0 && (
@@ -272,10 +271,10 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                         setIsDrawing={setIsDrawing}
                                         setVisibleRange={updateVisibleRange}
                                         visiblePriceRange={visiblePriceRange}
-                                        xAxisHeight={INITIAL_X_AXIS_HEIGHT}
                                         chartType={chartType}
                                         chartOptions={chartOptions}
                                         canvasSizes={canvasSizes}
+                                        windowSpread={windowSpread}
                                     />
                                 )}
                             </CanvasContainer>
@@ -287,18 +286,18 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                     timeDetailLevel={timeDetailLevel}
                                     timeFormat12h={timeFormat12h}
                                     visibleRange={visibleRange}
-                                    xAxisHeight={INITIAL_X_AXIS_HEIGHT}
+                                    xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
                                 />
                             </XAxisContainer>
                         </CanvasAxisContainer>
 
                         <RightYAxisContainer
                             className="right-y-axis-container"
-                            style={{ gridColumn: 2, width: `${INITIAL_Y_AXIS_WIDTH}px` }}
+                            style={{width: `${windowSpread.INITIAL_Y_AXIS_WIDTH}px`}}
                         >
                             <YAxis
                                 yAxisPosition={AxesPosition.right}
-                                xAxisHeight={INITIAL_X_AXIS_HEIGHT}
+                                xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
                                 minPrice={visiblePriceRange.min}
                                 maxPrice={visiblePriceRange.max}
                                 numberOfYTicks={numberOfYTicks}

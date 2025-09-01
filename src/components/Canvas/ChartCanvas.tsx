@@ -1,6 +1,12 @@
 import React, {useRef, useEffect, useState, useCallback, useMemo} from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
-import {StyledCanvas, InnerCanvasContainer, HoverTooltip} from '../../styles/ChartCanvas.styles';
+import {
+    StyledCanvasNonResponsive,
+    InnerCanvasContainer,
+    HoverTooltip,
+    ChartingContainer,
+    StyledCanvasResponsive
+} from '../../styles/ChartCanvas.styles';
 import {ChartOptions, ChartType} from "../../types/chartOptions";
 import {drawAreaChart, drawBarChart, drawCandlestickChart, drawHistogramChart, drawLineChart} from "./utils/GraphDraw";
 import {drawDrawings} from './utils/drawDrawings';
@@ -8,10 +14,10 @@ import {useChartData} from '../../hooks/useChartData';
 import {usePanAndZoom} from '../../hooks/usePanAndZoom';
 import {Interval} from "../../types/Interval";
 import {DrawingPoint} from "../../types/Drawings";
-import {PriceRange, TimeRange} from "../../types/Graph";
+import {PriceRange, TimeRange, ChartDimensionsData} from "../../types/Graph";
 import {LineShape} from "../Drawing/LineShape";
 import {RectangleShape} from "../Drawing/RectangleShape";
-import {CanvasSizes, DeepRequired} from "../../types/types";
+import {CanvasSizes, DeepRequired, WindowSpreadOptions} from "../../types/types";
 
 interface ChartCanvasProps {
     intervalsArray: Interval[];
@@ -22,11 +28,11 @@ interface ChartCanvasProps {
     visibleRange: TimeRange;
     setVisibleRange: (range: TimeRange) => void;
     visiblePriceRange: PriceRange;
-    xAxisHeight: number;
     chartType: ChartType;
     chartOptions: DeepRequired<ChartOptions>;
     canvasSizes: CanvasSizes;
     parentContainerRef?: React.RefObject<HTMLDivElement>;
+    windowSpread: WindowSpreadOptions;
 }
 
 export const ChartCanvas: React.FC<ChartCanvasProps> = ({
@@ -38,11 +44,11 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             isDrawing,
                                                             setIsDrawing,
                                                             selectedIndex,
-                                                            xAxisHeight,
                                                             chartType,
                                                             chartOptions,
                                                             canvasSizes,
                                                             parentContainerRef,
+                                                            windowSpread,
                                                         }) => {
     const {mode} = useMode();
 
@@ -62,10 +68,68 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
     const [startPoint, setStartPoint] = useState<DrawingPoint | null>(null);
 
+    // Chart dimension state and ref
+    const [chartDimensions, setChartDimensions] = React.useState<ChartDimensionsData | null>(null);
+    const chartDimensionsRef = React.useRef<ChartDimensionsData | null>(null);
+
 
     const {renderContext, hoveredCandle, intervalSeconds} = useChartData(
         intervalsArray, visibleRange, hoverPoint, canvasSizes.width, canvasSizes.height
     );
+
+    // Effect to compute and update chartDimensions when measured canvas size or DPR change
+    React.useEffect(() => {
+        const dpr = window.devicePixelRatio || 1;
+        const cssWidth = Math.max(0, canvasSizes?.width || 0);
+        const cssHeight = Math.max(0, canvasSizes?.height || 0);
+        const next: ChartDimensionsData = {
+            cssWidth,
+            cssHeight,
+            dpr,
+            width: Math.round(cssWidth * dpr),
+            height: Math.round(cssHeight * dpr),
+            clientWidth: cssWidth,
+            clientHeight: cssHeight,
+        };
+        // Avoid useless state updates
+        setChartDimensions(prev => {
+            if (
+                prev &&
+                prev.cssWidth === next.cssWidth &&
+                prev.cssHeight === next.cssHeight &&
+                prev.dpr === next.dpr &&
+                prev.width === next.width &&
+                prev.height === next.height
+            ) {
+                chartDimensionsRef.current = next;
+                return prev;
+            }
+            chartDimensionsRef.current = next;
+            return next;
+        });
+    }, [canvasSizes?.width, canvasSizes?.height]);
+
+    // Effect to update on window resize (e.g. DPR/zoom switches)
+    React.useEffect(() => {
+        const onResize = () => {
+            const dpr = window.devicePixelRatio || 1;
+            const cssWidth = Math.max(0, canvasSizes?.width || 0);
+            const cssHeight = Math.max(0, canvasSizes?.height || 0);
+            const next: ChartDimensionsData = {
+                cssWidth,
+                cssHeight,
+                dpr,
+                width: Math.round(cssWidth * dpr),
+                height: Math.round(cssHeight * dpr),
+                clientWidth: cssWidth,
+                clientHeight: cssHeight,
+            };
+            chartDimensionsRef.current = next;
+            setChartDimensions(next);
+        };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, [canvasSizes?.width, canvasSizes?.height]);
 
 
     const drawSceneToBuffer = useCallback(() => {
@@ -78,15 +142,23 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         const backBufferCtx = backBufferRef.current!.getContext('2d');
         if (!backBufferCtx) return;
 
-        const dpr = window.devicePixelRatio || 1;
-        const rect = mainCanvas.getBoundingClientRect();
+        const dims = chartDimensionsRef.current || {
+            cssWidth: Math.max(0, canvasSizes.width),
+            cssHeight: Math.max(0, canvasSizes.height),
+            dpr: window.devicePixelRatio || 1,
+            width: Math.max(0, Math.round(canvasSizes.width * (window.devicePixelRatio || 1))),
+            height: Math.max(0, Math.round(canvasSizes.height * (window.devicePixelRatio || 1))),
+            clientWidth: Math.max(0, canvasSizes.width),
+            clientHeight: Math.max(0, canvasSizes.height),
+        };
+        const {cssWidth, cssHeight, dpr} = dims;
 
-        if (backBufferRef.current!.width !== rect.width * dpr || backBufferRef.current!.height !== rect.height * dpr) {
-            backBufferRef.current!.width = rect.width * dpr;
-            backBufferRef.current!.height = rect.height * dpr;
+        if (backBufferRef.current!.width !== cssWidth * dpr || backBufferRef.current!.height !== cssHeight * dpr) {
+            backBufferRef.current!.width = cssWidth * dpr;
+            backBufferRef.current!.height = cssHeight * dpr;
         }
         backBufferCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        backBufferCtx.clearRect(0, 0, rect.width, rect.height);
+        backBufferCtx.clearRect(0, 0, cssWidth, cssHeight);
         switch (chartType) {
             case ChartType.Candlestick:
                 drawCandlestickChart(backBufferCtx, renderContext, chartOptions, visiblePriceRange);
@@ -126,23 +198,32 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     const drawFrame = useCallback(() => {
         requestAnimationIdRef.current = null;
 
-        const dpr = window.devicePixelRatio || 1;
         const panOffset = panOffsetRef.current;
+        console.log('Current Pan Offset:', panOffset);
+        const dims = chartDimensionsRef.current || {
+            cssWidth: Math.max(0, canvasSizes.width),
+            cssHeight: Math.max(0, canvasSizes.height),
+            dpr: window.devicePixelRatio || 1,
+            width: Math.max(0, Math.round(canvasSizes.width * (window.devicePixelRatio || 1))),
+            height: Math.max(0, Math.round(canvasSizes.height * (window.devicePixelRatio || 1))),
+            clientWidth: Math.max(0, canvasSizes.width),
+            clientHeight: Math.max(0, canvasSizes.height),
+        };
+        const {cssWidth, cssHeight, dpr} = dims;
 
         const mainCanvas = mainCanvasRef.current;
         const backBuffer = backBufferRef.current;
         if (mainCanvas && backBuffer) {
             const mainCtx = mainCanvas.getContext('2d');
             if (mainCtx) {
-                const rect = mainCanvas.getBoundingClientRect();
-                if (mainCanvas.width !== rect.width * dpr || mainCanvas.height !== rect.height * dpr) {
-                    mainCanvas.width = rect.width * dpr;
-                    mainCanvas.height = rect.height * dpr;
+                if (mainCanvas.width !== cssWidth * dpr || mainCanvas.height !== cssHeight * dpr) {
+                    mainCanvas.width = cssWidth * dpr;
+                    mainCanvas.height = cssHeight * dpr;
                     drawSceneToBuffer();
                 }
                 mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                mainCtx.clearRect(0, 0, rect.width, rect.height);
-                mainCtx.drawImage(backBuffer, panOffset, 0);
+                mainCtx.clearRect(0, 0, cssWidth, cssHeight);
+                mainCtx.drawImage(backBuffer, -panOffsetRef.current, 0, cssWidth, cssHeight);
             }
         }
 
@@ -166,13 +247,12 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         if (hoverCanvas) {
             const hoverCtx = hoverCanvas.getContext('2d');
             if (hoverCtx) {
-                const rect = hoverCanvas.getBoundingClientRect();
-                if (hoverCanvas.width !== rect.width * dpr || hoverCanvas.height !== rect.height * dpr) {
-                    hoverCanvas.width = rect.width * dpr;
-                    hoverCanvas.height = rect.height * dpr;
+                if (hoverCanvas.width !== cssWidth * dpr || hoverCanvas.height !== cssHeight * dpr) {
+                    hoverCanvas.width = cssWidth * dpr;
+                    hoverCanvas.height = cssHeight * dpr;
                 }
                 hoverCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                hoverCtx.clearRect(0, 0, rect.width, rect.height);
+                hoverCtx.clearRect(0, 0, cssWidth, cssHeight);
                 const point = currentPointRef.current;
                 const isInteractionMode = mode === Mode.none || mode === Mode.select;
                 if (point && !isPanning && !isWheeling) {
@@ -196,45 +276,21 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                         hoverCtx.lineWidth = 1;
                         hoverCtx.beginPath();
                         hoverCtx.moveTo(point.x, 0);
-                        hoverCtx.lineTo(point.x, rect.height);
+                        hoverCtx.lineTo(point.x, cssHeight);
                         hoverCtx.moveTo(0, point.y);
-                        hoverCtx.lineTo(rect.width, point.y);
+                        hoverCtx.lineTo(cssWidth, point.y);
                         hoverCtx.stroke();
                     }
                 }
             }
         }
-    }, [isDrawing, isPanning, isWheeling, startPoint, mode, chartOptions.base.showHistogram, drawSceneToBuffer, visibleRange, visiblePriceRange]);
+    }, [isDrawing, isPanning, isWheeling, startPoint, mode, chartOptions.base.showHistogram, drawSceneToBuffer, visibleRange, visiblePriceRange, canvasSizes.width, canvasSizes.height]);
     const scheduleDraw = useCallback(() => {
         if (requestAnimationIdRef.current) return;
         requestAnimationIdRef.current = window.requestAnimationFrame(drawFrame);
     }, [drawFrame]);
 
-    useEffect(
-        () => {
-            return () => {
-                if (requestAnimationIdRef.current) {
-                    // console.log("[DEBUG] Step 7: Cleaning up animation frame.");
-                    window.cancelAnimationFrame(requestAnimationIdRef.current!);
-                }
-                if (throttleTimerRef.current) {
-                    clearTimeout(throttleTimerRef.current!);
-                }
-            };
-        },
-        []
-    );
-
-
     useEffect(() => {
-        // This effect runs ONLY when the data context itself changes.
-        // console.log("[DEBUG] ChartCanvas Debug Info:", {
-        //     width: canvasSizes.width,
-        //     height: canvasSizes.height,
-        //     isRenderContextNull: renderContext === null,
-        //     intervals: intervalsArray.length,
-        // });
-
         if (renderContext) {
             console.log('[INIT] renderContext ready', {
                 intervals: intervalsArray.length,
@@ -246,14 +302,30 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             drawSceneToBuffer();
             scheduleDraw();
         }
-    }, [renderContext]);
 
+        return () => {
+            if (requestAnimationIdRef.current) {
+                if (typeof requestAnimationIdRef.current === "number") {
+                    window.cancelAnimationFrame(requestAnimationIdRef.current);
+                }
+                requestAnimationIdRef.current = null;
+            }
+        };
+    }, [renderContext, drawSceneToBuffer, scheduleDraw]);
     useEffect(() => {
         if (!renderContext) return;
         drawSceneToBuffer();
         scheduleDraw();
-    }, [visiblePriceRange, renderContext, drawSceneToBuffer, scheduleDraw]);
 
+        return () => {
+            if (requestAnimationIdRef.current) {
+                if (typeof requestAnimationIdRef.current === "number") {
+                    window.cancelAnimationFrame(requestAnimationIdRef.current);
+                }
+                requestAnimationIdRef.current = null;
+            }
+        };
+    }, [visiblePriceRange, renderContext, drawSceneToBuffer, scheduleDraw]);
 
     const panHandlers = useMemo(() => ({
         onPanStart: () => setIsPanning(true),
@@ -282,15 +354,18 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         onWheelStart: () => setIsWheeling(true),
         onWheelEnd: () => setIsWheeling(false),
     }), [visibleRange, setVisibleRange, scheduleDraw, canvasSizes.width]);
-    // Memoized computation for main chart canvas height (so main chart does not overlap the histogram area when it is shown)
-    const mainHeightPercent = useMemo(() => {
-        if (!chartOptions.base.showHistogram) return 100;
-        const r = Math.max(0.1, Math.min(0.6, chartOptions.base.style.histogram.heightRatio));
-        return Math.max(0, Math.min(100, Math.round((1 - r) * 100)));
-    }, [chartOptions.base.showHistogram, chartOptions.base.style.histogram.heightRatio]);
 
     const isInteractionMode = mode === Mode.none || mode === Mode.select;
-    usePanAndZoom(hoverCanvasRef, isInteractionMode, intervalsArray, visibleRange, setVisibleRange, intervalSeconds, panHandlers);
+    usePanAndZoom(
+        hoverCanvasRef,
+        isInteractionMode,
+        intervalsArray,
+        visibleRange,
+        setVisibleRange,
+        intervalSeconds,
+        panHandlers,
+        () => canvasSizes.width,
+    );
 
 
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -332,44 +407,45 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     };
 
     return (
-        <InnerCanvasContainer $xAxisHeight={xAxisHeight} ref={parentContainerRef}>
-            <div style={{position: "relative", width: "100%", height: "100%"}}>
-                <StyledCanvas
+        <InnerCanvasContainer className={'inner-canvas-container'} $xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
+                              ref={parentContainerRef}>
+            <ChartingContainer className={'charting-container'}>
+                <StyledCanvasNonResponsive
+                    className={'chart-data-canvas'}
                     ref={mainCanvasRef}
-                    $heightPrecent={mainHeightPercent}
-                    style={{position: "absolute", zIndex: 1, pointerEvents: "none"}}
+                    $zIndex={1}
+                    $heightPrecent={100}
                 />
 
                 {chartOptions.base.showHistogram && (
-                    <StyledCanvas
+                    <StyledCanvasNonResponsive
+                        className={'histogram-canvas'}
                         ref={histCanvasRef}
                         $heightPrecent={Math.round(Math.max(0.1, Math.min(0.6, chartOptions.base.style.histogram.heightRatio)) * 100)}
+                        $zIndex={2}
                         style={{
-                            position: "absolute",
                             opacity: chartOptions.base.style.histogram.opacity,
                             bottom: 0,
-                            zIndex: 2,
-                            pointerEvents: "none"
                         }}
                     />
                 )}
 
-                <StyledCanvas
+                <StyledCanvasResponsive
+                    className={'drawing-interaction-canvas'}
                     ref={hoverCanvasRef}
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
                     onMouseDown={handleMouseDown}
                     onMouseUp={handleMouseUp}
                     $heightPrecent={100}
+                    $zIndex={3}
                     style={{
-                        position: "absolute",
-                        zIndex: 3,
                         cursor: isInteractionMode ? (isPanning ? 'grabbing' : 'grab') : 'crosshair'
                     }}
                 />
-            </div>
+            </ChartingContainer>
             {hoveredCandle && !isPanning && !isDrawing && !isWheeling && (
-                <HoverTooltip $isPositive={hoveredCandle.c > hoveredCandle.o}>
+                <HoverTooltip className={'intervals-data-tooltip'} $isPositive={hoveredCandle.c > hoveredCandle.o}>
                     Time: {new Date(hoveredCandle.t * 1000).toLocaleString()} |
                     O: {hoveredCandle.o} | H: {hoveredCandle.h} | L: {hoveredCandle.l} | C: {hoveredCandle.c}
                     {hoveredCandle.v !== undefined && ` | V: ${hoveredCandle.v}`}

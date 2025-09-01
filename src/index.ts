@@ -2,6 +2,7 @@
 export type {SimpleChartEdgeProps} from './components/SimpleChartEdge';
 export type {Interval} from './types/Interval';
 export type {TimeRange} from './types/Graph';
+export type {ChartDimensionsData} from './types/Graph';
 
 // Enums
 export {AxesPosition} from './types/types';

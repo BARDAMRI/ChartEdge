@@ -6,17 +6,15 @@ interface StyledYAxisCanvasProps {
 }
 
 export const StyledYAxisCanvas = styled.canvas<StyledYAxisCanvasProps>`
-    display: block;
-    position: relative;
+    display: flex;
     width: 100%;
-    height: 100%;
+    height: 100% !important;
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
     padding: 0;
     margin: 0;
-    background-color: white;
+    background-color: transparent;
     border: none;
     pointer-events: none;
-    left: ${({$position}) => ($position === AxesPosition.left ? '0' : 'auto')};
-    right: ${({$position}) => ($position === AxesPosition.right ? '0' : 'auto')};
-    top: 0;
-    bottom: 0;
 `;
