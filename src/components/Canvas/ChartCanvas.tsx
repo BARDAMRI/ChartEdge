@@ -202,7 +202,6 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         requestAnimationIdRef.current = null;
 
         const panOffset = panOffsetRef.current;
-        console.log('Current Pan Offset:', panOffset);
         const dims = chartDimensionsRef.current || {
             cssWidth: Math.max(0, canvasSizes.width),
             cssHeight: Math.max(0, canvasSizes.height),

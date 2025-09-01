@@ -84,9 +84,9 @@ export function usePanAndZoom(
 
             const {visibleRange, setVisibleRange, intervalsArray, intervalSeconds, handlers} = latestPropsRef.current;
             const isZoomGesture = e.ctrlKey || e.metaKey;
-            const isVerticalScroll = Math.abs(e.deltaY) > Math.abs(e.deltaX);
+            // const isVerticalScroll = Math.abs(e.deltaY) > Math.abs(e.deltaX);
 
-            if (isZoomGesture || isVerticalScroll) { // ZOOM
+            if (isZoomGesture  /* || isVerticalScroll */) { // ZOOM
                 handlers.onWheelStart();
                 if (wheelingTimeoutRef.current) {
                     clearTimeout(wheelingTimeoutRef.current!);
@@ -110,7 +110,6 @@ export function usePanAndZoom(
                 if (newEnd - newStart < minDuration) return;
 
                 newStart = Math.max(newStart, intervalsArray[0].t);
-                newEnd = Math.min(newEnd, intervalsArray[intervalsArray.length - 1].t);
                 setVisibleRange({start: newStart, end: newEnd});
             } else { // PAN with horizontal scroll
                 const duration = visibleRange.end - visibleRange.start;

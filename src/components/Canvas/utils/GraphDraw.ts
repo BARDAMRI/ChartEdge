@@ -55,7 +55,6 @@ function interpolatedCloseAtTime(all: Interval[], intervalSeconds: number, timeS
 // =================================================================================
 
 export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: DeepRequired<ChartOptions>, visiblePriceRange: PriceRange) {
-    // console.log("[DEBUG] ENTERING drawCandlestickChart");
 
     const {
         allIntervals, visibleStartIndex, visibleEndIndex, visibleRange,
@@ -69,18 +68,12 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         return;
     }
 
-    console.log("[DEBUG] Received Context:", {
-        canvasWidth,
-        canvasHeight,
-        visibleStartIndex,
-        visibleEndIndex,
-        intervalSeconds
-    });
     if (!isFinite(visiblePriceRange.min) || !isFinite(visiblePriceRange.max)) {
         console.error("[DEBUG] EXIT: Price range is not finite. Check your data for invalid values (NaN, Infinity).");
         return;
     }
     if (!isFinite(visiblePriceRange.range) || visiblePriceRange.range <= 0) {
+        console.error("[DEBUG] EXIT: visiblePriceRange.range is zero or negative.");
         return;
     }
 
@@ -115,18 +108,6 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         const lowY = priceToY(candle.l, canvasHeight, visiblePriceRange);
         const openY = priceToY(candle.o, canvasHeight, visiblePriceRange);
         const closeY = priceToY(candle.c, canvasHeight, visiblePriceRange);
-
-        if (candlesDrawn === 1) {
-            console.log('[CANDLE0]', {
-                i,
-                xLeft,
-                candleWidth,
-                candleMidX: xLeft + candleWidth / 2,
-                y: {highY, lowY, openY, closeY},
-                canvas: {canvasWidth, canvasHeight},
-                visibleRange,
-            });
-        }
 
         const isBullish = candle.c >= candle.o;
         const color = isBullish ? (options?.base?.style?.candles?.bullColor || 'green') : (options?.base?.style?.candles?.bearColor || 'red');
