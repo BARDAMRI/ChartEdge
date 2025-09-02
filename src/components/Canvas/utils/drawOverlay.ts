@@ -2,11 +2,18 @@
 // Overlay builder helpers
 // -----------------------------------------------------------------------------
 
-import {OverlayCalcSpec, OverlayPriceKey, OverlaySeries, OverlayWithCalc} from "../../../types/overlay";
-import {OverlayOptions} from "../../../types/chartOptions";
+import {
+    OverlayCalcSpec,
+    OverlayKind,
+    OverlayOptions,
+    OverlayPriceKey,
+    OverlaySeries,
+    OverlayWithCalc
+} from "../../../types/overlay";
 import type {Interval} from "../../../types/Interval";
 import type {ChartRenderContext} from "../../../types/chartOptions";
 import type {PriceRange} from "../../../types/Graph";
+import {DeepRequired} from "../../../types/types";
 
 /** Factory helpers for calculation specs */
 export const OverlaySpecs = {
@@ -48,10 +55,11 @@ export const OverlaySpecs = {
  *   makeOverlay({ lineColor: '#f90', lineWidth: 2, lineStyle: 'solid' }, OverlaySpecs.sma(20))
  */
 export function makeOverlay(
-    style: OverlayOptions,
-    calc: OverlayCalcSpec,
+    style?: DeepRequired<OverlayOptions>,
+    calc: OverlayCalcSpec = OverlaySpecs.close(),
     extras?: Pick<OverlayWithCalc, 'connectNulls' | 'useCenterX'>
 ): OverlayWithCalc {
+
     return {
         ...style,
         calc,
@@ -66,8 +74,8 @@ export function makeOverlay(
  *   const withOrange = withOverlayStyle({ lineColor: '#f90', lineWidth: 2, lineStyle: 'solid' });
  *   const sma20 = withOrange(OverlaySpecs.sma(20));
  */
-export function withOverlayStyle(style: OverlayOptions) {
-    return (calc: OverlayCalcSpec, extras?: Pick<OverlayWithCalc, 'connectNulls' | 'useCenterX'>): OverlayWithCalc =>
+export function withOverlayStyle(style?: DeepRequired<OverlayOptions>) {
+    return (calc: OverlayCalcSpec = OverlaySpecs.close(), extras?: Pick<OverlayWithCalc, 'connectNulls' | 'useCenterX'>): OverlayWithCalc =>
         makeOverlay(style, calc, extras);
 }
 
@@ -330,9 +338,7 @@ export function drawOverlays(
                 continue;
             }
 
-            let v: number | null | undefined;
-            if (typeof series.source === 'function') v = (series.source as any)(it, i);
-            else v = (series.source as any)[i];
+            const v = series.source[i];
 
             const isNullish = (v == null) || !Number.isFinite(Number(v));
             const x = getX(it.t);
@@ -407,4 +413,59 @@ export function drawOverlaysFromOptions(
 
     const series = toSeriesFromUserOverlays(context.allIntervals, overlays);
     return drawOverlays(ctx, context, visiblePriceRange, series);
+}
+
+/** Convenience: quick overlay creator with defaults.
+ *  Example: overlay('sma', { lineColor: '#f90' }, { connectNulls: false })
+ */
+export function overlay(
+    kindOrSpec?: OverlayCalcSpec | 'close' | 'open' | 'high' | 'low' | 'sma' | 'ema' | 'wma' | 'vwap' | 'bbands_mid' | 'bbands_upper' | 'bbands_lower',
+    style?: DeepRequired<OverlayOptions>,
+    extras?: Pick<OverlayWithCalc, 'connectNulls' | 'useCenterX'>
+): OverlayWithCalc {
+    let calc: OverlayCalcSpec;
+    if (!kindOrSpec) calc = OverlaySpecs.close();
+    else if (typeof kindOrSpec === 'string') {
+        const k = kindOrSpec;
+        // Map kind to a calc with sensible defaults
+        if (k === 'sma' || k === 'ema' || k === 'wma') calc = OverlaySpecs[k](20, 'close') as OverlayCalcSpec;
+        else if (k === 'bbands_mid') calc = OverlaySpecs.bbandsMid(20);
+        else if (k === 'bbands_upper') calc = OverlaySpecs.bbandsUpper(20, 2);
+        else if (k === 'bbands_lower') calc = OverlaySpecs.bbandsLower(20, 2);
+        else if (k === 'vwap') calc = OverlaySpecs.vwap();
+        else calc = OverlaySpecs[k]();
+    } else {
+        calc = kindOrSpec;
+    }
+    return makeOverlay(style, calc, extras);
+}
+
+// -----------------------------------------------------------------------------
+// Simple external entry: drawOverlay
+// Supports either an existing overlays array OR a kind/spec + optional style
+// -----------------------------------------------------------------------------
+
+export function drawOverlay(
+    ctx: CanvasRenderingContext2D,
+    context: ChartRenderContext,
+    visiblePriceRange: PriceRange,
+    overlaysOrKind?: OverlayWithCalc[] | OverlayCalcSpec | OverlayKind,
+    style?: DeepRequired<OverlayOptions>,
+    extras?: Pick<OverlayWithCalc, 'connectNulls' | 'useCenterX'>
+) {
+    let overlays: OverlayWithCalc[] | undefined;
+
+    if (Array.isArray(overlaysOrKind)) {
+        // Case 1: user supplied overlays[] directly
+        overlays = overlaysOrKind;
+    } else if (overlaysOrKind) {
+        // Case 2: user supplied a kind string or a full calc spec; build single overlay
+        const single = overlay(overlaysOrKind as any, style, extras);
+        overlays = [single];
+    } else {
+        // No input → nothing to draw
+        return;
+    }
+
+    return drawOverlaysFromOptions(ctx, context, visiblePriceRange, overlays);
 }

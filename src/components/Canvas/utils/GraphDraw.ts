@@ -3,7 +3,7 @@ import {PriceRange} from "../../../types/Graph";
 import {DeepRequired} from "../../../types/types";
 import {OverlayWithCalc} from "../../../types/overlay";
 import {interpolatedCloseAtTime, lerp, priceToY, timeToX, xFromCenter, xFromStart} from "./GraphHelpers";
-import {drawOverlaysFromOptions} from "./drawOverlay";
+import {drawOverlay} from "./drawOverlay";
 
 // =================================================================================
 // == CHART DRAWING FUNCTIONS (Corrected)
@@ -87,7 +87,7 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
 
     // --- overlays (from user options) ---
     if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
-        drawOverlaysFromOptions(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
+        drawOverlay(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[], options?.base?.style?.overlay);
     }
 }
 
@@ -135,7 +135,7 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
 
     // --- overlays (from user options) ---
     if (style.base.showOverlayLine && style.base.overlays && style.base.overlays.length) {
-        drawOverlaysFromOptions(ctx, context, visiblePriceRange, style.base.overlays as OverlayWithCalc[]);
+        drawOverlay(ctx, context, visiblePriceRange, style.base.overlays as OverlayWithCalc[]);
     }
 }
 
@@ -219,7 +219,7 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, context: ChartRende
 
     // --- overlays (from user options) ---
     if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
-        drawOverlaysFromOptions(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
+        drawOverlay(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
     }
 }
 
@@ -282,7 +282,7 @@ export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRender
 
     // --- overlays (from user options) ---
     if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
-        drawOverlaysFromOptions(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
+        drawOverlay(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
     }
 }
 

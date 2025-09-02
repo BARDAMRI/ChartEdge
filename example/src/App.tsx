@@ -1,7 +1,8 @@
 import type {Interval} from 'chartedge';
 import {AxesPosition, ChartType, SimpleChartEdge, TimeDetailLevel} from 'chartedge';
 import './App.css';
-import {OverlaySpecs, withOverlayStyle} from "../../src/components/Canvas/utils/drawOverlay.ts";
+import {OverlaySpecs, withOverlayStyle, overlay} from "../../src/components/Canvas/utils/drawOverlay.ts";
+import {OverlayOptions} from "../../src/types/overlay.ts";
 
 function simplePRNG(seed = 12345) {
     // Tiny LCG (deterministic)
@@ -59,12 +60,18 @@ function makeSimpleIntervals(params: {
         const h = Math.max(o, c) + wigUp;
         const l = Math.min(o, c) - wigDn;
 
+        // Synthetic volume so VWAP overlays have data
+        const baseVol = 1200; // arbitrary baseline
+        const volJitter = (rng.rand() - 0.5) * 2 * 300; // ±300 variation
+        const v = Math.max(1, Math.round(baseVol + volJitter));
+
         out.push({
             t,
             o: +o.toFixed(2),
             h: +h.toFixed(2),
             l: +l.toFixed(2),
             c: +c.toFixed(2),
+            v,
         });
 
         lastClose = c;
@@ -75,10 +82,11 @@ function makeSimpleIntervals(params: {
 }
 
 // ---- Example: 200 bars of 5m starting at 1688000000 around price 100 ----
+const INTERVAL_SEC = 300; // 5 minutes
 const intervalsArray: Interval[] = makeSimpleIntervals({
     startTime: 1688000000,
     startPrice: 100,
-    intervalSec: 300,
+    intervalSec: INTERVAL_SEC,
     count: 200,
     seed: 4242,
     driftPerBar: 0.03,
@@ -90,15 +98,20 @@ const maxPrice = Math.max(...intervalsArray.map(candle => [candle.l, candle.h, c
 const lastCandleTime = intervalsArray[intervalsArray.length - 1].t;
 const exampleVisibleRange = {
     start: intervalsArray[0].t,
-    end: lastCandleTime + 300 // Use the intervalSec value
+    end: lastCandleTime + INTERVAL_SEC // Use the intervalSec value
 };
-const withOrange = withOverlayStyle({lineColor: '#ff8800', lineWidth: 2, lineStyle: 'solid'});
-const witBlue = withOverlayStyle({lineColor: '#0095ff', lineWidth: 2, lineStyle: 'solid'});
-const witGreen = withOverlayStyle({lineColor: '#00bb0f', lineWidth: 2, lineStyle: 'solid'});
-const sma20 = withOrange(OverlaySpecs.ema(20));         // OverlayWithCalc
-const ema50 = witBlue(OverlaySpecs.ema(50, 'close')); // OverlayWithCalc
-const vwap = witGreen(OverlaySpecs.wma(1, 'close'));  // OverlayWithCalc
 
+// --- Demo overlays ---
+const withBlue = withOverlayStyle({lineColor: '#2962ff', lineWidth: 2, lineStyle: 'solid'} as OverlayOptions);
+const sma20 = withBlue(OverlaySpecs.sma(20, 'close'));
+
+// Using the simple "kind" helper with explicit full style (DeepRequired<OverlayOptions>)
+const emaDefault = overlay('ema', {lineColor: '#26a69a', lineWidth: 2, lineStyle: 'solid'} as OverlayOptions);
+const vwapOv = overlay('vwap', {lineColor: '#7e57c2', lineWidth: 1.5, lineStyle: 'solid'} as OverlayOptions);
+
+const demoOverlays = [sma20, emaDefault, vwapOv];
+
+// --- Demo overlays ---
 export default function App() {
     return (
         <div className={'app-root'}>
@@ -115,8 +128,9 @@ export default function App() {
                 chartType={ChartType.Candlestick}
                 chartOptions={{
                     base: {
-                        showOverlayLine: false,
-                        overlays: [sma20, ema50, vwap],
+                        showOverlayLine: true,
+                        // overlays: demoOverlays,
+                        overlayKinds: OverlayKind, // ← Uncomment to use simple mode instead of overlays[]
                         showHistogram: true,
                     }
                 }}

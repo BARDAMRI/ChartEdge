@@ -4,7 +4,7 @@
 import {AxesOptions, AxesPosition, ChartTheme} from "./types";
 import type {Interval} from "./Interval";
 import type {PriceRange, TimeRange} from "./Graph";
-import {LinesStyle, OverlayWithCalc} from "./overlay";
+import {LinesStyle, OverlayCalcSpec, OverlayKind, OverlayOptions, OverlayWithCalc} from "./overlay";
 
 export enum TimeDetailLevel {
     Auto = 'auto',
@@ -87,12 +87,6 @@ export interface AxesStyleOptions {
     numberFractionDigits: number; // Number of decimal places to format axis values
 }
 
-export interface OverlayOptions {
-    lineColor: string;
-    lineWidth: number;
-    lineStyle: LinesStyle;
-}
-
 // --- Main Combined Interface ---
 export type StyleOptions = {
     candles: CandleStyleOptions;
@@ -113,6 +107,7 @@ interface BaseChartOptions {
     showHistogram: boolean;
     style: StyleOptions;
     overlays?: OverlayWithCalc[];
+    overlayKinds?: (OverlayKind | OverlayCalcSpec)[];
 }
 
 export type ChartOptions = {

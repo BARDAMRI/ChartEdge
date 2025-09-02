@@ -1,6 +1,10 @@
-import type {OverlayOptions} from "./chartOptions";
-
 export type LinesStyle = 'solid' | 'dashed' | 'dotted';
+
+export interface OverlayOptions {
+    lineColor: string;
+    lineWidth: number;
+    lineStyle: LinesStyle;
+}
 
 export interface OverlayWithCalc extends OverlayOptions {
     calc: OverlayCalcSpec;
@@ -20,11 +24,20 @@ export interface OverlaySeries {
 }
 
 export type OverlayPriceKey = 'close' | 'open' | 'high' | 'low';
+export type OverlayKind =
+    | 'sma'
+    | 'ema'
+    | 'wma'
+    | 'vwap'
+    | 'bbands_mid'
+    | 'bbands_upper'
+    | 'bbands_lower';
 
 export type OverlayCalcSpec =
-    | { kind: 'close' | 'open' | 'high' | 'low' }
+    | { kind: OverlayPriceKey }
     | { kind: 'sma' | 'ema' | 'wma'; period: number; price?: OverlayPriceKey }
     | { kind: 'vwap' }
     | { kind: 'bbands_mid'; period: number; price?: OverlayPriceKey }
     | { kind: 'bbands_upper'; period: number; stddev?: number; price?: OverlayPriceKey }
-    | { kind: 'bbands_lower'; period: number; stddev?: number; price?: OverlayPriceKey };
+    | { kind: 'bbands_lower'; period: number; stddev?: number; price?: OverlayPriceKey }
+
