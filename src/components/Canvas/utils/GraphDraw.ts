@@ -1,54 +1,9 @@
-import type {Interval} from "../../../types/Interval";
 import type {ChartOptions, ChartRenderContext} from "../../../types/chartOptions";
-import {PriceRange, TimeRange} from "../../../types/Graph";
+import {PriceRange} from "../../../types/Graph";
 import {DeepRequired} from "../../../types/types";
-
-// -----------------------------------------------------------------------------
-// TIME SEMANTICS: We assume throughout this file that Interval.t is the
-// **START** time of the interval (candle).When a center timestamp is needed
-// (e.g., for line/area interpolation), we explicitly add intervalSeconds/2.
-// -----------------------------------------------------------------------------
-const xFromStart = (tStart: number, clientWidth: number, visibleRange: TimeRange) =>
-    clientWidth * ((tStart - visibleRange.start) / (visibleRange.end - visibleRange.start));
-const xFromCenter = (tStart: number, intervalSeconds: number, clientWidth: number, visibleRange: TimeRange) =>
-    clientWidth * (((tStart + intervalSeconds / 2) - visibleRange.start) / (visibleRange.end - visibleRange.start));
-
-// =================================================================================
-// == HELPER FUNCTIONS (Unchanged)
-// =================================================================================
-
-const priceToY = (p: number, clientHeight: number, price: PriceRange) => {
-    return clientHeight * (1 - (p - price.min) / price.range);
-}
-const timeToX = (time: number, clientWidth: number, visibleRange: TimeRange) => clientWidth * ((time - visibleRange.start) / (visibleRange.end - visibleRange.start));
-
-
-export function lerp(y1: number, y2: number, t: number): number {
-    return y1 * (1 - t) + y2 * t;
-}
-
-function interpolatedCloseAtTime(all: Interval[], intervalSeconds: number, timeSec: number): number {
-    if (all.length === 0) return 0;
-    const center = (i: number) => all[i].t + intervalSeconds / 2;
-    if (timeSec <= center(0)) return all[0].c;
-    const last = all.length - 1;
-    if (timeSec >= center(last)) return all[last].c;
-    let lo = 0, hi = last - 1;
-    while (lo <= hi) {
-        const mid = (lo + hi) >> 1;
-        const cMid = center(mid);
-        const cNext = center(mid + 1);
-        if (timeSec < cMid) {
-            hi = mid - 1;
-        } else if (timeSec >= cNext) {
-            lo = mid + 1;
-        } else {
-            const t = (timeSec - cMid) / (cNext - cMid);
-            return lerp(all[mid].c, all[mid + 1].c, t);
-        }
-    }
-    return all[last].c;
-}
+import {OverlayWithCalc} from "../../../types/overlay";
+import {interpolatedCloseAtTime, lerp, priceToY, timeToX, xFromCenter, xFromStart} from "./GraphHelpers";
+import {drawOverlaysFromOptions} from "./drawOverlay";
 
 // =================================================================================
 // == CHART DRAWING FUNCTIONS (Corrected)
@@ -130,6 +85,10 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         ctx.fillRect(bodyLeft, Math.floor(bodyTop), Math.ceil(bodyWidth), Math.ceil(bodyHeight) || 1);
     }
 
+    // --- overlays (from user options) ---
+    if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
+        drawOverlaysFromOptions(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
+    }
 }
 
 export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, style: DeepRequired<ChartOptions>, visiblePriceRange: PriceRange) {
@@ -173,6 +132,11 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
     const rightY = localPriceToY(interpolatedCloseAtTime(allIntervals, intervalSeconds, clipEnd));
     ctx.lineTo(rightX, rightY);
     ctx.stroke();
+
+    // --- overlays (from user options) ---
+    if (style.base.showOverlayLine && style.base.overlays && style.base.overlays.length) {
+        drawOverlaysFromOptions(ctx, context, visiblePriceRange, style.base.overlays as OverlayWithCalc[]);
+    }
 }
 
 export function drawAreaChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: DeepRequired<ChartOptions>, visiblePriceRange: PriceRange) {
@@ -252,6 +216,11 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, context: ChartRende
     ctx.lineWidth = options?.base?.style?.area?.lineWidth || 2;
     ctx.stroke();
     ctx.restore();
+
+    // --- overlays (from user options) ---
+    if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
+        drawOverlaysFromOptions(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
+    }
 }
 
 export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: DeepRequired<ChartOptions>, visiblePriceRange: PriceRange) {
@@ -310,6 +279,11 @@ export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRender
         ctx.stroke();
     }
     ctx.restore();
+
+    // --- overlays (from user options) ---
+    if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
+        drawOverlaysFromOptions(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
+    }
 }
 
 export function drawHistogramChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: DeepRequired<ChartOptions>) {
@@ -370,4 +344,3 @@ export function drawHistogramChart(ctx: CanvasRenderingContext2D, context: Chart
     }
     ctx.restore();
 }
-

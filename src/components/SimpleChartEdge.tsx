@@ -1,10 +1,9 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, { useMemo, useState} from 'react';
 import {ChartStage} from './Canvas/ChartStage';
 import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {Interval} from '../types/Interval';
 import {TimeRange} from '../types/Graph';
-import {DrawingPoint} from '../types/Drawings';
 import {AxesPosition, DeepPartial, DeepRequired} from '../types/types';
 import {ChartOptions, ChartType, StyleOptions, TimeDetailLevel} from '../types/chartOptions';
 import {ModeProvider} from '../contexts/ModeContext';
@@ -70,7 +69,8 @@ const DEFAULT_STYLES: DeepRequired<StyleOptions> = {
     },
     overlay: {
         lineColor: "#ff9800",
-        lineWidth: 1
+        lineWidth: 1,
+        lineStyle: "solid",
     },
     axes: {
         axisPosition: AxesPosition.left,
@@ -89,9 +89,10 @@ const DEFAULT_STYLES: DeepRequired<StyleOptions> = {
 export const DEFAULT_GRAPH_OPTIONS: DeepRequired<ChartOptions> = {
     base: {
         theme: 'light',
-        showOverlayLine: true,
+        showOverlayLine: false,
         showHistogram: true,
         style: DEFAULT_STYLES,
+        overlays: [],
     },
     axes: {
         yAxisPosition: AxesPosition.left,

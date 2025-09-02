@@ -4,6 +4,7 @@
 import {AxesOptions, AxesPosition, ChartTheme} from "./types";
 import type {Interval} from "./Interval";
 import type {PriceRange, TimeRange} from "./Graph";
+import {LinesStyle, OverlayWithCalc} from "./overlay";
 
 export enum TimeDetailLevel {
     Auto = 'auto',
@@ -89,6 +90,7 @@ export interface AxesStyleOptions {
 export interface OverlayOptions {
     lineColor: string;
     lineWidth: number;
+    lineStyle: LinesStyle;
 }
 
 // --- Main Combined Interface ---
@@ -110,6 +112,7 @@ interface BaseChartOptions {
     showOverlayLine: boolean;
     showHistogram: boolean;
     style: StyleOptions;
+    overlays?: OverlayWithCalc[];
 }
 
 export type ChartOptions = {

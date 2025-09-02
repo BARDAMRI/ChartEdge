@@ -1,8 +1,8 @@
 import type {Interval} from 'chartedge';
 import {AxesPosition, ChartType, SimpleChartEdge, TimeDetailLevel} from 'chartedge';
 import './App.css';
+import {OverlaySpecs, withOverlayStyle} from "../../src/components/Canvas/utils/drawOverlay.ts";
 
-// ---- Simple, deterministic OHLC generator (random-walk with small drift) ----
 function simplePRNG(seed = 12345) {
     // Tiny LCG (deterministic)
     let s = seed >>> 0;
@@ -92,6 +92,13 @@ const exampleVisibleRange = {
     start: intervalsArray[0].t,
     end: lastCandleTime + 300 // Use the intervalSec value
 };
+const withOrange = withOverlayStyle({lineColor: '#ff8800', lineWidth: 2, lineStyle: 'solid'});
+const witBlue = withOverlayStyle({lineColor: '#0095ff', lineWidth: 2, lineStyle: 'solid'});
+const witGreen = withOverlayStyle({lineColor: '#00bb0f', lineWidth: 2, lineStyle: 'solid'});
+const sma20 = withOrange(OverlaySpecs.ema(20));         // OverlayWithCalc
+const ema50 = witBlue(OverlaySpecs.ema(50, 'close')); // OverlayWithCalc
+const vwap = witGreen(OverlaySpecs.wma(1, 'close'));  // OverlayWithCalc
+
 export default function App() {
     return (
         <div className={'app-root'}>
@@ -108,7 +115,9 @@ export default function App() {
                 chartType={ChartType.Candlestick}
                 chartOptions={{
                     base: {
-                        showOverlayLine: true
+                        showOverlayLine: false,
+                        overlays: [sma20, ema50, vwap],
+                        showHistogram: true,
                     }
                 }}
             />
