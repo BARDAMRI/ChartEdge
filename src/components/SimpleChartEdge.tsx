@@ -1,10 +1,10 @@
-import React, { useMemo, useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {ChartStage} from './Canvas/ChartStage';
 import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {Interval} from '../types/Interval';
 import {TimeRange} from '../types/Graph';
-import {AxesPosition, DeepPartial, DeepRequired} from '../types/types';
+import {AxesPosition, ChartTheme, DeepPartial, DeepRequired} from '../types/types';
 import {ChartOptions, ChartType, StyleOptions, TimeDetailLevel} from '../types/chartOptions';
 import {ModeProvider} from '../contexts/ModeContext';
 import {deepMerge} from "../utils/deepMerge";
@@ -16,6 +16,7 @@ import {
     ChartStageArea,
     SettingsArea
 } from '../styles/App.styles';
+import {OverlayCalcSpec, OverlayKind, OverlayWithCalc} from "../types/overlay";
 
 export type SimpleChartEdgeProps = {
     intervalsArray?: Interval[];
@@ -93,13 +94,13 @@ export const DEFAULT_GRAPH_OPTIONS: DeepRequired<ChartOptions> = {
         showHistogram: true,
         style: DEFAULT_STYLES,
         overlays: [],
+        overlayKinds: [],
     },
     axes: {
         yAxisPosition: AxesPosition.left,
         currency: 'USD',
         numberOfYTicks: 5,
     }
-
 };
 
 export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({

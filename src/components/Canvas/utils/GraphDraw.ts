@@ -85,7 +85,6 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         ctx.fillRect(bodyLeft, Math.floor(bodyTop), Math.ceil(bodyWidth), Math.ceil(bodyHeight) || 1);
     }
 
-    // --- overlays (from user options) ---
     if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
         drawOverlay(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[], options?.base?.style?.overlay);
     }
@@ -100,7 +99,7 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
         intervalSeconds,
         canvasWidth,
         canvasHeight
-    } = context; // <-- Use context dimensions
+    } = context;
     if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
     if (!isFinite(visiblePriceRange.range) || visiblePriceRange.range <= 0) return;
 
@@ -133,7 +132,6 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
     ctx.lineTo(rightX, rightY);
     ctx.stroke();
 
-    // --- overlays (from user options) ---
     if (style.base.showOverlayLine && style.base.overlays && style.base.overlays.length) {
         drawOverlay(ctx, context, visiblePriceRange, style.base.overlays as OverlayWithCalc[]);
     }
@@ -148,7 +146,7 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, context: ChartRende
         intervalSeconds,
         canvasWidth,
         canvasHeight
-    } = context; // <-- Use context dimensions
+    } = context;
     if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
     if (!isFinite(visiblePriceRange.range) || visiblePriceRange.range <= 0) return;
 
@@ -217,7 +215,6 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, context: ChartRende
     ctx.stroke();
     ctx.restore();
 
-    // --- overlays (from user options) ---
     if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
         drawOverlay(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
     }
@@ -232,7 +229,7 @@ export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRender
         intervalSeconds,
         canvasWidth,
         canvasHeight
-    } = context; // <-- Use context dimensions
+    } = context;
     if (visibleEndIndex < visibleStartIndex || allIntervals.length === 0) return;
     if (!isFinite(visiblePriceRange.range) || visiblePriceRange.range <= 0) return;
 
@@ -280,7 +277,6 @@ export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRender
     }
     ctx.restore();
 
-    // --- overlays (from user options) ---
     if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
         drawOverlay(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
     }
