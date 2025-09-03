@@ -136,11 +136,11 @@ export default function App() {
                 chartOptions={{
                     base: {
                         showOverlayLine: true,
-                        overlays: demoOverlays,
-                        style: {
-                            overlay: {lineWidth: 1.5, lineStyle: 'solid', lineColor: '#22ff34'},
-                        },
-                        overlayKinds: [OverlayKind.sma, OverlayKind.bbands_lower],
+                        // overlays: demoOverlays,
+                        // style: {
+                        //     overlay: {lineWidth: 1.5, lineStyle: 'solid', lineColor: '#22ff34'},
+                        // },
+                        // overlayKinds: [OverlayKind.sma, OverlayKind.bbands_lower],
                         showHistogram: true,
                     }
                 }}
