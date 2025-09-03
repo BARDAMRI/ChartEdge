@@ -23,21 +23,27 @@ export interface OverlaySeries {
     useCenterX: boolean;       // If true, plot points at the center of the candle interval.
 }
 
-export type OverlayPriceKey = 'close' | 'open' | 'high' | 'low';
-export type OverlayKind =
-    | 'sma'
-    | 'ema'
-    | 'wma'
-    | 'vwap'
-    | 'bbands_mid'
-    | 'bbands_upper'
-    | 'bbands_lower';
+export enum OverlayPriceKey {
+    close = 'close',
+    open = 'open',
+    high = 'high',
+    low = 'low',
+}
+
+export enum OverlayKind {
+    sma = 'sma',
+    ema = 'ema',
+    wma = 'wma',
+    vwap = 'vwap',
+    bbands_mid = 'bbands_mid',
+    bbands_upper = 'bbands_upper',
+    bbands_lower = 'bbands_lower',
+}
 
 export type OverlayCalcSpec =
     | { kind: OverlayPriceKey }
-    | { kind: 'sma' | 'ema' | 'wma'; period: number; price?: OverlayPriceKey }
-    | { kind: 'vwap' }
-    | { kind: 'bbands_mid'; period: number; price?: OverlayPriceKey }
-    | { kind: 'bbands_upper'; period: number; stddev?: number; price?: OverlayPriceKey }
-    | { kind: 'bbands_lower'; period: number; stddev?: number; price?: OverlayPriceKey }
-
+    | { kind: OverlayKind.sma | OverlayKind.ema | OverlayKind.wma; period: number; price?: OverlayPriceKey }
+    | { kind: OverlayKind.vwap }
+    | { kind: OverlayKind.bbands_mid; period: number; price?: OverlayPriceKey }
+    | { kind: OverlayKind.bbands_upper; period: number; stddev?: number; price?: OverlayPriceKey }
+    | { kind: OverlayKind.bbands_lower; period: number; stddev?: number; price?: OverlayPriceKey };

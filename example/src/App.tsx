@@ -1,8 +1,15 @@
 import type {Interval} from 'chartedge';
-import {AxesPosition, ChartType, SimpleChartEdge, TimeDetailLevel} from 'chartedge';
+import {
+    ChartType,
+    OverlayKind,
+    SimpleChartEdge,
+    TimeDetailLevel,
+    OverlaySpecs,
+    overlay,
+    withOverlayStyle,
+    OverlayPriceKey
+} from 'chartedge';
 import './App.css';
-import {OverlaySpecs, withOverlayStyle, overlay} from "../../src/components/Canvas/utils/drawOverlay.ts";
-import {OverlayOptions} from "../../src/types/overlay.ts";
 
 function simplePRNG(seed = 12345) {
     // Tiny LCG (deterministic)
@@ -102,12 +109,12 @@ const exampleVisibleRange = {
 };
 
 // --- Demo overlays ---
-const withBlue = withOverlayStyle({lineColor: '#2962ff', lineWidth: 2, lineStyle: 'solid'} as OverlayOptions);
-const sma20 = withBlue(OverlaySpecs.sma(20, 'close'));
+const withBlue = withOverlayStyle({lineColor: '#2962ff', lineWidth: 2, lineStyle: 'solid'});
+const sma20 = withBlue(OverlaySpecs.sma(20, OverlayPriceKey.close));
 
 // Using the simple "kind" helper with explicit full style (DeepRequired<OverlayOptions>)
-const emaDefault = overlay('ema', {lineColor: '#26a69a', lineWidth: 2, lineStyle: 'solid'} as OverlayOptions);
-const vwapOv = overlay('vwap', {lineColor: '#7e57c2', lineWidth: 1.5, lineStyle: 'solid'} as OverlayOptions);
+const emaDefault = overlay(OverlayKind.ema, {lineColor: '#26a69a', lineWidth: 2, lineStyle: 'solid'});
+const vwapOv = overlay(OverlayKind.vwap, {lineColor: '#7e57c2', lineWidth: 1.5, lineStyle: 'solid'});
 
 const demoOverlays = [sma20, emaDefault, vwapOv];
 
@@ -129,8 +136,11 @@ export default function App() {
                 chartOptions={{
                     base: {
                         showOverlayLine: true,
-                        // overlays: demoOverlays,
-                        overlayKinds: OverlayKind, // ← Uncomment to use simple mode instead of overlays[]
+                        overlays: demoOverlays,
+                        style: {
+                            overlay: {lineWidth: 1.5, lineStyle: 'solid', lineColor: '#22ff34'},
+                        },
+                        overlayKinds: [OverlayKind.sma, OverlayKind.bbands_lower],
                         showHistogram: true,
                     }
                 }}

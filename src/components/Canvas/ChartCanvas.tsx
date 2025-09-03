@@ -55,6 +55,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     const mainCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const hoverCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const histCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const drawingsCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
     const backBufferRef = useRef<HTMLCanvasElement | null>(null);
     const histBackBufferRef = useRef<HTMLCanvasElement | null>(null);
@@ -173,7 +174,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 drawCandlestickChart(backBufferCtx, renderContext, chartOptions, visiblePriceRange);
                 break;
         }
-        drawDrawings(backBufferCtx, drawings, selectedIndex);
+        // drawDrawings(backBufferCtx, drawings, selectedIndex); // REMOVED: do not draw persistent drawings into back buffer
 
         const histCanvas = histCanvasRef.current;
         if (chartOptions.base.showHistogram && histCanvas) {
@@ -197,6 +198,34 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             }
         }
     }, [renderContext, chartType, chartOptions, drawings, selectedIndex, canvasSizes, visiblePriceRange]);
+
+    // Draw persistent drawings to their own canvas layer
+    const redrawDrawingsLayer = useCallback(() => {
+        const canvas = drawingsCanvasRef.current;
+        if (!canvas) return;
+        const dims = chartDimensionsRef.current || {
+            cssWidth: Math.max(0, canvasSizes.width),
+            cssHeight: Math.max(0, canvasSizes.height),
+            dpr: window.devicePixelRatio || 1,
+            width: Math.max(0, Math.round(canvasSizes.width * (window.devicePixelRatio || 1))),
+            height: Math.max(0, Math.round(canvasSizes.height * (window.devicePixelRatio || 1))),
+            clientWidth: Math.max(0, canvasSizes.width),
+            clientHeight: Math.max(0, canvasSizes.height),
+        };
+        const {cssWidth, cssHeight, dpr} = dims;
+
+        if (canvas.width !== cssWidth * dpr || canvas.height !== cssHeight * dpr) {
+            canvas.width = cssWidth * dpr;
+            canvas.height = cssHeight * dpr;
+        }
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+        // NOTE: drawings are currently screen-anchored; if you need data-anchored, map time/price→px here
+        drawDrawings(ctx, drawings, selectedIndex);
+    }, [drawings, selectedIndex, canvasSizes.width, canvasSizes.height]);
 
     const drawFrame = useCallback(() => {
         requestAnimationIdRef.current = null;
@@ -287,6 +316,9 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             }
         }
     }, [isDrawing, isPanning, isWheeling, startPoint, mode, chartOptions.base.showHistogram, drawSceneToBuffer, visibleRange, visiblePriceRange, canvasSizes.width, canvasSizes.height]);
+    useEffect(() => {
+        redrawDrawingsLayer();
+    }, [redrawDrawingsLayer]);
     const scheduleDraw = useCallback(() => {
         if (requestAnimationIdRef.current) return;
         requestAnimationIdRef.current = window.requestAnimationFrame(drawFrame);
@@ -432,6 +464,15 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                     />
                 )}
 
+                {/* Persistent drawings canvas: above data/histogram, below preview/interaction */}
+                <StyledCanvasNonResponsive
+                    className={'drawings-canvas'}
+                    ref={drawingsCanvasRef}
+                    $heightPrecent={100}
+                    $zIndex={3}
+                    style={{pointerEvents: 'none'}}
+                />
+
                 <StyledCanvasResponsive
                     className={'drawing-interaction-canvas'}
                     ref={hoverCanvasRef}
@@ -440,7 +481,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                     onMouseDown={handleMouseDown}
                     onMouseUp={handleMouseUp}
                     $heightPrecent={100}
-                    $zIndex={3}
+                    $zIndex={4}
                     style={{
                         cursor: isInteractionMode ? (isPanning ? 'grabbing' : 'grab') : 'crosshair'
                     }}

@@ -3,8 +3,8 @@
 // Candles style
 import {AxesOptions, AxesPosition, ChartTheme} from "./types";
 import type {Interval} from "./Interval";
-import type {PriceRange, TimeRange} from "./Graph";
-import {LinesStyle, OverlayCalcSpec, OverlayKind, OverlayOptions, OverlayWithCalc} from "./overlay";
+import type {TimeRange} from "./Graph";
+import {OverlayCalcSpec, OverlayKind, OverlayOptions, OverlayWithCalc} from "./overlay";
 
 export enum TimeDetailLevel {
     Auto = 'auto',
@@ -18,7 +18,6 @@ export enum ChartType {
     Line,
     Area,
     Bar,
-    // Histogram , // // moved to another canvas
 }
 
 

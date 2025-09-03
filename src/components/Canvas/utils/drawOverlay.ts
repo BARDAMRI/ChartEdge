@@ -13,39 +13,39 @@ import {
 import type {Interval} from "../../../types/Interval";
 import type {ChartRenderContext} from "../../../types/chartOptions";
 import type {PriceRange} from "../../../types/Graph";
-import {DeepRequired} from "../../../types/types";
+import {DeepPartial, DeepRequired} from "../../../types/types";
 
 /** Factory helpers for calculation specs */
 export const OverlaySpecs = {
     // direct accessors
-    close: (): OverlayCalcSpec => ({kind: 'close'}),
-    open: (): OverlayCalcSpec => ({kind: 'open'}),
-    high: (): OverlayCalcSpec => ({kind: 'high'}),
-    low: (): OverlayCalcSpec => ({kind: 'low'}),
+    close: (): OverlayCalcSpec => ({kind: OverlayPriceKey.close}),
+    open: (): OverlayCalcSpec => ({kind: OverlayPriceKey.open}),
+    high: (): OverlayCalcSpec => ({kind: OverlayPriceKey.high}),
+    low: (): OverlayCalcSpec => ({kind: OverlayPriceKey.low}),
 
     // moving averages
-    sma: (period: number, price: OverlayPriceKey = 'close'): OverlayCalcSpec => (
-        {kind: 'sma', period, price}
+    sma: (period: number, price: OverlayPriceKey = OverlayPriceKey.close): OverlayCalcSpec => (
+        {kind: OverlayKind.sma, period, price}
     ),
-    ema: (period: number, price: OverlayPriceKey = 'close'): OverlayCalcSpec => (
-        {kind: 'ema', period, price}
+    ema: (period: number, price: OverlayPriceKey = OverlayPriceKey.close): OverlayCalcSpec => (
+        {kind: OverlayKind.ema, period, price}
     ),
-    wma: (period: number, price: OverlayPriceKey = 'close'): OverlayCalcSpec => (
-        {kind: 'wma', period, price}
+    wma: (period: number, price: OverlayPriceKey = OverlayPriceKey.close): OverlayCalcSpec => (
+        {kind: OverlayKind.wma, period, price}
     ),
 
     // volume-weighted average price
-    vwap: (): OverlayCalcSpec => ({kind: 'vwap'}),
+    vwap: (): OverlayCalcSpec => ({kind: OverlayKind.vwap}),
 
     // Bollinger Bands (three separate helpers)
-    bbandsMid: (period: number, price: OverlayPriceKey = 'close'): OverlayCalcSpec => (
-        {kind: 'bbands_mid', period, price}
+    bbandsMid: (period: number, price: OverlayPriceKey = OverlayPriceKey.close): OverlayCalcSpec => (
+        {kind: OverlayKind.bbands_mid, period, price}
     ),
-    bbandsUpper: (period: number, stddev = 2, price: OverlayPriceKey = 'close'): OverlayCalcSpec => (
-        {kind: 'bbands_upper', period, stddev, price}
+    bbandsUpper: (period: number, stddev = 2, price: OverlayPriceKey = OverlayPriceKey.close): OverlayCalcSpec => (
+        {kind: OverlayKind.bbands_upper, period, stddev, price}
     ),
-    bbandsLower: (period: number, stddev = 2, price: OverlayPriceKey = 'close'): OverlayCalcSpec => (
-        {kind: 'bbands_lower', period, stddev, price}
+    bbandsLower: (period: number, stddev = 2, price: OverlayPriceKey = OverlayPriceKey.close): OverlayCalcSpec => (
+        {kind: OverlayKind.bbands_lower, period, stddev, price}
     ),
 } as const;
 
@@ -74,9 +74,15 @@ export function makeOverlay(
  *   const withOrange = withOverlayStyle({ lineColor: '#f90', lineWidth: 2, lineStyle: 'solid' });
  *   const sma20 = withOrange(OverlaySpecs.sma(20));
  */
-export function withOverlayStyle(style?: DeepRequired<OverlayOptions>) {
+export function withOverlayStyle(style?: DeepPartial<OverlayOptions>) {
+    let defaultStyle: DeepRequired<OverlayOptions> = {
+        lineColor: '#2962ff',
+        lineWidth: 2,
+        lineStyle: 'solid',
+    }
+    defaultStyle = {...defaultStyle, ...style};
     return (calc: OverlayCalcSpec = OverlaySpecs.close(), extras?: Pick<OverlayWithCalc, 'connectNulls' | 'useCenterX'>): OverlayWithCalc =>
-        makeOverlay(style, calc, extras);
+        makeOverlay(defaultStyle, calc, extras);
 }
 
 // -----------------------------------------------------------------------------
@@ -87,16 +93,16 @@ export function withOverlayStyle(style?: DeepRequired<OverlayOptions>) {
 type PriceAccessor = (it: Interval) => number;
 
 function priceAccessor(key?: OverlayPriceKey): PriceAccessor {
-    const k = key ?? 'close';
+    const k = key ?? OverlayPriceKey.close;
     switch (k) {
-        case 'open':
+        case OverlayPriceKey.open:
             return (it) => it.o;
-        case 'high':
+        case OverlayPriceKey.high:
             return (it) => it.h;
-        case 'low':
+        case OverlayPriceKey.low:
             return (it) => it.l;
         default:
-            return (it) => it.c; // close
+            return (it) => it.c;
     }
 }
 
@@ -219,27 +225,27 @@ function computeVWAP(intervals: Interval[]): (number | null)[] {
 export function computeSeriesBySpec(intervals: Interval[], spec: OverlayCalcSpec): (number | null)[] {
     const acc = priceAccessor((spec as any).price);
     switch (spec.kind) {
-        case 'close':
+        case  OverlayPriceKey.close:
             return intervals.map(acc);
-        case 'open':
+        case OverlayPriceKey.open:
             return intervals.map(acc);
-        case 'high':
+        case OverlayPriceKey.high:
             return intervals.map(acc);
-        case 'low':
+        case OverlayPriceKey.low:
             return intervals.map(acc);
-        case 'sma':
+        case OverlayKind.sma:
             return computeSMA(intervals.map(acc), Math.max(1, (spec as any).period ?? 20));
-        case 'ema':
+        case OverlayKind.ema:
             return computeEMA(intervals.map(acc), Math.max(1, (spec as any).period ?? 20));
-        case 'wma':
+        case OverlayKind.wma:
             return computeWMA(intervals.map(acc), Math.max(1, (spec as any).period ?? 20));
-        case 'vwap':
+        case OverlayKind.vwap:
             return computeVWAP(intervals);
-        case 'bbands_mid': {
+        case OverlayKind.bbands_mid: {
             const period = Math.max(1, (spec as any).period ?? 20);
             return computeSMA(intervals.map(acc), period);
         }
-        case 'bbands_upper': {
+        case OverlayKind.bbands_upper: {
             const period = Math.max(1, (spec as any).period ?? 20);
             const base = intervals.map(acc);
             const sma = computeSMA(base, period);
@@ -247,7 +253,7 @@ export function computeSeriesBySpec(intervals: Interval[], spec: OverlayCalcSpec
             const k = (spec as any).stddev ?? 2;
             return sma.map((m, i) => (m == null || std[i] == null) ? null : (m + k * (std[i] as number)));
         }
-        case 'bbands_lower': {
+        case OverlayKind.bbands_lower: {
             const period = Math.max(1, (spec as any).period ?? 20);
             const base = intervals.map(acc);
             const sma = computeSMA(base, period);
@@ -419,31 +425,56 @@ export function drawOverlaysFromOptions(
  *  Example: overlay('sma', { lineColor: '#f90' }, { connectNulls: false })
  */
 export function overlay(
-    kindOrSpec?: OverlayCalcSpec | 'close' | 'open' | 'high' | 'low' | 'sma' | 'ema' | 'wma' | 'vwap' | 'bbands_mid' | 'bbands_upper' | 'bbands_lower',
-    style?: DeepRequired<OverlayOptions>,
+    kindOrSpec?: OverlayCalcSpec | OverlayKind | OverlayPriceKey,
+    style?: DeepPartial<OverlayOptions>,
     extras?: Pick<OverlayWithCalc, 'connectNulls' | 'useCenterX'>
 ): OverlayWithCalc {
     let calc: OverlayCalcSpec;
-    if (!kindOrSpec) calc = OverlaySpecs.close();
-    else if (typeof kindOrSpec === 'string') {
-        const k = kindOrSpec;
-        // Map kind to a calc with sensible defaults
-        if (k === 'sma' || k === 'ema' || k === 'wma') calc = OverlaySpecs[k](20, 'close') as OverlayCalcSpec;
-        else if (k === 'bbands_mid') calc = OverlaySpecs.bbandsMid(20);
-        else if (k === 'bbands_upper') calc = OverlaySpecs.bbandsUpper(20, 2);
-        else if (k === 'bbands_lower') calc = OverlaySpecs.bbandsLower(20, 2);
-        else if (k === 'vwap') calc = OverlaySpecs.vwap();
-        else calc = OverlaySpecs[k]();
+    if (!kindOrSpec) {
+        calc = {kind: OverlayPriceKey.close};
+    } else if (typeof kindOrSpec === 'string') {
+        switch (kindOrSpec) {
+            case OverlayKind.sma:
+                calc = {kind: OverlayKind.sma, period: 20, price: OverlayPriceKey.close};
+                break;
+            case OverlayKind.ema:
+                calc = {kind: OverlayKind.ema, period: 20, price: OverlayPriceKey.close};
+                break;
+            case OverlayKind.wma:
+                calc = {kind: OverlayKind.wma, period: 20, price: OverlayPriceKey.close};
+                break;
+            case OverlayKind.vwap:
+                calc = {kind: OverlayKind.vwap};
+                break;
+            case OverlayKind.bbands_mid:
+                calc = {kind: OverlayKind.bbands_mid, period: 20, price: OverlayPriceKey.close};
+                break;
+            case OverlayKind.bbands_upper:
+                calc = {kind: OverlayKind.bbands_upper, period: 20, stddev: 2, price: OverlayPriceKey.close};
+                break;
+            case OverlayKind.bbands_lower:
+                calc = {kind: OverlayKind.bbands_lower, period: 20, stddev: 2, price: OverlayPriceKey.close};
+                break;
+            case OverlayPriceKey.close:
+            case OverlayPriceKey.open:
+            case OverlayPriceKey.high:
+            case OverlayPriceKey.low:
+                calc = {kind: kindOrSpec as OverlayPriceKey};
+                break;
+            default:
+                calc = {kind: OverlayPriceKey.close};
+        }
     } else {
-        calc = kindOrSpec;
+        calc = kindOrSpec as OverlayCalcSpec;
     }
-    return makeOverlay(style, calc, extras);
+    let defaultStyle: DeepRequired<OverlayOptions> = {
+        lineColor: '#2962ff',
+        lineWidth: 2,
+        lineStyle: 'solid',
+    };
+    defaultStyle = {...defaultStyle, ...style};
+    return makeOverlay(defaultStyle, calc, extras);
 }
-
-// -----------------------------------------------------------------------------
-// Simple external entry: drawOverlay
-// Supports either an existing overlays array OR a kind/spec + optional style
-// -----------------------------------------------------------------------------
 
 export function drawOverlay(
     ctx: CanvasRenderingContext2D,

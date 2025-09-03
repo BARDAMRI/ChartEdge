@@ -1,9 +1,9 @@
 import type {ChartOptions, ChartRenderContext} from "../../../types/chartOptions";
 import {PriceRange} from "../../../types/Graph";
 import {DeepRequired} from "../../../types/types";
-import {OverlayWithCalc} from "../../../types/overlay";
+import {OverlayWithCalc, OverlayKind} from "../../../types/overlay";
 import {interpolatedCloseAtTime, lerp, priceToY, timeToX, xFromCenter, xFromStart} from "./GraphHelpers";
-import {drawOverlay} from "./drawOverlay";
+import {drawOverlay, overlay as buildOverlay} from "./drawOverlay";
 
 // =================================================================================
 // == CHART DRAWING FUNCTIONS (Corrected)
@@ -85,8 +85,17 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         ctx.fillRect(bodyLeft, Math.floor(bodyTop), Math.ceil(bodyWidth), Math.ceil(bodyHeight) || 1);
     }
 
-    if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
-        drawOverlay(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[], options?.base?.style?.overlay);
+    if (options.base.showOverlayLine) {
+        const overlays = options.base.overlays as OverlayWithCalc[] | undefined;
+        if (overlays && overlays.length) {
+            drawOverlay(ctx, context, visiblePriceRange, overlays, options.base.style.overlay);
+        }
+        if (Array.isArray((options.base as any).overlayKinds) && (options.base as any).overlayKinds.length) {
+            const kinds = (options.base as any).overlayKinds as OverlayKind[];
+            const stroke = options.base.style.overlay;
+            const built = kinds.map(k => buildOverlay(k, stroke));
+            drawOverlay(ctx, context, visiblePriceRange, built, stroke);
+        }
     }
 }
 
@@ -132,8 +141,17 @@ export function drawLineChart(ctx: CanvasRenderingContext2D, context: ChartRende
     ctx.lineTo(rightX, rightY);
     ctx.stroke();
 
-    if (style.base.showOverlayLine && style.base.overlays && style.base.overlays.length) {
-        drawOverlay(ctx, context, visiblePriceRange, style.base.overlays as OverlayWithCalc[]);
+    if (style.base.showOverlayLine) {
+        const overlays = style.base.overlays as OverlayWithCalc[] | undefined;
+        if (overlays && overlays.length) {
+            drawOverlay(ctx, context, visiblePriceRange, overlays, style.base.style.overlay);
+        }
+        if (Array.isArray((style.base as any).overlayKinds) && (style.base as any).overlayKinds.length) {
+            const kinds = (style.base as any).overlayKinds as OverlayKind[];
+            const stroke = style.base.style.overlay;
+            const built = kinds.map(k => buildOverlay(k, stroke));
+            drawOverlay(ctx, context, visiblePriceRange, built, stroke);
+        }
     }
 }
 
@@ -215,8 +233,17 @@ export function drawAreaChart(ctx: CanvasRenderingContext2D, context: ChartRende
     ctx.stroke();
     ctx.restore();
 
-    if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
-        drawOverlay(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
+    if (options.base.showOverlayLine) {
+        const overlays = options.base.overlays as OverlayWithCalc[] | undefined;
+        if (overlays && overlays.length) {
+            drawOverlay(ctx, context, visiblePriceRange, overlays, options.base.style.overlay);
+        }
+        if (Array.isArray((options.base as any).overlayKinds) && (options.base as any).overlayKinds.length) {
+            const kinds = (options.base as any).overlayKinds as OverlayKind[];
+            const stroke = options.base.style.overlay;
+            const built = kinds.map(k => buildOverlay(k, stroke));
+            drawOverlay(ctx, context, visiblePriceRange, built, stroke);
+        }
     }
 }
 
@@ -277,8 +304,17 @@ export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRender
     }
     ctx.restore();
 
-    if (options.base.showOverlayLine && options.base.overlays && options.base.overlays.length) {
-        drawOverlay(ctx, context, visiblePriceRange, options.base.overlays as OverlayWithCalc[]);
+    if (options.base.showOverlayLine) {
+        const overlays = options.base.overlays as OverlayWithCalc[] | undefined;
+        if (overlays && overlays.length) {
+            drawOverlay(ctx, context, visiblePriceRange, overlays, options.base.style.overlay);
+        }
+        if (Array.isArray((options.base as any).overlayKinds) && (options.base as any).overlayKinds.length) {
+            const kinds = (options.base as any).overlayKinds as OverlayKind[];
+            const stroke = options.base.style.overlay;
+            const built = kinds.map(k => buildOverlay(k, stroke));
+            drawOverlay(ctx, context, visiblePriceRange, built, stroke);
+        }
     }
 }
 
