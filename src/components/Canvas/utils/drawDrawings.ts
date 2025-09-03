@@ -1,107 +1,89 @@
-import {Drawing} from '../../Drawing/types';
-import {LineShape} from '../../Drawing/LineShape';
-import {RectangleShape} from '../../Drawing/RectangleShape';
-import {CircleShape} from '../../Drawing/CircleShape';
-import {TriangleShape} from '../../Drawing/TriangleShape';
-import {Polyline} from '../../Drawing/Polyline';
-import {ArrowShape} from '../../Drawing/ArrowShape';
-import {CustomSymbolShape} from '../../Drawing/CustomSymbolShape';
+import {ChartRenderContext, ChartOptions} from '../../../types/chartOptions';
+import {PriceRange} from '../../../types/Graph';
 import {Mode} from '../../../contexts/ModeContext';
-import {AngleShape} from "../../Drawing/Angleshape";
+import {Drawing} from "../../Drawing/types";
+import {IDrawingShape} from "../../Drawing/IDrawingShape";
+import {LineShape, LineShapeArgs} from '../../Drawing/LineShape';
+import {RectangleShape, RectangleShapeArgs} from '../../Drawing/RectangleShape';
+import {CircleShape, CircleShapeArgs} from '../../Drawing/CircleShape';
+import {TriangleShape, TriangleShapeArgs} from '../../Drawing/TriangleShape';
+import {ArrowShape, ArrowShapeArgs} from '../../Drawing/ArrowShape';
+import {Polyline, PolylineShapeArgs} from '../../Drawing/Polyline';
+import {CustomSymbolShape, CustomSymbolShapeArgs} from '../../Drawing/CustomSymbolShape';
+import {DeepRequired} from "../../../types/types";
+import {FinalDrawingStyle} from "../../../types/Drawings";
+import {AngleShape, AngleShapeArgs} from "../../Drawing/Angleshape";
 
 export function drawDrawings(
     ctx: CanvasRenderingContext2D,
     drawings: Drawing[],
-    selectedIndex: number | null
+    selectedIndex: number | null,
+    renderContext: ChartRenderContext,
+    visiblePriceRange: PriceRange,
+    chartOptions: DeepRequired<ChartOptions>
 ): void {
+    const defaultStyles = chartOptions.base.style.drawings;
+
     drawings.forEach((d, index) => {
-        ctx.beginPath();
-        let shape = null;
+        let shape: IDrawingShape | null = null;
+
+        // Create the correct shape instance based on the mode
         switch (d.mode) {
             case Mode.drawLine:
-                shape = new LineShape(
-                    d.args.startX,
-                    d.args.startY,
-                    d.args.endX,
-                    d.args.endY
-                );
+                shape = new LineShape(d.args as LineShapeArgs);
                 break;
             case Mode.drawRectangle:
-                shape = new RectangleShape(
-                    d.args.x,
-                    d.args.y,
-                    d.args.width,
-                    d.args.height
-                );
+                shape = new RectangleShape(d.args as RectangleShapeArgs);
                 break;
             case Mode.drawCircle:
-                shape = new CircleShape(
-                    d.args.startX,
-                    d.args.startY,
-                    d.args.endX,
-                    d.args.endY,
-                    d.args.color,
-                    d.args.lineWidth
-                );
+                shape = new CircleShape(d.args as CircleShapeArgs);
                 break;
             case Mode.drawTriangle:
-                shape = new TriangleShape(
-                    d.args.startX,
-                    d.args.startY,
-                    d.args.endX,
-                    d.args.endY,
-                    d.args.color,
-                    d.args.lineWidth
-                );
+                shape = new TriangleShape(d.args as TriangleShapeArgs);
                 break;
             case Mode.drawAngle:
-                shape = new AngleShape(
-                    d.args.x0,
-                    d.args.y0,
-                    d.args.x1,
-                    d.args.y1,
-                    d.args.x2,
-                    d.args.y2,
-                    d.args.color,
-                    d.args.lineWidth
-                );
-                break;
-            case Mode.drawPolyline:
-                shape = new Polyline(d.args.points);
+                shape = new AngleShape(d.args as AngleShapeArgs);
                 break;
             case Mode.drawArrow:
-                shape = new ArrowShape(
-                    d.args.fromX,
-                    d.args.fromY,
-                    d.args.toX,
-                    d.args.toY,
-                    d.args.color,
-                    d.args.lineWidth
-                );
+                shape = new ArrowShape(d.args as ArrowShapeArgs);
+                break;
+            case Mode.drawPolyline:
+                shape = new Polyline(d.args as PolylineShapeArgs);
                 break;
             case Mode.drawCustomSymbol:
-                shape = new CustomSymbolShape(
-                    d.args.x,
-                    d.args.y,
-                    d.args.symbol,
-                    d.args.size,
-                    d.args.color
-                );
+                shape = new CustomSymbolShape(d.args as CustomSymbolShapeArgs);
                 break;
             default:
                 break;
         }
 
         if (shape) {
-            if (selectedIndex === index) {
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 2;
-            } else {
-                ctx.strokeStyle = 'black';
-                ctx.lineWidth = 1;
+            // --- Cascading Style Logic ---
+
+            // 1. Start with the global default style
+            let finalStyle: FinalDrawingStyle = {
+                lineColor: defaultStyles.lineColor as string,
+                lineWidth: defaultStyles.lineWidth as number,
+                lineStyle: defaultStyles.lineStyle as FinalDrawingStyle['lineStyle'],
+                fillColor: defaultStyles.fillColor as string
+            };
+
+            // 2. Override with shape-specific style, if it exists
+            if (d.args.style) {
+                finalStyle = {...finalStyle, ...d.args.style};
             }
-            shape.draw(ctx);
-            ctx.stroke();
+
+            // 3. Override again with the "selected" style if the shape is selected
+            if (selectedIndex === index) {
+                finalStyle.lineColor = defaultStyles.selected.lineColor as string;
+                finalStyle.lineWidth = (finalStyle.lineWidth || 1) + (defaultStyles.selected.lineWidthAdd || 1) as number;
+                finalStyle.lineStyle = (defaultStyles.selected.lineStyle || finalStyle.lineStyle) as FinalDrawingStyle['lineStyle'];
+                if (defaultStyles.selected.fillColor) finalStyle.fillColor = defaultStyles.selected.fillColor as string;
+            }
+
+            // 4. Pass the final calculated style to the shape's draw method
+            // The shape is now fully responsible for its own rendering.
+            shape.draw(ctx, renderContext, visiblePriceRange, finalStyle);
         }
     });
 }

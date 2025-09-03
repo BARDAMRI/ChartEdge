@@ -22,7 +22,7 @@ export function usePanAndZoom(
     setVisibleRange: (range: TimeRange) => void,
     intervalSeconds: number,
     handlers: PanAndZoomHandlers,
-    getCssWidth?: () => number, // optional external CSS width provider
+    getCssWidth?: () => number, // optional external CSS endTime provider
 ) {
     const wheelingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -51,8 +51,8 @@ export function usePanAndZoom(
         const canvas = canvasRef.current;
         if (!canvas || !isEnabled || intervalsArray.length === 0) return;
 
-        const isPanningRef = { current: false };
-        const lastPosRef = { x: 0, y: 0 };
+        const isPanningRef = {current: false};
+        const lastPosRef = {x: 0, y: 0};
 
         const handleMouseDown = (e: MouseEvent) => {
             if (e.button !== 0) return; // left button only
@@ -64,7 +64,7 @@ export function usePanAndZoom(
 
         const handleMouseMove = (e: MouseEvent) => {
             if (!isPanningRef.current) return;
-            const { visibleRange, setVisibleRange, intervalsArray, intervalSeconds } = latestPropsRef.current;
+            const {visibleRange, setVisibleRange, intervalsArray, intervalSeconds} = latestPropsRef.current;
 
             const dx = e.clientX - lastPosRef.x;
             const dy = e.clientY - lastPosRef.y;
@@ -92,7 +92,7 @@ export function usePanAndZoom(
             const maxStart = dataEnd - intervalSeconds;
 
             newStart = Math.max(minStart, Math.min(newStart, maxStart));
-            setVisibleRange({ start: newStart, end: newStart + duration });
+            setVisibleRange({start: newStart, end: newStart + duration});
 
             // advance last position for incremental behavior
             lastPosRef.x = e.clientX;
@@ -148,7 +148,7 @@ export function usePanAndZoom(
                 const delta = Math.abs(e.deltaX) >= Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
 
                 // Invert sign so visual motion matches scroll direction on the chart
-                const timeOffset = -delta * timePerPixel * PAN_SENSITIVITY;
+                const timeOffset = delta * timePerPixel * PAN_SENSITIVITY;
                 let newStart = visibleRange.start + timeOffset;
 
                 const dataStart = intervalsArray[0].t;
@@ -157,7 +157,7 @@ export function usePanAndZoom(
                 const maxStart = dataEnd - intervalSeconds;
 
                 newStart = Math.max(minStart, Math.min(newStart, maxStart));
-                setVisibleRange({ start: newStart, end: newStart + duration });
+                setVisibleRange({start: newStart, end: newStart + duration});
             }
         };
 

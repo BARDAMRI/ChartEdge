@@ -43,7 +43,7 @@ export default function YAxis({
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, rect.width, rect.height);
 
-        // IMPORTANT for grid layout: Y axis container sits only in row 1, so its height already excludes X-axis.
+        // IMPORTANT for grid layout: Y axis container sits only in row 1, so its endPrice already excludes X-axis.
         // Therefore, pass 0 for xAxisHeight into the tick generator to avoid double-reserving space.
         generateAndDrawYTicks(
             canvas,
@@ -80,6 +80,6 @@ export default function YAxis({
     }, [minPrice, maxPrice, numberOfYTicks, yAxisPosition]);
 
     return (
-        <StyledYAxisCanvas className={'y-axis-canvas'} ref={canvasRef} $position={yAxisPosition}/>
+        <StyledYAxisCanvas className={'startPrice-axis-canvas'} ref={canvasRef} $position={yAxisPosition}/>
     );
 }

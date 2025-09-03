@@ -64,7 +64,7 @@ Example:
 | `downColor` | `string` | Color of a bearish (falling) candle body. |
 | `borderColor` | `string` | Color of the candle border. |
 | `borderWidth` | `number` | Width of the candle border (in pixels). |
-| `bodyWidthFactor` | `number` | Ratio of the body width relative to the total available width. |
+| `bodyWidthFactor` | `number` | Ratio of the body endTime relative to the total available endTime. |
 
 ---
 

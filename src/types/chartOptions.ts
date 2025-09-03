@@ -5,6 +5,7 @@ import {AxesOptions, AxesPosition, ChartTheme} from "./types";
 import type {Interval} from "./Interval";
 import type {TimeRange} from "./Graph";
 import {OverlayCalcSpec, OverlayKind, OverlayOptions, OverlayWithCalc} from "./overlay";
+import {DrawingStyleOptions} from "./Drawings";
 
 export enum TimeDetailLevel {
     Auto = 'auto',
@@ -96,6 +97,7 @@ export type StyleOptions = {
     grid: GridStyleOptions;
     overlay: OverlayOptions;
     axes: AxesStyleOptions;
+    drawings: DrawingStyleOptions;
     showGrid: boolean;
     backgroundColor: string;
 }

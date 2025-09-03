@@ -4,6 +4,7 @@ export type {Interval} from './types/Interval';
 export type {TimeRange} from './types/Graph';
 export type {ChartDimensionsData} from './types/Graph';
 export type {OverlayWithCalc, OverlaySeries, OverlayOptions} from './types/overlay';
+export type {ShapeBaseArgs, Drawing} from './components/Drawing/types';
 // Enums
 export {AxesPosition} from './types/types';
 export {TimeDetailLevel, ChartType} from './types/chartOptions';

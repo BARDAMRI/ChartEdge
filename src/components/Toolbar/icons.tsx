@@ -47,7 +47,7 @@ export const IconBase: React.FC<{ active?: boolean; name: string; children: Reac
     );
 };
 
-// Stroke width tokens for consistency
+// Stroke endTime tokens for consistency
 const SW = {
     thick: 1.8,
     medium: 1.3,

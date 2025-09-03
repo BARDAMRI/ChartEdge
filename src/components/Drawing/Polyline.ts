@@ -1,78 +1,103 @@
 import {IDrawingShape} from "./IDrawingShape";
+import {ShapeBaseArgs} from "./types";
+import {priceToY, timeToX} from "../Canvas/utils/GraphHelpers";
+import {ChartRenderContext} from "../../types/chartOptions";
+import {PriceRange} from "../../types/Graph";
+import {isPointNearLine} from "../Canvas/utils/helpers";
+import {FinalDrawingStyle} from "../../types/Drawings";
 
-interface Point {
-    x: number,
-    y: number
+export interface PolylineShapeArgs extends ShapeBaseArgs {
+    points: { time: number; price: number }[];
 }
-
-export interface PolylineShapeArgs {
-    points: Point[],
-    color?: string,
-    lineWidth?: number
-}
-
 
 export class Polyline implements IDrawingShape {
-
-    constructor(
-        public points: Point[],
-        public color: string = 'navy',
-        public lineWidth: number = 2
-    ) {
+    constructor(public args: PolylineShapeArgs) {
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
-        if (this.points?.length < 2) return;
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = this.lineWidth;
+    /**
+     * Draws the polyline/polygon shape on the canvas using a provided style.
+     * @param ctx The canvas 2D rendering context.
+     * @param renderContext The context containing canvas dimensions and visible ranges.
+     * @param visiblePriceRange The currently visible price range for y-axis scaling.
+     * @param style The final, calculated style object to apply.
+     */
+    public draw(
+        ctx: CanvasRenderingContext2D,
+        renderContext: ChartRenderContext,
+        visiblePriceRange: PriceRange,
+        style: FinalDrawingStyle
+    ): void {
+        const {points} = this.args;
+        if (points.length < 2) return;
+
+        const {canvasWidth, canvasHeight, visibleRange} = renderContext;
+
+        // Apply the final calculated style
+        ctx.strokeStyle = style.lineColor;
+        ctx.lineWidth = style.lineWidth;
+        ctx.fillStyle = style.fillColor;
+        if (style.lineStyle === 'dashed') ctx.setLineDash([5, 5]);
+        else if (style.lineStyle === 'dotted') ctx.setLineDash([1, 2]);
+        else ctx.setLineDash([]);
+
+        const pixelPoints = points.map(p => ({
+            x: timeToX(p.time, canvasWidth, visibleRange),
+            y: priceToY(p.price, canvasHeight, visiblePriceRange)
+        }));
+
         ctx.beginPath();
-        ctx.moveTo(this.points[0].x, this.points[0].y);
-        this.points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.moveTo(pixelPoints[0].x, pixelPoints[0].y);
+        for (let i = 1; i < pixelPoints.length; i++) {
+            ctx.lineTo(pixelPoints[i].x, pixelPoints[i].y);
+        }
+
+        // If it's a polygon (more than 2 points), close the path
+        if (points.length > 2) {
+            ctx.closePath();
+        }
+
+        // Fill the shape if a fill color is provided and is not transparent
+        if (style.fillColor !== 'transparent') {
+            ctx.fill();
+        }
+
+        // Draw the stroke last
         ctx.stroke();
     }
 
-    isHit(x: number, y: number): boolean {
+    public isHit(
+        px: number,
+        py: number,
+        renderContext: ChartRenderContext,
+        visiblePriceRange: PriceRange
+    ): boolean {
+        const {points} = this.args;
+        if (points.length < 2) return false;
+
+        const {canvasWidth, canvasHeight, visibleRange} = renderContext;
         const tolerance = 6;
-        for (let i = 0; i < this.points.length - 1; i++) {
-            const p1 = this.points[i];
-            const p2 = this.points[i + 1];
-            if (this.isPointNearLine(x, y, p1.x, p1.y, p2.x, p2.y, tolerance)) {
+
+        const pixelPoints = points.map(p => ({
+            x: timeToX(p.time, canvasWidth, visibleRange),
+            y: priceToY(p.price, canvasHeight, visiblePriceRange)
+        }));
+
+        // Check for a hit on any of the line segments
+        for (let i = 0; i < pixelPoints.length - 1; i++) {
+            if (isPointNearLine(px, py, pixelPoints[i].x, pixelPoints[i].y, pixelPoints[i + 1].x, pixelPoints[i + 1].y, tolerance)) {
                 return true;
             }
         }
-        return false;
-    }
 
-    private isPointNearLine(
-        px: number, py: number,
-        x1: number, y1: number,
-        x2: number, y2: number,
-        tolerance: number
-    ): boolean {
-        const A = px - x1;
-        const B = py - y1;
-        const C = x2 - x1;
-        const D = y2 - y1;
-
-        const dot = A * C + B * D;
-        const len_sq = C * C + D * D;
-        let param = -1;
-        if (len_sq !== 0) param = dot / len_sq;
-
-        let xx, yy;
-        if (param < 0) {
-            xx = x1;
-            yy = y1;
-        } else if (param > 1) {
-            xx = x2;
-            yy = y2;
-        } else {
-            xx = x1 + param * C;
-            yy = y1 + param * D;
+        // If it's a closed polygon, also check the last segment connecting back to the first point
+        if (points.length > 2) {
+            const lastPoint = pixelPoints[pixelPoints.length - 1];
+            const firstPoint = pixelPoints[0];
+            if (isPointNearLine(px, py, lastPoint.x, lastPoint.y, firstPoint.x, firstPoint.y, tolerance)) {
+                return true;
+            }
         }
 
-        const dx = px - xx;
-        const dy = py - yy;
-        return (dx * dx + dy * dy) <= tolerance * tolerance;
+        return false;
     }
 }

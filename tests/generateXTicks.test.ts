@@ -32,7 +32,7 @@ describe('generateXTicks', () => {
         });
     });
 
-    test('respects canvas width and avoids overlapping labels', () => {
+    test('respects canvas endTime and avoids overlapping labels', () => {
         const ticks = generateXTicks('1d', 'auto', baseCandles, {width: 200, height: 300}, textSize);
         for (let i = 1; i < ticks.length; i++) {
             expect(ticks[i].x - ticks[i - 1].x).toBeGreaterThanOrEqual(textSize * 5);

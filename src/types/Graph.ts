@@ -4,7 +4,7 @@ export interface TimeRange {
 }
 
 export interface Tick {
-    position: number; // x axis position in pixels
+    position: number; // startTime axis position in pixels
     label: string;    //  label text to display
 }
 
@@ -15,12 +15,12 @@ export interface PriceRange {
 }
 
 export interface DrawTicksOptions {
-    tickHeight: number;      // tick height in pixels
+    tickHeight: number;      // tick endPrice in pixels
     tickColor: string;       // tick line color
     labelColor: string;      // text color for labels
     labelFont: string;       // text font for labels
     labelOffset: number;     // distance from tick to label in pixels
-    axisY: number;          // y position of the axis line in pixels
+    axisY: number;          // startPrice position of the axis line in pixels
 }
 
 export type IndexRangePair = {
@@ -28,11 +28,11 @@ export type IndexRangePair = {
     endIndex: number;
 }
 export type ChartDimensionsData = {
-    cssWidth: number;      // width of the chart in CSS pixels
-    cssHeight: number;     // height of the chart in CSS pixels
+    cssWidth: number;      // endTime of the chart in CSS pixels
+    cssHeight: number;     // endPrice of the chart in CSS pixels
     dpr: number;           // device pixel ratio
-    width: number;        // width of the chart in device pixels
-    height: number;       // height of the chart in device pixels
-    clientWidth: number;   // width of the chart container in CSS pixels
-    clientHeight: number;  // height of the chart container in CSS pixels
+    width: number;        // endTime of the chart in device pixels
+    height: number;       // endPrice of the chart in device pixels
+    clientWidth: number;   // endTime of the chart container in CSS pixels
+    clientHeight: number;  // endPrice of the chart container in CSS pixels
 }

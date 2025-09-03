@@ -1,63 +1,76 @@
 import {IDrawingShape} from "./IDrawingShape";
+import {ShapeBaseArgs} from "./types";
+import {timeToX, priceToY} from "../Canvas/utils/GraphHelpers";
+import {ChartRenderContext} from "../../types/chartOptions";
+import {PriceRange} from "../../types/Graph";
+import {FinalDrawingStyle} from "../../types/Drawings";
+import {isPointNearLine} from "../Canvas/utils/helpers";
 
-export interface LineShapeArgs {
-    startX: number,
-    startY: number,
-    endX: number,
-    endY: number,
-    color?: string,
-    lineWidth?: number
+export interface LineShapeArgs extends ShapeBaseArgs {
+    startTime: number;
+    startPrice: number;
+    endTime: number;
+    endPrice: number;
 }
 
 export class LineShape implements IDrawingShape {
-    constructor(
-        public startX: number,
-        public startY: number,
-        public endX: number,
-        public endY: number,
-        public color: string = 'black',
-        public lineWidth: number = 2) {
+    constructor(public args: LineShapeArgs) {
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = this.lineWidth;
+    /**
+     * Draws the line shape on the canvas using a provided style.
+     * @param ctx The canvas 2D rendering context.
+     * @param renderContext The context containing canvas dimensions and visible ranges.
+     * @param visiblePriceRange The currently visible price range for y-axis scaling.
+     * @param style The final, calculated style object to apply.
+     */
+    public draw(
+        ctx: CanvasRenderingContext2D,
+        renderContext: ChartRenderContext,
+        visiblePriceRange: PriceRange,
+        style: FinalDrawingStyle
+    ): void {
+        const {startTime, startPrice, endTime, endPrice} = this.args;
+        const {canvasWidth, canvasHeight, visibleRange} = renderContext;
+
+        const x1 = timeToX(startTime, canvasWidth, visibleRange);
+        const y1 = priceToY(startPrice, canvasHeight, visiblePriceRange);
+        const x2 = timeToX(endTime, canvasWidth, visibleRange);
+        const y2 = priceToY(endPrice, canvasHeight, visiblePriceRange);
+
+        ctx.strokeStyle = style.lineColor;
+        ctx.lineWidth = style.lineWidth;
+
+        if (style.lineStyle === 'dashed') {
+            ctx.setLineDash([5, 5]);
+        } else if (style.lineStyle === 'dotted') {
+            ctx.setLineDash([1, 2]);
+        } else {
+            ctx.setLineDash([]);
+        }
+
         ctx.beginPath();
-        ctx.moveTo(this.startX, this.startY);
-        ctx.lineTo(this.endX, this.endY);
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
         ctx.stroke();
     }
 
-    isHit(x: number, y: number): boolean {
+    public isHit(
+        px: number,
+        py: number,
+        renderContext: ChartRenderContext,
+        visiblePriceRange: PriceRange
+    ): boolean {
+        const {startTime, startPrice, endTime, endPrice} = this.args;
+        const {canvasWidth, canvasHeight, visibleRange} = renderContext;
         const tolerance = 6;
-        return this.isPointNearLine(x, y, this.startX, this.startY, this.endX, this.endY, tolerance);
+
+        const x1 = timeToX(startTime, canvasWidth, visibleRange);
+        const y1 = priceToY(startPrice, canvasHeight, visiblePriceRange);
+        const x2 = timeToX(endTime, canvasWidth, visibleRange);
+        const y2 = priceToY(endPrice, canvasHeight, visiblePriceRange);
+
+        return isPointNearLine(px, py, x1, y1, x2, y2, tolerance);
     }
 
-    private isPointNearLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number, tolerance: number): boolean {
-        const A = px - x1;
-        const B = py - y1;
-        const C = x2 - x1;
-        const D = y2 - y1;
-
-        const dot = A * C + B * D;
-        const len_sq = C * C + D * D;
-        let param = -1;
-        if (len_sq !== 0) param = dot / len_sq;
-
-        let xx, yy;
-        if (param < 0) {
-            xx = x1;
-            yy = y1;
-        } else if (param > 1) {
-            xx = x2;
-            yy = y2;
-        } else {
-            xx = x1 + param * C;
-            yy = y1 + param * D;
-        }
-
-        const dx = px - xx;
-        const dy = py - yy;
-        return (dx * dx + dy * dy) <= tolerance * tolerance;
-    }
 }

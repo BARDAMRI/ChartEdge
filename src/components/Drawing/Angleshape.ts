@@ -1,115 +1,124 @@
 import {IDrawingShape} from "./IDrawingShape";
+import {ShapeBaseArgs} from "./types";
+import {ChartRenderContext} from "../../types/chartOptions";
+import {PriceRange} from "../../types/Graph";
+import {timeToX, priceToY} from "../Canvas/utils/GraphHelpers";
+import {DrawingPoint, FinalDrawingStyle} from "../../types/Drawings";
 
-export interface AngleShapeArgs {
-    x0: number,
-    y0: number,
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    color?: string,
-    lineWidth?: number
+export interface AngleShapeArgs extends ShapeBaseArgs {
+    startTime: number;
+    startPrice: number;
+    endTime: number;
+    endPrice: number;
 }
 
-
 export class AngleShape implements IDrawingShape {
-
-    constructor(
-        public x0: number,
-        public y0: number,
-        public x1: number,
-        public y1: number,
-        public x2: number,
-        public y2: number,
-        public color: string = 'teal',
-        public lineWidth: number = 2) {
+    constructor(public args: AngleShapeArgs) {
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = this.lineWidth;
+    public draw(
+        ctx: CanvasRenderingContext2D,
+        renderContext: ChartRenderContext,
+        visiblePriceRange: PriceRange,
+        style: FinalDrawingStyle
+    ): void {
+        const {startTime, startPrice, endTime, endPrice} = this.args;
+        const {canvasWidth, canvasHeight, visibleRange} = renderContext;
+
+        const p1 = {
+            x: timeToX(startTime, canvasWidth, visibleRange),
+            y: priceToY(startPrice, canvasHeight, visiblePriceRange)
+        };
+        const p2 = {
+            x: timeToX(endTime, canvasWidth, visibleRange),
+            y: priceToY(endPrice, canvasHeight, visiblePriceRange)
+        };
+        const vertex = {x: p2.x, y: p1.y};
+
+        // Apply the final calculated style
+        ctx.strokeStyle = style.lineColor;
+        ctx.lineWidth = style.lineWidth;
+        if (style.lineStyle === 'dashed') ctx.setLineDash([5, 5]);
+        else if (style.lineStyle === 'dotted') ctx.setLineDash([1, 2]);
+        else ctx.setLineDash([]);
+
+        // Draw the main angle lines
         ctx.beginPath();
-        ctx.moveTo(this.x0, this.y0);
-        ctx.lineTo(this.x1, this.y1);
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(vertex.x, vertex.y);
+        ctx.lineTo(p2.x, p2.y);
         ctx.stroke();
 
-        // Draw dashed line from (x0,y0) to (x0+10,y0)
-        ctx.setLineDash([3, 2]);
-        ctx.beginPath();
-        ctx.moveTo(this.x0, this.y0);
-        ctx.lineTo(this.x0 + 30, this.y0);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Draw arc for angle visualization
-        const radius = 20;
-        const v1 = {x: this.x1 - this.x0, y: this.y1 - this.y0};
-        const v2 = {x: this.x2 - this.x0, y: this.y2 - this.y0};
-
-        const angle1 = Math.atan2(v1.y, v1.x);
-        const angle2 = Math.atan2(v2.y, v2.x);
-
-        const anticlockwise = this.y1 > this.y0;
-        ctx.setLineDash([3, 2]);
-        ctx.lineDashOffset = 0;
-        ctx.beginPath();
-        ctx.arc(this.x0, this.y0, radius, angle1, angle2, anticlockwise);
-        ctx.stroke();
-
-        // Draw angle text
-        const angle = this.calculateAngle();
-        const midAngle = (angle1 + angle2) / 2;
-        const textX = this.x0 + 40;
-        const textY = this.y0
-        ctx.fillStyle = this.color;
-        ctx.font = '14px sans-serif';
-        ctx.fillText(angle + '°', textX, textY);
+        // Draw the visuals (arc and text)
+        this.drawAngleVisuals(ctx, p1, vertex, p2, style.lineColor);
     }
 
-    isHit(x: number, y: number): boolean {
+    public isHit(
+        px: number,
+        py: number,
+        renderContext: ChartRenderContext,
+        visiblePriceRange: PriceRange
+    ): boolean {
+        const {startTime, startPrice, endTime, endPrice} = this.args;
+        const {canvasWidth, canvasHeight, visibleRange} = renderContext;
         const tolerance = 6;
-        return this.isPointNearLine(x, y, this.x0, this.y0, this.x1, this.y1, tolerance) ||
-            this.isPointNearLine(x, y, this.x0, this.y0, this.x2, this.y2, tolerance);
+
+        const p1 = {
+            x: timeToX(startTime, canvasWidth, visibleRange),
+            y: priceToY(startPrice, canvasHeight, visiblePriceRange)
+        };
+        const p2 = {
+            x: timeToX(endTime, canvasWidth, visibleRange),
+            y: priceToY(endPrice, canvasHeight, visiblePriceRange)
+        };
+        const vertex = {x: p2.x, y: p1.y};
+
+        return this.isPointNearLine(px, py, p1.x, p1.y, vertex.x, vertex.y, tolerance) ||
+            this.isPointNearLine(px, py, vertex.x, vertex.y, p2.x, p2.y, tolerance);
+    }
+
+    private drawAngleVisuals(ctx: CanvasRenderingContext2D, p1: DrawingPoint, vertex: DrawingPoint, p2: DrawingPoint, color: string) {
+        const radius = 25;
+
+        const angle1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
+        const angle2 = Math.atan2(p2.y - vertex.y, p2.x - vertex.x);
+
+        ctx.beginPath();
+        ctx.arc(vertex.x, vertex.y, radius, angle1, angle2);
+        ctx.stroke();
+
+        const angleDeg = this.calculateAngle(p1, vertex, p2);
+        const midAngle = (angle1 + angle2) / 2;
+        const textRadius = radius + 15;
+        const textX = vertex.x + textRadius * Math.cos(midAngle);
+        const textY = vertex.y + textRadius * Math.sin(midAngle);
+
+        ctx.fillStyle = color;
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(angleDeg.toFixed(1) + '°', textX, textY);
     }
 
     private isPointNearLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number, tolerance: number): boolean {
-        const A = px - x1;
-        const B = py - y1;
-        const C = x2 - x1;
-        const D = y2 - y1;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        if (dx === 0 && dy === 0) return false;
 
-        const dot = A * C + B * D;
-        const len_sq = C * C + D * D;
-        let param = -1;
-        if (len_sq !== 0) param = dot / len_sq;
+        const t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
+        const closestX = t < 0 ? x1 : t > 1 ? x2 : x1 + t * dx;
+        const closestY = t < 0 ? y1 : t > 1 ? y2 : y1 + t * dy;
 
-        let xx, yy;
-        if (param < 0) {
-            xx = x1;
-            yy = y1;
-        } else if (param > 1) {
-            xx = x2;
-            yy = y2;
-        } else {
-            xx = x1 + param * C;
-            yy = y1 + param * D;
-        }
-
-        const dx = px - xx;
-        const dy = py - yy;
-        return (dx * dx + dy * dy) <= tolerance * tolerance;
+        const distSq = (px - closestX) ** 2 + (py - closestY) ** 2;
+        return distSq <= tolerance ** 2;
     }
 
-    private calculateAngle(): number {
-        const v1 = {x: this.x1 - this.x0, y: this.y1 - this.y0};
-        const v2 = {x: this.x2 - this.x0, y: this.y2 - this.y0};
-        const dot = v1.x * v2.x + v1.y * v2.y;
-        const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
-        const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
-        const cos = dot / (mag1 * mag2);
-        const angleRad = Math.acos(cos);
-        const angleDeg = angleRad * (180 / Math.PI);
-        const signedDeg = v2.y < v1.y ?  -angleDeg : angleDeg;
-        return parseFloat(signedDeg.toFixed(1)) || 0;
+    private calculateAngle(p1: DrawingPoint, vertex: DrawingPoint, p2: DrawingPoint): number {
+        const v1 = {x: p1.x - vertex.x, y: p1.y - vertex.y};
+        const v2 = {x: p2.x - vertex.x, y: p2.y - vertex.y};
+        const angleRad = Math.atan2(v2.y, v2.x) - Math.atan2(v1.y, v1.x);
+        let angleDeg = Math.abs(angleRad * (180 / Math.PI));
+        if (angleDeg > 180) angleDeg = 360 - angleDeg;
+        return angleDeg;
     }
 }

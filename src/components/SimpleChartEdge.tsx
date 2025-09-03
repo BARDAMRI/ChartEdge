@@ -5,7 +5,16 @@ import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {Interval} from '../types/Interval';
 import {TimeRange} from '../types/Graph';
 import {AxesPosition, ChartTheme, DeepPartial, DeepRequired} from '../types/types';
-import {ChartOptions, ChartType, StyleOptions, TimeDetailLevel} from '../types/chartOptions';
+import {
+    AreaStyleOptions,
+    AxesStyleOptions,
+    BarStyleOptions,
+    CandleStyleOptions,
+    ChartOptions,
+    ChartType, GridStyleOptions, HistogramStyleOptions, LineStyleOptions,
+    StyleOptions,
+    TimeDetailLevel
+} from '../types/chartOptions';
 import {ModeProvider} from '../contexts/ModeContext';
 import {deepMerge} from "../utils/deepMerge";
 import {
@@ -16,6 +25,9 @@ import {
     ChartStageArea,
     SettingsArea
 } from '../styles/App.styles';
+import {OverlayOptions} from "../types/overlay";
+import {DrawingStyleOptions} from "../types/Drawings";
+import {DEFAULT_GRAPH_OPTIONS} from "./DefaultData";
 
 
 export type SimpleChartEdgeProps = {
@@ -28,79 +40,6 @@ export type SimpleChartEdgeProps = {
     initialVisibleTimeRange?: TimeRange;
     chartType?: ChartType;
     chartOptions?: DeepPartial<ChartOptions>
-};
-
-const DEFAULT_STYLES: DeepRequired<StyleOptions> = {
-    candles: {
-        bullColor: "#26a69a",
-        bearColor: "#ef5350",
-        upColor: "#26a69a",
-        downColor: "#ef5350",
-        borderColor: "#333333",
-        borderWidth: 1,
-        bodyWidthFactor: 0.6,
-        spacingFactor: 0.2,
-    },
-    line: {
-        color: "#2962ff",
-        lineWidth: 2,
-    },
-    area: {
-        fillColor: "rgba(41, 98, 255, 0.2)",
-        strokeColor: "rgba(41, 98, 255, 1)",
-        lineWidth: 2,
-    },
-    histogram: {
-        bullColor: "#26a69a",
-        bearColor: "#ef5350",
-        opacity: 0.5,
-        heightRatio: 0.3,
-    },
-    bar: {
-        bullColor: "#26a69a",
-        bearColor: "#ef5350",
-        opacity: 0.7,
-    },
-    grid: {
-        color: "#e0e0e0",
-        lineWidth: 1,
-        gridSpacing: 50,
-        lineColor: "#e0e0e0",
-        lineDash: [],
-    },
-    overlay: {
-        lineColor: "#ff9800",
-        lineWidth: 1,
-        lineStyle: "solid",
-    },
-    axes: {
-        axisPosition: AxesPosition.left,
-        textColor: "#424242",
-        font: "12px Arial",
-        lineColor: "#9e9e9e",
-        lineWidth: 1,
-        numberLocale: "en-US",
-        dateLocale: "en-US",
-        numberFractionDigits: 2,
-    },
-    backgroundColor: "#ffffff",
-    showGrid: true,
-};
-
-export const DEFAULT_GRAPH_OPTIONS: DeepRequired<ChartOptions> = {
-    base: {
-        theme: 'light',
-        showOverlayLine: false,
-        showHistogram: true,
-        style: DEFAULT_STYLES,
-        overlays: [],
-        overlayKinds: [],
-    },
-    axes: {
-        yAxisPosition: AxesPosition.left,
-        currency: 'USD',
-        numberOfYTicks: 5,
-    }
 };
 
 export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
