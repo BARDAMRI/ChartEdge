@@ -22,6 +22,7 @@ import {CanvasSizes, DeepRequired, WindowSpreadOptions} from "../../types/types"
 interface ChartCanvasProps {
     intervalsArray: Interval[];
     drawings: any[];
+    setDrawings: (drawings: any[] | ((prev: any[]) => any[])) => void;
     isDrawing: boolean;
     selectedIndex: number | null;
     setIsDrawing: (value: boolean) => void;
@@ -36,20 +37,21 @@ interface ChartCanvasProps {
 }
 
 export const ChartCanvas: React.FC<ChartCanvasProps> = ({
-                                                            intervalsArray,
-                                                            visibleRange,
-                                                            setVisibleRange,
-                                                            visiblePriceRange,
-                                                            drawings,
-                                                            isDrawing,
-                                                            setIsDrawing,
-                                                            selectedIndex,
-                                                            chartType,
-                                                            chartOptions,
-                                                            canvasSizes,
-                                                            parentContainerRef,
-                                                            windowSpread,
-                                                        }) => {
+    intervalsArray,
+    visibleRange,
+    setVisibleRange,
+    visiblePriceRange,
+    drawings,
+    setDrawings,
+    isDrawing,
+    setIsDrawing,
+    selectedIndex,
+    chartType,
+    chartOptions,
+    canvasSizes,
+    parentContainerRef,
+    windowSpread,
+}) => {
     const {mode} = useMode();
 
     const mainCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -390,9 +392,10 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
     }), [visibleRange, setVisibleRange, scheduleDraw, canvasSizes.width]);
 
     const isInteractionMode = mode === Mode.none || mode === Mode.select;
+    const panZoomEnabled = (mode === Mode.none || mode === Mode.select) && !isDrawing;
     usePanAndZoom(
         hoverCanvasRef,
-        isInteractionMode,
+        panZoomEnabled,
         intervalsArray,
         visibleRange,
         setVisibleRange,
@@ -434,10 +437,53 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
     const handleMouseUp = () => {
         if (!isDrawing || !startPoint) return;
+
+        const endPoint = currentPointRef.current; // last hover point
+        if (endPoint) {
+            // Build a simple drawing object in screen (CSS px) coordinates.
+            // NOTE: drawDrawings() should know how to render these shapes.
+            let newShape: any | null = null;
+            switch (mode) {
+                case Mode.drawLine: {
+                    newShape = {
+                        type: 'line',
+                        x1: startPoint.x, y1: startPoint.y,
+                        x2: endPoint.x,   y2: endPoint.y,
+                    };
+                    break;
+                }
+                case Mode.drawRectangle: {
+                    const x = Math.min(startPoint.x, endPoint.x);
+                    const y = Math.min(startPoint.y, endPoint.y);
+                    const w = Math.abs(endPoint.x - startPoint.x);
+                    const h = Math.abs(endPoint.y - startPoint.y);
+                    newShape = { type: 'rect', x, y, w, h };
+                    break;
+                }
+                // TODO: add more shapes (circle/triangle/angle) when tools are enabled
+                default:
+                    break;
+            }
+
+            if (newShape) {
+                setDrawings(prev => Array.isArray(prev) ? [...prev, newShape] : [newShape]);
+                // Immediately refresh drawings layer (persistent canvas)
+                redrawDrawingsLayer();
+            }
+        }
+
         setIsDrawing(false);
         setStartPoint(null);
         drawSceneToBuffer();
         scheduleDraw();
+    };
+
+    // Wheel handler to block wheel/pinch while drawing tools are active
+    const handleWheelBlock: React.WheelEventHandler<HTMLCanvasElement> = (e) => {
+        if (!panZoomEnabled) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
     };
 
     return (
@@ -480,10 +526,11 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                     onMouseLeave={handleMouseLeave}
                     onMouseDown={handleMouseDown}
                     onMouseUp={handleMouseUp}
+                    onWheel={handleWheelBlock}
                     $heightPrecent={100}
                     $zIndex={4}
                     style={{
-                        cursor: isInteractionMode ? (isPanning ? 'grabbing' : 'grab') : 'crosshair'
+                        cursor: panZoomEnabled ? (isPanning ? 'grabbing' : 'grab') : 'crosshair'
                     }}
                 />
             </ChartingContainer>

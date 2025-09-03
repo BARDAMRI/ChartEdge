@@ -16,7 +16,7 @@ import {
     ChartStageArea,
     SettingsArea
 } from '../styles/App.styles';
-import {OverlayCalcSpec, OverlayKind, OverlayWithCalc} from "../types/overlay";
+
 
 export type SimpleChartEdgeProps = {
     intervalsArray?: Interval[];
@@ -136,6 +136,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                             timeFormat12h={initialTimeFormat12h}
                             chartType={chartType}
                             drawings={drawings}
+                            setDrawings={setDrawings}
                             isDrawing={isDrawing}
                             selectedIndex={selectedIndex}
                             setIsDrawing={setIsDrawing}

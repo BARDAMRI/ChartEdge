@@ -80,6 +80,7 @@ interface ChartStageProps {
     timeFormat12h: boolean;
     chartType: ChartType;
     drawings: any[];
+    setDrawings: (value: any[] | ((prev: any[]) => any[])) => void;
     isDrawing: boolean;
     selectedIndex: number | null;
     setIsDrawing: (value: boolean) => void;
@@ -95,6 +96,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           timeFormat12h,
                                                           chartType,
                                                           drawings,
+                                                          setDrawings,
                                                           isDrawing,
                                                           selectedIndex,
                                                           setIsDrawing,
@@ -228,6 +230,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                     <ChartCanvas
                                         intervalsArray={intervalsArray}
                                         drawings={drawings}
+                                        setDrawings={setDrawings}
                                         isDrawing={isDrawing}
                                         selectedIndex={selectedIndex}
                                         visibleRange={visibleRange}
@@ -265,6 +268,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                     <ChartCanvas
                                         intervalsArray={intervalsArray}
                                         drawings={drawings}
+                                        setDrawings={setDrawings}
                                         isDrawing={isDrawing}
                                         selectedIndex={selectedIndex}
                                         visibleRange={visibleRange}
