@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {ChartCanvas} from './ChartCanvas';
 import XAxis from "./Axes/XAxis";
 import YAxis from "./Axes/YAxis";
@@ -16,6 +16,7 @@ import {ChartOptions, ChartType, TimeDetailLevel} from "../../types/chartOptions
 import {AxesPosition, DeepRequired, windowSpread} from "../../types/types";
 import {useElementSize} from '../../hooks/useElementSize';
 import {findPriceRange} from "./utils/helpers";
+import {IDrawingShape} from "../Drawing/IDrawingShape";
 
 // --- Simple helpers ---
 const median = (nums: number[]): number => {
@@ -79,11 +80,7 @@ interface ChartStageProps {
     timeDetailLevel: TimeDetailLevel;
     timeFormat12h: boolean;
     chartType: ChartType;
-    drawings: any[];
-    setDrawings: (value: any[] | ((prev: any[]) => any[])) => void;
-    isDrawing: boolean;
     selectedIndex: number | null;
-    setIsDrawing: (value: boolean) => void;
     chartOptions: DeepRequired<ChartOptions>;
     showTopBar?: boolean;
     showLeftBar?: boolean;
@@ -95,11 +92,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           timeDetailLevel,
                                                           timeFormat12h,
                                                           chartType,
-                                                          drawings,
-                                                          setDrawings,
-                                                          isDrawing,
                                                           selectedIndex,
-                                                          setIsDrawing,
                                                           chartOptions
                                                           , showTopBar = true
                                                           , showLeftBar = true
@@ -115,6 +108,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         max: Math.max(...intervalsArray.map(inter => inter?.h || 0)),
         range: Math.max(...intervalsArray.map(inter => inter?.h || 0)) - Math.min(...intervalsArray.map(inter => inter?.l || 0))
     });
+    const [drawings, setDrawings] = useState<IDrawingShape[]>([]);
 
     function updateVisibleRange(newRangeTime: TimeRange) {
         if (!intervalsArray || intervalsArray.length === 0) return;
@@ -231,10 +225,8 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                         intervalsArray={intervalsArray}
                                         drawings={drawings}
                                         setDrawings={setDrawings}
-                                        isDrawing={isDrawing}
                                         selectedIndex={selectedIndex}
                                         visibleRange={visibleRange}
-                                        setIsDrawing={setIsDrawing}
                                         setVisibleRange={updateVisibleRange}
                                         visiblePriceRange={visiblePriceRange}
                                         chartType={chartType}
@@ -269,10 +261,8 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                         intervalsArray={intervalsArray}
                                         drawings={drawings}
                                         setDrawings={setDrawings}
-                                        isDrawing={isDrawing}
                                         selectedIndex={selectedIndex}
                                         visibleRange={visibleRange}
-                                        setIsDrawing={setIsDrawing}
                                         setVisibleRange={updateVisibleRange}
                                         visiblePriceRange={visiblePriceRange}
                                         chartType={chartType}

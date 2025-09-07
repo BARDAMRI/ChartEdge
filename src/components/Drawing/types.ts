@@ -1,16 +1,15 @@
 import {Mode} from "../../contexts/ModeContext";
-import {LineShapeArgs} from "./LineShape";
-import {RectangleShapeArgs} from "./RectangleShape";
-import {CircleShapeArgs} from "./CircleShape";
-import {TriangleShapeArgs} from "./TriangleShape";
-import {AngleShapeArgs} from "./Angleshape";
-import {PolylineShapeArgs} from "./Polyline";
-import {ArrowShapeArgs} from "./ArrowShape";
-import {CustomSymbolShapeArgs} from "./CustomSymbolShape";
-import {DrawingStyleOptions} from "../../types/Drawings";
+import {
+    AngleShapeArgs, ArrowShapeArgs,
+    CircleShapeArgs, CustomSymbolShapeArgs,
+    DrawingPoint,
+    DrawingStyleOptions,
+    LineShapeArgs, PolylineShapeArgs,
+    RectangleShapeArgs, TriangleShapeArgs
+} from "../../types/Drawings";
 
 export type ShapeBaseArgs = {
-    style?: Partial<Omit<DrawingStyleOptions, 'selected'>>;
+    points: DrawingPoint[];
 }
 export type ShapeArgs =
     LineShapeArgs
@@ -24,5 +23,6 @@ export type ShapeArgs =
 
 export type Drawing = {
     mode: Mode;
-    args: ShapeArgs;
+    args?: ShapeArgs;
+    style?: DrawingStyleOptions;
 }

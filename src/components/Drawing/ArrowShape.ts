@@ -1,27 +1,26 @@
 import {IDrawingShape} from "./IDrawingShape";
-import {ShapeBaseArgs} from "./types";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
 import {timeToX, priceToY} from "../Canvas/utils/GraphHelpers";
 import {isPointNearLine} from "../Canvas/utils/helpers";
-import {FinalDrawingStyle} from "../../types/Drawings";
+import {ArrowShapeArgs, DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
+import {pointerTolerance} from "./drawHelper";
 
-export interface ArrowShapeArgs extends ShapeBaseArgs {
-    startTime: number;
-    startPrice: number;
-    endTime: number;
-    endPrice: number;
-}
 
 export class ArrowShape implements IDrawingShape {
-    constructor(public args: ArrowShapeArgs) {
+    public style: DrawingStyleOptions;
+    public points: DrawingPoint[] = [];
+
+    constructor(public args: ArrowShapeArgs, public styleOverride: DrawingStyleOptions) {
+        this.style = styleOverride;
+        this.points = args?.points ?? [];
     }
 
     /**
      * Draws the arrow shape on the canvas using a provided style.
      * @param ctx The canvas 2D rendering context.
      * @param renderContext The context containing canvas dimensions and visible ranges.
-     * @param visiblePriceRange The currently visible price range for y-axis scaling.
+     * @param visiblePriceRange The currently visible price range for price-axis scaling.
      * @param style The final, calculated style object to apply.
      */
     public draw(
@@ -30,13 +29,12 @@ export class ArrowShape implements IDrawingShape {
         visiblePriceRange: PriceRange,
         style: FinalDrawingStyle
     ): void {
-        const {startTime, startPrice, endTime, endPrice} = this.args;
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
-        const fromX = timeToX(startTime, canvasWidth, visibleRange);
-        const fromY = priceToY(startPrice, canvasHeight, visiblePriceRange);
-        const toX = timeToX(endTime, canvasWidth, visibleRange);
-        const toY = priceToY(endPrice, canvasHeight, visiblePriceRange);
+        const x1 = timeToX(this.points[0].time, canvasWidth, visibleRange);
+        const y1 = priceToY(this.points[0].price, canvasHeight, visiblePriceRange);
+        const x2 = timeToX(this.points[1].time, canvasWidth, visibleRange);
+        const y2 = priceToY(this.points[1].price, canvasHeight, visiblePriceRange);
 
         // Apply the final calculated style
         ctx.strokeStyle = style.lineColor;
@@ -48,20 +46,20 @@ export class ArrowShape implements IDrawingShape {
 
         // Draw the main line of the arrow
         ctx.beginPath();
-        ctx.moveTo(fromX, fromY);
-        ctx.lineTo(toX, toY);
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
         ctx.stroke();
 
         // Draw the arrowhead
         const headLength = 8 + (style.lineWidth - 1) * 2; // Make arrowhead scale with line width
-        const dx = toX - fromX;
-        const dy = toY - fromY;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
         const angle = Math.atan2(dy, dx);
 
         ctx.beginPath();
-        ctx.moveTo(toX, toY);
-        ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6), toY - headLength * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6), toY - headLength * Math.sin(angle + Math.PI / 6));
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - headLength * Math.cos(angle - Math.PI / 6), y2 - headLength * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(x2 - headLength * Math.cos(angle + Math.PI / 6), y2 - headLength * Math.sin(angle + Math.PI / 6));
         ctx.closePath();
         ctx.fill();
     }
@@ -75,16 +73,32 @@ export class ArrowShape implements IDrawingShape {
         renderContext: ChartRenderContext,
         visiblePriceRange: PriceRange
     ): boolean {
-        const {startTime, startPrice, endTime, endPrice} = this.args;
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
-        const tolerance = 6;
 
-        const x1 = timeToX(startTime, canvasWidth, visibleRange);
-        const y1 = priceToY(startPrice, canvasHeight, visiblePriceRange);
-        const x2 = timeToX(endTime, canvasWidth, visibleRange);
-        const y2 = priceToY(endPrice, canvasHeight, visiblePriceRange);
+        const x1 = timeToX(this.points[0].time, canvasWidth, visibleRange);
+        const y1 = priceToY(this.points[0].price, canvasHeight, visiblePriceRange);
+        const x2 = timeToX(this.points[1].time, canvasWidth, visibleRange);
+        const y2 = priceToY(this.points[1].price, canvasHeight, visiblePriceRange);
 
-        return isPointNearLine(px, py, x1, y1, x2, y2, tolerance);
+        return isPointNearLine(px, py, x1, y1, x2, y2, pointerTolerance);
+    }
+
+    addPoint(point: DrawingPoint): void {
+        if (this.points.length < 2) {
+            this.points.push(point);
+        } else {
+            this.points[1] = point; // Update the end point if already two points exist
+        }
+    }
+
+    setPoints(points: DrawingPoint[]): void {
+        this.points = points.slice(0, 2); // Ensure only two points are kept
+    }
+
+    setPointAt(index: number, point: DrawingPoint): void {
+        if (index >= 0 && index < this.points.length) {
+            this.points[index] = point;
+        }
     }
 
 }

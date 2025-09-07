@@ -1,26 +1,54 @@
-import { IDrawingShape } from "./IDrawingShape";
-import {  ShapeBaseArgs } from "./types";
-import { priceToY, timeToX } from "../Canvas/utils/GraphHelpers";
-import { ChartRenderContext } from "../../types/chartOptions";
-import { PriceRange } from "../../types/Graph";
-import {FinalDrawingStyle} from "../../types/Drawings";
+import {IDrawingShape} from "./IDrawingShape";
+import {priceToY, timeToX} from "../Canvas/utils/GraphHelpers";
+import {ChartRenderContext} from "../../types/chartOptions";
+import {PriceRange} from "../../types/Graph";
+import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle, TriangleShapeArgs} from "../../types/Drawings";
 import {isPointNearLine} from "../Canvas/utils/helpers";
+import {pointerTolerance, pointInTriangle} from "./drawHelper";
+import {c} from "vite/dist/node/types.d-aGj9QkWt";
 
-export interface TriangleShapeArgs extends ShapeBaseArgs {
-    startTime: number;
-    startPrice: number;
-    endTime: number;
-    endPrice: number;
-}
 
 export class TriangleShape implements IDrawingShape {
-    constructor(public args: TriangleShapeArgs) {}
+
+    public style: DrawingStyleOptions;
+    public points: DrawingPoint[] = [];
+
+    constructor(public args: TriangleShapeArgs, public styleOverride: DrawingStyleOptions) {
+
+        this.style = styleOverride;
+        this.points = args?.points ?? [];
+
+
+        // Derive the third vertex based on quadrant rules (hover logic)
+        const xmin = Math.min(this.points[0].time, this.points[1].time);
+        const xmax = Math.max(this.points[0].time, this.points[1].time);
+        const ymin = Math.min(this.points[0].price, this.points[1].price);
+        const ymax = Math.max(this.points[0].price, this.points[1].price);
+
+        const dx = this.points[1].time - this.points[0].time;
+        const dy = this.points[1].price - this.points[0].price;
+        const isLeftToRight = dx >= 0;
+        const isUp = dy > 0;
+        let rx: number, ry: number;
+
+
+        if (isLeftToRight) {
+            rx = xmax;
+            ry = isUp ? ymax : ymin;
+        } else {
+            rx = xmin;
+            ry = isUp ? ymax : ymin;
+        }
+
+        this.points.push({time: rx, price: ry});
+
+    }
 
     /**
      * Draws the triangle shape on the canvas using a provided style.
      * @param ctx The canvas 2D rendering context.
      * @param renderContext The context containing canvas dimensions and visible ranges.
-     * @param visiblePriceRange The currently visible price range for y-axis scaling.
+     * @param visiblePriceRange The currently visible price range for price-axis scaling.
      * @param style The final, calculated style object to apply.
      */
     public draw(
@@ -29,12 +57,25 @@ export class TriangleShape implements IDrawingShape {
         visiblePriceRange: PriceRange,
         style: FinalDrawingStyle
     ): void {
-        const { startTime, startPrice, endTime, endPrice } = this.args;
-        const { canvasWidth, canvasHeight, visibleRange } = renderContext;
 
-        const p1 = { x: timeToX(startTime, canvasWidth, visibleRange), y: priceToY(startPrice, canvasHeight, visiblePriceRange) };
-        const p2 = { x: timeToX(endTime, canvasWidth, visibleRange), y: priceToY(endPrice, canvasHeight, visiblePriceRange) };
-        const p3 = { x: p1.x, y: p2.y }; // Third point to make a right-angled triangle
+
+        const {canvasWidth, canvasHeight, visibleRange} = renderContext;
+
+
+        const p1 = {
+            x: timeToX(this.points[0].time, canvasWidth, visibleRange),
+            y: priceToY(this.points[0].price, canvasHeight, visiblePriceRange)
+        };
+        const p2 = {
+            x: timeToX(this.points[1].time, canvasWidth, visibleRange),
+            y: priceToY(this.points[1].price, canvasHeight, visiblePriceRange)
+        };
+
+        const p3 = {
+            x: timeToX(this.points[2].time, canvasWidth, visibleRange),
+            y: priceToY(this.points[2].price, canvasHeight, visiblePriceRange)
+        };
+
 
         ctx.strokeStyle = style.lineColor;
         ctx.lineWidth = style.lineWidth;
@@ -66,17 +107,118 @@ export class TriangleShape implements IDrawingShape {
         renderContext: ChartRenderContext,
         visiblePriceRange: PriceRange
     ): boolean {
-        const { startTime, startPrice, endTime, endPrice } = this.args;
-        const { canvasWidth, canvasHeight, visibleRange } = renderContext;
-        const tolerance = 6;
+        const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
-        const p1 = { x: timeToX(startTime, canvasWidth, visibleRange), y: priceToY(startPrice, canvasHeight, visiblePriceRange) };
-        const p2 = { x: timeToX(endTime, canvasWidth, visibleRange), y: priceToY(endPrice, canvasHeight, visiblePriceRange) };
-        const p3 = { x: p1.x, y: p2.y };
+        const a = {
+            x: timeToX(this.points[0].time, canvasWidth, visibleRange),
+            y: priceToY(this.points[0].price, canvasHeight, visiblePriceRange),
+        };
+        const b = {
+            x: timeToX(this.points[1].time, canvasWidth, visibleRange),
+            y: priceToY(this.points[1].price, canvasHeight, visiblePriceRange),
+        };
+        const c = {
+            x: timeToX(this.points[2].time, canvasWidth, visibleRange),
+            y: priceToY(this.points[2].price, canvasHeight, visiblePriceRange),
+        };
 
-        // Check for a hit on any of the 3 lines of the triangle
-        return isPointNearLine(px, py, p1.x, p1.y, p2.x, p2.y, tolerance) ||
-               isPointNearLine(px, py, p2.x, p2.y, p3.x, p3.y, tolerance) ||
-               isPointNearLine(px, py, p3.x, p3.y, p1.x, p1.y, tolerance);
+        if (
+            isPointNearLine(px, py, a.x, a.y, b.x, b.y, pointerTolerance) ||
+            isPointNearLine(px, py, b.x, b.y, c.x, c.y, pointerTolerance) ||
+            isPointNearLine(px, py, c.x, c.y, a.x, a.y, pointerTolerance)
+        ) {
+            return true;
+        }
+
+        return pointInTriangle(px, py, a, b, c);
     }
+
+    addPoint(point: DrawingPoint): void {
+        if (this.points.length < 2) {
+            this.points.push(point);
+        } else {
+            this.points[1] = point;
+
+            // Recalculate the third vertex based on the updated second point
+            const xmin = Math.min(this.points[0].time, this.points[1].time);
+            const xmax = Math.max(this.points[0].time, this.points[1].time);
+            const ymin = Math.min(this.points[0].price, this.points[1].price);
+            const ymax = Math.max(this.points[0].price, this.points[1].price);
+
+            const dx = this.points[1].time - this.points[0].time;
+            const dy = this.points[1].price - this.points[0].price;
+            const isLeftToRight = dx >= 0;
+            const isUp = dy > 0;
+            let rx: number, ry: number;
+
+            if (isLeftToRight) {
+                rx = xmax;
+                ry = isUp ? ymax : ymin;
+            } else {
+                rx = xmin;
+                ry = isUp ? ymax : ymin;
+            }
+
+            this.points[2] = {time: rx, price: ry};
+        }
+    }
+
+    setPoints(points: DrawingPoint[]): void {
+        this.points = points.slice(0, 2); // Keep only the first two points
+
+        if (this.points.length === 2) {
+            // Recalculate the third vertex based on the two points
+            const xmin = Math.min(this.points[0].time, this.points[1].time);
+            const xmax = Math.max(this.points[0].time, this.points[1].time);
+            const ymin = Math.min(this.points[0].price, this.points[1].price);
+            const ymax = Math.max(this.points[0].price, this.points[1].price);
+
+            const dx = this.points[1].time - this.points[0].time;
+            const dy = this.points[1].price - this.points[0].price;
+            const isLeftToRight = dx >= 0;
+            const isUp = dy > 0;
+            let rx: number, ry: number;
+
+            if (isLeftToRight) {
+                rx = xmax;
+                ry = isUp ? ymax : ymin;
+            } else {
+                rx = xmin;
+                ry = isUp ? ymax : ymin;
+            }
+
+            this.points.push({time: rx, price: ry});
+        }
+    }
+
+    setPointAt(index: number, point: DrawingPoint): void {
+        if (index < 0 || index > 1) return;
+        this.points[index] = point;
+
+        if (this.points.length === 2) {
+            // Recalculate the third vertex based on the updated points
+            const xmin = Math.min(this.points[0].time, this.points[1].time);
+            const xmax = Math.max(this.points[0].time, this.points[1].time);
+            const ymin = Math.min(this.points[0].price, this.points[1].price);
+            const ymax = Math.max(this.points[0].price, this.points[1].price);
+
+            const dx = this.points[1].time - this.points[0].time;
+            const dy = this.points[1].price - this.points[0].price;
+            const isLeftToRight = dx >= 0;
+            const isUp = dy > 0;
+            let rx: number, ry: number;
+
+            if (isLeftToRight) {
+                rx = xmax;
+                ry = isUp ? ymax : ymin;
+            } else {
+                rx = xmin;
+                ry = isUp ? ymax : ymin;
+            }
+
+            this.points[2] = {time: rx, price: ry};
+        }
+    }
+
+
 }

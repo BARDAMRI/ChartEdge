@@ -1,26 +1,30 @@
 import {IDrawingShape} from "./IDrawingShape";
-import {ShapeBaseArgs} from "./types";
 import {priceToY, timeToX} from "../Canvas/utils/GraphHelpers";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
-import {FinalDrawingStyle} from "../../types/Drawings";
+import {CustomSymbolShapeArgs, DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
+import {s} from "vite/dist/node/types.d-aGj9QkWt";
 
-export interface CustomSymbolShapeArgs extends ShapeBaseArgs {
-    time: number;
-    price: number;
-    symbol: string;
-    size: number;
-}
 
 export class CustomSymbolShape implements IDrawingShape {
-    constructor(public args: CustomSymbolShapeArgs) {
+
+    public style: DrawingStyleOptions;
+    public points: DrawingPoint[] = [];
+    public symbol: string;
+    public size: number;
+
+    constructor(public args: CustomSymbolShapeArgs, public styleOverride: DrawingStyleOptions) {
+        this.style = styleOverride;
+        this.points = args?.points ?? [];
+        this.symbol = args.symbol;
+        this.size = args.size;
     }
 
     /**
      * Draws the symbol on the canvas using a provided style.
      * @param ctx The canvas 2D rendering context.
      * @param renderContext The context containing canvas dimensions and visible ranges.
-     * @param visiblePriceRange The currently visible price range for y-axis scaling.
+     * @param visiblePriceRange The currently visible price range for price-axis scaling.
      * @param style The final, calculated style object to apply.
      */
     public draw(
@@ -29,11 +33,11 @@ export class CustomSymbolShape implements IDrawingShape {
         visiblePriceRange: PriceRange,
         style: FinalDrawingStyle
     ): void {
-        const {time, price, symbol, size} = this.args;
+        const {points, symbol, size} = this.args;
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
-        const x = timeToX(time, canvasWidth, visibleRange);
-        const y = priceToY(price, canvasHeight, visiblePriceRange);
+        const x = timeToX(points[0].time, canvasWidth, visibleRange);
+        const y = priceToY(points[0].price, canvasHeight, visiblePriceRange);
 
 
         ctx.fillStyle = style.fillColor !== 'transparent' ? style.fillColor : style.lineColor;
@@ -50,11 +54,11 @@ export class CustomSymbolShape implements IDrawingShape {
         renderContext: ChartRenderContext,
         visiblePriceRange: PriceRange
     ): boolean {
-        const {time, price, size} = this.args;
+        const {points, size} = this.args;
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
-        const x = timeToX(time, canvasWidth, visibleRange);
-        const y = priceToY(price, canvasHeight, visiblePriceRange);
+        const x = timeToX(points[0].time, canvasWidth, visibleRange);
+        const y = priceToY(points[0].price, canvasHeight, visiblePriceRange);
         const s = size || 20;
 
         // Bounding box hit test
@@ -62,5 +66,21 @@ export class CustomSymbolShape implements IDrawingShape {
             px <= x + s / 2 &&
             py >= y - s / 2 &&
             py <= y + s / 2;
+    }
+
+    addPoint(point: DrawingPoint): void {
+        if (this.points.length < 1) {
+            this.points.push(point);
+        }
+    }
+
+    setPoints(points: DrawingPoint[]): void {
+        this.points = points;
+    }
+
+    setPointAt(index: number, point: DrawingPoint): void {
+        if (index >= 0 && index < this.points.length) {
+            this.points[index] = point;
+        }
     }
 }

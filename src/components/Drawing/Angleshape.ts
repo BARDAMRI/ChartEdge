@@ -1,19 +1,18 @@
 import {IDrawingShape} from "./IDrawingShape";
-import {ShapeBaseArgs} from "./types";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
 import {timeToX, priceToY} from "../Canvas/utils/GraphHelpers";
-import {DrawingPoint, FinalDrawingStyle} from "../../types/Drawings";
-
-export interface AngleShapeArgs extends ShapeBaseArgs {
-    startTime: number;
-    startPrice: number;
-    endTime: number;
-    endPrice: number;
-}
+import {AngleShapeArgs, CanvasPoint, DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
+import {pointerTolerance} from "./drawHelper";
 
 export class AngleShape implements IDrawingShape {
-    constructor(public args: AngleShapeArgs) {
+
+    public style: DrawingStyleOptions;
+    public points: DrawingPoint[] = [];
+
+    constructor(public args: AngleShapeArgs, public styleOptions: DrawingStyleOptions) {
+        this.style = styleOptions;
+        this.points = args.points ?? [];
     }
 
     public draw(
@@ -22,18 +21,16 @@ export class AngleShape implements IDrawingShape {
         visiblePriceRange: PriceRange,
         style: FinalDrawingStyle
     ): void {
-        const {startTime, startPrice, endTime, endPrice} = this.args;
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
-        const p1 = {
-            x: timeToX(startTime, canvasWidth, visibleRange),
-            y: priceToY(startPrice, canvasHeight, visiblePriceRange)
-        };
-        const p2 = {
-            x: timeToX(endTime, canvasWidth, visibleRange),
-            y: priceToY(endPrice, canvasHeight, visiblePriceRange)
-        };
-        const vertex = {x: p2.x, y: p1.y};
+        const x1 = timeToX(this.points[0].time, canvasWidth, visibleRange);
+        const y1 = priceToY(this.points[0].price, canvasHeight, visiblePriceRange);
+        const x2 = timeToX(this.points[1].time, canvasWidth, visibleRange);
+        const y2 = priceToY(this.points[1].price, canvasHeight, visiblePriceRange);
+
+        const p1: CanvasPoint = {x: x1, y: y1};
+        const p2: CanvasPoint = {x: x2, y: y2};
+        const vertex: CanvasPoint = {x: p2.x, y: p1.y};
 
         // Apply the final calculated style
         ctx.strokeStyle = style.lineColor;
@@ -59,25 +56,23 @@ export class AngleShape implements IDrawingShape {
         renderContext: ChartRenderContext,
         visiblePriceRange: PriceRange
     ): boolean {
-        const {startTime, startPrice, endTime, endPrice} = this.args;
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
-        const tolerance = 6;
 
         const p1 = {
-            x: timeToX(startTime, canvasWidth, visibleRange),
-            y: priceToY(startPrice, canvasHeight, visiblePriceRange)
+            x: timeToX(this.points[0].time, canvasWidth, visibleRange),
+            y: priceToY(this.points[0].price, canvasHeight, visiblePriceRange)
         };
         const p2 = {
-            x: timeToX(endTime, canvasWidth, visibleRange),
-            y: priceToY(endPrice, canvasHeight, visiblePriceRange)
+            x: timeToX(this.points[1].time, canvasWidth, visibleRange),
+            y: priceToY(this.points[1].price, canvasHeight, visiblePriceRange)
         };
         const vertex = {x: p2.x, y: p1.y};
 
-        return this.isPointNearLine(px, py, p1.x, p1.y, vertex.x, vertex.y, tolerance) ||
-            this.isPointNearLine(px, py, vertex.x, vertex.y, p2.x, p2.y, tolerance);
+        return this.isPointNearLine(px, py, p1.x, p1.y, vertex.x, vertex.y, pointerTolerance) ||
+            this.isPointNearLine(px, py, vertex.x, vertex.y, p2.x, p2.y, pointerTolerance);
     }
 
-    private drawAngleVisuals(ctx: CanvasRenderingContext2D, p1: DrawingPoint, vertex: DrawingPoint, p2: DrawingPoint, color: string) {
+    private drawAngleVisuals(ctx: CanvasRenderingContext2D, p1: CanvasPoint, vertex: CanvasPoint, p2: CanvasPoint, color: string) {
         const radius = 25;
 
         const angle1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
@@ -113,12 +108,31 @@ export class AngleShape implements IDrawingShape {
         return distSq <= tolerance ** 2;
     }
 
-    private calculateAngle(p1: DrawingPoint, vertex: DrawingPoint, p2: DrawingPoint): number {
+    private calculateAngle(p1: CanvasPoint, vertex: CanvasPoint, p2: CanvasPoint): number {
         const v1 = {x: p1.x - vertex.x, y: p1.y - vertex.y};
         const v2 = {x: p2.x - vertex.x, y: p2.y - vertex.y};
         const angleRad = Math.atan2(v2.y, v2.x) - Math.atan2(v1.y, v1.x);
         let angleDeg = Math.abs(angleRad * (180 / Math.PI));
         if (angleDeg > 180) angleDeg = 360 - angleDeg;
         return angleDeg;
+    }
+
+    addPoint(point: DrawingPoint): void {
+        if (this.points.length < 2) {
+            this.points.push(point);
+        } else {
+            this.points[1] = point;
+        }
+    }
+
+    setPoints(points: DrawingPoint[]): void {
+        this.points = points;
+    }
+
+    setPointAt(index: number, point: DrawingPoint): void {
+        if (index >= 0 && index < this.points.length) {
+            this.points[index] = point;
+        }
+        
     }
 }

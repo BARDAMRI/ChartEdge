@@ -52,8 +52,6 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                 }) => {
 
     const finalStyleOptions: DeepRequired<ChartOptions> = useMemo(() => deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions), [chartOptions]);
-    const [drawings, setDrawings] = useState<any[]>([]);
-    const [isDrawing, setIsDrawing] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
 
     return (
@@ -74,11 +72,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                             timeDetailLevel={initialTimeDetailLevel}
                             timeFormat12h={initialTimeFormat12h}
                             chartType={chartType}
-                            drawings={drawings}
-                            setDrawings={setDrawings}
-                            isDrawing={isDrawing}
                             selectedIndex={selectedIndex}
-                            setIsDrawing={setIsDrawing}
                             chartOptions={finalStyleOptions}
                         />
                     </ChartStageArea>

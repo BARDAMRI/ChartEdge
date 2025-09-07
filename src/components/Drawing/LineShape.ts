@@ -3,25 +3,28 @@ import {ShapeBaseArgs} from "./types";
 import {timeToX, priceToY} from "../Canvas/utils/GraphHelpers";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
-import {FinalDrawingStyle} from "../../types/Drawings";
+import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle, LineShapeArgs} from "../../types/Drawings";
 import {isPointNearLine} from "../Canvas/utils/helpers";
+import {pointerTolerance} from "./drawHelper";
+import * as console from "console";
 
-export interface LineShapeArgs extends ShapeBaseArgs {
-    startTime: number;
-    startPrice: number;
-    endTime: number;
-    endPrice: number;
-}
 
 export class LineShape implements IDrawingShape {
-    constructor(public args: LineShapeArgs) {
+
+    public style: DrawingStyleOptions;
+    public points: DrawingPoint[] = [];
+
+
+    constructor(public args: LineShapeArgs, public styleOverride: DrawingStyleOptions) {
+        this.style = styleOverride;
+        this.points = args?.points ?? [];
     }
 
     /**
      * Draws the line shape on the canvas using a provided style.
      * @param ctx The canvas 2D rendering context.
      * @param renderContext The context containing canvas dimensions and visible ranges.
-     * @param visiblePriceRange The currently visible price range for y-axis scaling.
+     * @param visiblePriceRange The currently visible price range for price-axis scaling.
      * @param style The final, calculated style object to apply.
      */
     public draw(
@@ -30,13 +33,12 @@ export class LineShape implements IDrawingShape {
         visiblePriceRange: PriceRange,
         style: FinalDrawingStyle
     ): void {
-        const {startTime, startPrice, endTime, endPrice} = this.args;
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
-        const x1 = timeToX(startTime, canvasWidth, visibleRange);
-        const y1 = priceToY(startPrice, canvasHeight, visiblePriceRange);
-        const x2 = timeToX(endTime, canvasWidth, visibleRange);
-        const y2 = priceToY(endPrice, canvasHeight, visiblePriceRange);
+        const x1 = timeToX(this.points[0].time, canvasWidth, visibleRange);
+        const y1 = priceToY(this.points[0].price, canvasHeight, visiblePriceRange);
+        const x2 = timeToX(this.points[1].time, canvasWidth, visibleRange);
+        const y2 = priceToY(this.points[1].price, canvasHeight, visiblePriceRange);
 
         ctx.strokeStyle = style.lineColor;
         ctx.lineWidth = style.lineWidth;
@@ -61,16 +63,34 @@ export class LineShape implements IDrawingShape {
         renderContext: ChartRenderContext,
         visiblePriceRange: PriceRange
     ): boolean {
-        const {startTime, startPrice, endTime, endPrice} = this.args;
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
-        const tolerance = 6;
 
-        const x1 = timeToX(startTime, canvasWidth, visibleRange);
-        const y1 = priceToY(startPrice, canvasHeight, visiblePriceRange);
-        const x2 = timeToX(endTime, canvasWidth, visibleRange);
-        const y2 = priceToY(endPrice, canvasHeight, visiblePriceRange);
+        const x1 = timeToX(this.points[0].time, canvasWidth, visibleRange);
+        const y1 = priceToY(this.points[0].price, canvasHeight, visiblePriceRange);
+        const x2 = timeToX(this.points[1].time, canvasWidth, visibleRange);
+        const y2 = priceToY(this.points[1].price, canvasHeight, visiblePriceRange);
 
-        return isPointNearLine(px, py, x1, y1, x2, y2, tolerance);
+        return isPointNearLine(px, py, x1, y1, x2, y2, pointerTolerance);
     }
+
+    setPoints(points: DrawingPoint[]): void {
+        this.points = points;
+    }
+
+    addPoint(point: DrawingPoint): void {
+        if (this.points.length < 2) {
+            this.points.push(point);
+        } else {
+            console.warn("LineShape can only have two points.");
+        }
+    }
+
+    setPointAt(index: number, point: DrawingPoint): void {
+        if (index < 0 || index >= this.points.length) {
+            throw new Error("Index out of bounds");
+        }
+        this.points[index] = point;
+    }
+
 
 }

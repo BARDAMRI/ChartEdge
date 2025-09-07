@@ -1,24 +1,31 @@
 import {IDrawingShape} from "./IDrawingShape";
-import {ShapeBaseArgs} from "./types";
 import {priceToY, timeToX} from "../Canvas/utils/GraphHelpers";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
 import {isPointNearLine} from "../Canvas/utils/helpers";
-import {FinalDrawingStyle} from "../../types/Drawings";
+import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle, PolylineShapeArgs} from "../../types/Drawings";
+import {i} from "vite/dist/node/types.d-aGj9QkWt";
 
-export interface PolylineShapeArgs extends ShapeBaseArgs {
-    points: { time: number; price: number }[];
-}
 
 export class Polyline implements IDrawingShape {
-    constructor(public args: PolylineShapeArgs) {
+
+    public style: DrawingStyleOptions;
+    public points: DrawingPoint[] = [];
+
+    constructor(public args: PolylineShapeArgs, public styleOverride: DrawingStyleOptions) {
+        this.style = styleOverride;
+
+    }
+
+    public addPoint(point: DrawingPoint): void {
+        this.points.push(point);
     }
 
     /**
      * Draws the polyline/polygon shape on the canvas using a provided style.
      * @param ctx The canvas 2D rendering context.
      * @param renderContext The context containing canvas dimensions and visible ranges.
-     * @param visiblePriceRange The currently visible price range for y-axis scaling.
+     * @param visiblePriceRange The currently visible price range for price-axis scaling.
      * @param style The final, calculated style object to apply.
      */
     public draw(
@@ -99,5 +106,15 @@ export class Polyline implements IDrawingShape {
         }
 
         return false;
+    }
+
+    setPoints(points: DrawingPoint[]): void {
+        this.points = points;
+    }
+
+    setPointAt(index: number, point: DrawingPoint): void {
+        if (index >= 0 && index < this.points.length) {
+            this.points[index] = point;
+        }
     }
 }

@@ -1,6 +1,13 @@
+import {ShapeBaseArgs} from "../components/Drawing/types";
+
 export interface DrawingPoint {
-    x: number;
-    y: number;
+    time: number; // time value
+    price: number; // price value
+}
+
+export interface CanvasPoint {
+    x: number; // x coordinate on canvas
+    y: number; // y coordinate on canvas
 }
 
 
@@ -24,3 +31,38 @@ export type FinalDrawingStyle = {
     lineStyle: 'solid' | 'dashed' | 'dotted';
     fillColor: string | 'transparent';
 };
+
+
+export interface AngleShapeArgs extends ShapeBaseArgs {
+    points: DrawingPoint[];
+}
+
+export interface PolylineShapeArgs extends ShapeBaseArgs {
+    points: DrawingPoint[];
+}
+
+export interface LineShapeArgs extends ShapeBaseArgs {
+    points: DrawingPoint[];
+}
+
+export interface RectangleShapeArgs extends ShapeBaseArgs {
+    points: DrawingPoint[];
+}
+
+export interface CircleShapeArgs extends ShapeBaseArgs {
+    points: DrawingPoint[];
+}
+
+export interface TriangleShapeArgs extends ShapeBaseArgs {
+    points: DrawingPoint[];
+}
+
+export interface ArrowShapeArgs extends ShapeBaseArgs {
+    points: DrawingPoint[];
+}
+
+export interface CustomSymbolShapeArgs extends ShapeBaseArgs {
+    points: DrawingPoint[];
+    symbol: string;
+    size: number;
+}

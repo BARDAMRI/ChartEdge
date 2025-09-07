@@ -1,8 +1,11 @@
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
-import {DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
+import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
 
 export interface IDrawingShape {
+    style: DrawingStyleOptions;
+    points: DrawingPoint[];
+
     /**
      * Draws the shape on the canvas.
      * @param ctx
@@ -26,4 +29,10 @@ export interface IDrawingShape {
         renderContext: ChartRenderContext,
         visiblePriceRange: PriceRange
     ): boolean;
+
+    setPoints(points: DrawingPoint[]): void;
+
+    setPointAt(index: number, point: DrawingPoint): void;
+
+    addPoint(point: DrawingPoint): void;
 }

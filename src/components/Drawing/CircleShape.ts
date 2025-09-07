@@ -1,26 +1,26 @@
 import {IDrawingShape} from "./IDrawingShape";
-import {ShapeBaseArgs} from "./types";
 import {priceToY, timeToX} from "../Canvas/utils/GraphHelpers";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
-import {FinalDrawingStyle} from "../../types/Drawings";
+import {CircleShapeArgs, DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
+import {pointerTolerance} from "./drawHelper";
 
-export interface CircleShapeArgs extends ShapeBaseArgs {
-    startTime: number;
-    startPrice: number;
-    endTime: number;
-    endPrice: number;
-}
 
 export class CircleShape implements IDrawingShape {
-    constructor(public args: CircleShapeArgs) {
+
+    public style: DrawingStyleOptions;
+    public points: DrawingPoint[] = [];
+
+    constructor(public args: CircleShapeArgs, public styleOverride: DrawingStyleOptions) {
+        this.style = styleOverride;
+        this.points = args?.points ?? [];
     }
 
     /**
      * Draws the circle/ellipse shape on the canvas using a provided style.
      * @param ctx The canvas 2D rendering context.
      * @param renderContext The context containing canvas dimensions and visible ranges.
-     * @param visiblePriceRange The currently visible price range for y-axis scaling.
+     * @param visiblePriceRange The currently visible price range for price-axis scaling.
      * @param style The final, calculated style object to apply.
      */
     public draw(
@@ -29,13 +29,12 @@ export class CircleShape implements IDrawingShape {
         visiblePriceRange: PriceRange,
         style: FinalDrawingStyle
     ): void {
-        const {startTime, startPrice, endTime, endPrice} = this.args;
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
-        const x1 = timeToX(startTime, canvasWidth, visibleRange);
-        const y1 = priceToY(startPrice, canvasHeight, visiblePriceRange);
-        const x2 = timeToX(endTime, canvasWidth, visibleRange);
-        const y2 = priceToY(endPrice, canvasHeight, visiblePriceRange);
+        const x1 = timeToX(this.points[0].time, canvasWidth, visibleRange);
+        const y1 = priceToY(this.points[0].price, canvasHeight, visiblePriceRange);
+        const x2 = timeToX(this.points[1].time, canvasWidth, visibleRange);
+        const y2 = priceToY(this.points[1].price, canvasHeight, visiblePriceRange);
 
         const centerX = (x1 + x2) / 2;
         const centerY = (y1 + y2) / 2;
@@ -69,15 +68,12 @@ export class CircleShape implements IDrawingShape {
         renderContext: ChartRenderContext,
         visiblePriceRange: PriceRange
     ): boolean {
-        // Approximate hit test for an ellipse
-        const {startTime, startPrice, endTime, endPrice} = this.args;
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
-        const tolerance = 0.1; // Tolerance for ellipse boundary (10%)
 
-        const x1 = timeToX(startTime, canvasWidth, visibleRange);
-        const y1 = priceToY(startPrice, canvasHeight, visiblePriceRange);
-        const x2 = timeToX(endTime, canvasWidth, visibleRange);
-        const y2 = priceToY(endPrice, canvasHeight, visiblePriceRange);
+        const x1 = timeToX(this.points[0].time, canvasWidth, visibleRange);
+        const y1 = priceToY(this.points[0].price, canvasHeight, visiblePriceRange);
+        const x2 = timeToX(this.points[1].time, canvasWidth, visibleRange);
+        const y2 = priceToY(this.points[1].price, canvasHeight, visiblePriceRange);
 
         const centerX = (x1 + x2) / 2;
         const centerY = (y1 + y2) / 2;
@@ -88,6 +84,24 @@ export class CircleShape implements IDrawingShape {
 
         // Check if the point is on the boundary of the ellipse
         const normalized = ((px - centerX) / radiusX) ** 2 + ((py - centerY) / radiusY) ** 2;
-        return normalized >= 1 - tolerance && normalized <= 1 + tolerance;
+        return normalized >= 1 - pointerTolerance && normalized <= 1 + pointerTolerance;
+    }
+
+    addPoint(point: DrawingPoint): void {
+        if (this.points.length < 2) {
+            this.points.push(point);
+        } else {
+            this.points[1] = point;
+        }
+    }
+
+    setPoints(points: DrawingPoint[]): void {
+        this.points = points.slice(0, 2);
+    }
+
+    setPointAt(index: number, point: DrawingPoint): void {
+        if (index >= 0 && index < this.points.length) {
+            this.points[index] = point;
+        }
     }
 }
