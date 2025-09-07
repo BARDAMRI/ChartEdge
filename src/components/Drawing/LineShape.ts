@@ -6,8 +6,6 @@ import {PriceRange} from "../../types/Graph";
 import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle, LineShapeArgs} from "../../types/Drawings";
 import {isPointNearLine} from "../Canvas/utils/helpers";
 import {pointerTolerance} from "./drawHelper";
-import * as console from "console";
-
 
 export class LineShape implements IDrawingShape {
 
@@ -86,10 +84,37 @@ export class LineShape implements IDrawingShape {
     }
 
     setPointAt(index: number, point: DrawingPoint): void {
-        if (index < 0 || index >= this.points.length) {
+        if (index < 0) {
             throw new Error("Index out of bounds");
         }
-        this.points[index] = point;
+        if (index == this.points.length - 1) {
+            this.points[index] = point;
+        } else if (index === this.points.length + 1) {
+            this.addPoint(point);
+        }
+    }
+
+    getPoints(): DrawingPoint[] {
+        return this.points;
+    }
+
+    updateLastPoint(point: DrawingPoint): void {
+        // Updating the seconds point of the line or adding it if it doesn't exist
+        if (this.points.length === 0) {
+            this.points.push(point);
+        } else if (this.points.length === 1) {
+            this.points.push(point);
+        } else {
+            this.points[1] = point;
+        }
+    }
+
+    setFirstPoint(point: DrawingPoint): void {
+        if (this.points.length === 0) {
+            this.points.push(point);
+        } else {
+            this.points[0] = point;
+        }
     }
 
 

@@ -101,4 +101,26 @@ export class RectangleShape implements IDrawingShape {
         }
     }
 
+    getPoints(): DrawingPoint[] {
+        return this.points;
+    }
+
+    setFirstPoint(point: DrawingPoint): void {
+        if (this.points.length === 0) {
+            this.points.push(point);
+        } else {
+            this.points[0] = point;
+        }
+    }
+
+    updateLastPoint(point: DrawingPoint): void {
+        if (this.points.length === 0) {
+            this.points.push(point);
+        } else if (this.points.length === 1) {
+            this.points.push(point);
+        } else {
+            this.points[1] = point;
+        }
+    }
+
 }

@@ -17,30 +17,7 @@ export class TriangleShape implements IDrawingShape {
 
         this.style = styleOverride;
         this.points = args?.points ?? [];
-
-
-        // Derive the third vertex based on quadrant rules (hover logic)
-        const xmin = Math.min(this.points[0].time, this.points[1].time);
-        const xmax = Math.max(this.points[0].time, this.points[1].time);
-        const ymin = Math.min(this.points[0].price, this.points[1].price);
-        const ymax = Math.max(this.points[0].price, this.points[1].price);
-
-        const dx = this.points[1].time - this.points[0].time;
-        const dy = this.points[1].price - this.points[0].price;
-        const isLeftToRight = dx >= 0;
-        const isUp = dy > 0;
-        let rx: number, ry: number;
-
-
-        if (isLeftToRight) {
-            rx = xmax;
-            ry = isUp ? ymax : ymin;
-        } else {
-            rx = xmin;
-            ry = isUp ? ymax : ymin;
-        }
-
-        this.points.push({time: rx, price: ry});
+        this.recalculateThirdVertex();
 
     }
 
@@ -133,90 +110,78 @@ export class TriangleShape implements IDrawingShape {
         return pointInTriangle(px, py, a, b, c);
     }
 
+    recalculateThirdVertex(): void {
+        if (this.points.length < 2) return;
+
+        const xmin = Math.min(this.points[0].time, this.points[1].time);
+        const xmax = Math.max(this.points[0].time, this.points[1].time);
+        const ymin = Math.min(this.points[0].price, this.points[1].price);
+        const ymax = Math.max(this.points[0].price, this.points[1].price);
+
+        const dx = this.points[1].time - this.points[0].time;
+        const dy = this.points[1].price - this.points[0].price;
+        const isLeftToRight = dx >= 0;
+        const isUp = dy > 0;
+        let rx: number, ry: number;
+
+        if (isLeftToRight) {
+            rx = xmax;
+            ry = isUp ? ymax : ymin;
+        } else {
+            rx = xmin;
+            ry = isUp ? ymax : ymin;
+        }
+
+        if (this.points.length === 2) {
+            this.points.push({time: rx, price: ry});
+        } else {
+            this.points[2] = {time: rx, price: ry};
+        }
+    }
+
     addPoint(point: DrawingPoint): void {
         if (this.points.length < 2) {
             this.points.push(point);
         } else {
             this.points[1] = point;
-
-            // Recalculate the third vertex based on the updated second point
-            const xmin = Math.min(this.points[0].time, this.points[1].time);
-            const xmax = Math.max(this.points[0].time, this.points[1].time);
-            const ymin = Math.min(this.points[0].price, this.points[1].price);
-            const ymax = Math.max(this.points[0].price, this.points[1].price);
-
-            const dx = this.points[1].time - this.points[0].time;
-            const dy = this.points[1].price - this.points[0].price;
-            const isLeftToRight = dx >= 0;
-            const isUp = dy > 0;
-            let rx: number, ry: number;
-
-            if (isLeftToRight) {
-                rx = xmax;
-                ry = isUp ? ymax : ymin;
-            } else {
-                rx = xmin;
-                ry = isUp ? ymax : ymin;
-            }
-
-            this.points[2] = {time: rx, price: ry};
+            this.recalculateThirdVertex();
         }
     }
 
     setPoints(points: DrawingPoint[]): void {
-        this.points = points.slice(0, 2); // Keep only the first two points
+        this.points = points.slice(0, 2);
+        this.recalculateThirdVertex();
 
-        if (this.points.length === 2) {
-            // Recalculate the third vertex based on the two points
-            const xmin = Math.min(this.points[0].time, this.points[1].time);
-            const xmax = Math.max(this.points[0].time, this.points[1].time);
-            const ymin = Math.min(this.points[0].price, this.points[1].price);
-            const ymax = Math.max(this.points[0].price, this.points[1].price);
-
-            const dx = this.points[1].time - this.points[0].time;
-            const dy = this.points[1].price - this.points[0].price;
-            const isLeftToRight = dx >= 0;
-            const isUp = dy > 0;
-            let rx: number, ry: number;
-
-            if (isLeftToRight) {
-                rx = xmax;
-                ry = isUp ? ymax : ymin;
-            } else {
-                rx = xmin;
-                ry = isUp ? ymax : ymin;
-            }
-
-            this.points.push({time: rx, price: ry});
-        }
     }
 
     setPointAt(index: number, point: DrawingPoint): void {
         if (index < 0 || index > 1) return;
         this.points[index] = point;
+        this.recalculateThirdVertex();
+    }
 
-        if (this.points.length === 2) {
-            // Recalculate the third vertex based on the updated points
-            const xmin = Math.min(this.points[0].time, this.points[1].time);
-            const xmax = Math.max(this.points[0].time, this.points[1].time);
-            const ymin = Math.min(this.points[0].price, this.points[1].price);
-            const ymax = Math.max(this.points[0].price, this.points[1].price);
+    getPoints(): DrawingPoint[] {
+        return this.points;
+    }
 
-            const dx = this.points[1].time - this.points[0].time;
-            const dy = this.points[1].price - this.points[0].price;
-            const isLeftToRight = dx >= 0;
-            const isUp = dy > 0;
-            let rx: number, ry: number;
+    setFirstPoint(point: DrawingPoint): void {
 
-            if (isLeftToRight) {
-                rx = xmax;
-                ry = isUp ? ymax : ymin;
-            } else {
-                rx = xmin;
-                ry = isUp ? ymax : ymin;
-            }
+        if (this.points.length === 0) {
+            this.points.push(point);
+        } else {
+            this.points[0] = point;
+            this.recalculateThirdVertex();
+        }
+    }
 
-            this.points[2] = {time: rx, price: ry};
+    updateLastPoint(point: DrawingPoint): void {
+        if (this.points.length === 0) {
+            this.points.push(point);
+        } else if (this.points.length === 1) {
+            this.points.push(point);
+        } else {
+            this.points[1] = point;
+            this.recalculateThirdVertex();
         }
     }
 

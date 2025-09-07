@@ -133,6 +133,29 @@ export class AngleShape implements IDrawingShape {
         if (index >= 0 && index < this.points.length) {
             this.points[index] = point;
         }
-        
+
     }
+
+    getPoints(): DrawingPoint[] {
+        return [];
+    }
+
+    setFirstPoint(point: DrawingPoint): void {
+        if (this.points.length === 0) {
+            this.points.push(point);
+        } else {
+            this.points[0] = point;
+        }
+    }
+
+    updateLastPoint(point: DrawingPoint): void {
+        if (this.points.length === 0) {
+            this.points.push(point);
+        } else if (this.points.length === 1) {
+            this.points.push(point);
+        } else {
+            this.points[1] = point;
+        }
+    }
+
 }

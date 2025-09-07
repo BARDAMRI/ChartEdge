@@ -67,7 +67,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
         const [isPanning, setIsPanning] = useState(false);
         const [isWheeling, setIsWheeling] = useState(false);
-        const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
+        const [hoverPoint, setHoverPoint] = useState<CanvasPoint | null>(null);
         const createdShape = useRef<IDrawingShape | null>(null);
         const [_, setChartDimensions] = React.useState<ChartDimensionsData | null>(null);
         const chartDimensionsRef = React.useRef<ChartDimensionsData | null>(null);
@@ -283,8 +283,17 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             const {cssWidth, cssHeight, dpr} = dims;
             const hoverCanvas = hoverCanvasRef.current;
             const point = currentPointRef.current;
-            if (!renderContext || !hoverCanvas || !point) return;
+            if (!renderContext || !hoverCanvas) {
+                console.group('No renderContext or hoverCanvas or point available for drawCreatedShapes');
+                console.log('renderContext:', renderContext);
+                console.log('hoverCanvas:', hoverCanvas);
+                console.log('point:', point);
+                console.groupEnd();
+                return;
+
+            }
             const hoverCtx = hoverCanvas.getContext('2d');
+
             if (hoverCtx) {
                 if (hoverCanvas.width !== cssWidth * dpr || hoverCanvas.height !== cssHeight * dpr) {
                     hoverCanvas.width = cssWidth * dpr;
@@ -292,11 +301,8 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 }
                 hoverCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 hoverCtx.clearRect(0, 0, cssWidth, cssHeight);
-
-
                 const isInteractionMode = mode === Mode.none || mode === Mode.select;
-
-                if (isInteractionMode && point && !isPanning && !isWheeling) {
+                if (isInteractionMode && point && !isPanning && !isWheeling && hoverCtx) {
                     hoverCtx.strokeStyle = 'rgba(100, 100, 100, 0.7)';
                     hoverCtx.lineWidth = 1;
                     hoverCtx.beginPath();
@@ -307,11 +313,10 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                     hoverCtx.stroke();
                 } else if (renderContext) {
                     drawDrawings(hoverCtx, [createdShape.current!], selectedIndex, renderContext, visiblePriceRange);
-
                 }
             }
 
-        }, [drawingsCanvasRef.current, drawingsBackBufferRef.current]);
+        }, [hoverCanvasRef.current, currentPointRef.current, mode, isPanning, isWheeling, selectedIndex, drawDrawings, renderContext, visiblePriceRange, chartOptions]);
 
         const drawSceneToBuffer = useCallback(() => {
             if (!renderContext) return;
@@ -456,17 +461,45 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         );
 
 
+        const handleMouseLeave = () => {
+            console.log('Mouse Leave - Clearing hover point and current point ref');
+            currentPointRef.current = undefined;
+            setHoverPoint(null);
+            scheduleDraw();
+        };
+        const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+            if (isInteractionMode || !renderContext) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const time = xToTime(x, renderContext!.canvasWidth, renderContext!.visibleRange);
+            const price = yToPrice(y, renderContext!.canvasHeight, visiblePriceRange);
+            const pt = {time, price};
+            if (mode !== Mode.drawPolyline || createdShape.current?.points.length! >= 1) {
+                createdShape.current?.setFirstPoint(pt);
+                console.group('Add Point');
+                console.log('Point added (p0):', pt);
+                console.groupEnd();
+            } else if (mode === Mode.drawPolyline && createdShape.current?.points.length === 1) {
+                createdShape.current?.addPoint(pt);
+                console.group('Add Point');
+                console.log(`Point added (p${createdShape.current?.getPoints().length}):`, pt);
+                console.groupEnd();
+            }
+        };
         const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-            if ((mode === Mode.none || mode === Mode.select || mode === Mode.drawPolyline) || !createdShape.current || !renderContext) return;
             const rect = e.currentTarget.getBoundingClientRect();
             const point = {x: e.clientX - rect.left, y: e.clientY - rect.top};
             currentPointRef.current = point;
-            const isSinglePoint = mode === Mode.drawCustomSymbol;
-            const endTime = xToTime(point.x, renderContext.canvasWidth, renderContext.visibleRange);
-            const endPrice = yToPrice(point.y, renderContext.canvasHeight, visiblePriceRange);
-            const pt = {time: endTime, price: endPrice};
-            const indexToUpdate = isSinglePoint ? 0 : 1;
-            createdShape.current?.setPointAt(indexToUpdate, pt);
+
+            // If we are in a drawing mode (except polyline), update the "tail" point live
+            const isDrawingMode = !(mode === Mode.none || mode === Mode.select) && mode !== Mode.drawPolyline;
+            if (isDrawingMode && createdShape.current && renderContext && (createdShape.current?.points.length ?? 0) > 0) {
+                const endTime = xToTime(point.x, renderContext.canvasWidth, renderContext.visibleRange);
+                const endPrice = yToPrice(point.y, renderContext.canvasHeight, visiblePriceRange);
+                const pt = {time: endTime, price: endPrice};
+                createdShape.current?.updateLastPoint(pt);
+            }
 
             scheduleDraw();
             if (throttleTimerRef.current) {
@@ -476,38 +509,16 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 setHoverPoint(point);
             }, 50);
         };
-
-        const handleMouseLeave = () => {
-            currentPointRef.current = undefined;
-            setHoverPoint(null);
-            scheduleDraw();
-        };
-
-        const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-            if (isInteractionMode || !renderContext) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const time = xToTime(x, renderContext!.canvasWidth, renderContext!.visibleRange);
-            const price = yToPrice(y, renderContext!.canvasHeight, visiblePriceRange);
-            const pt = {time, price};
-            const shapeAny = createdShape.current as any;
-            if (shapeAny?.setPointAt && typeof shapeAny.setPointAt === 'function') {
-                shapeAny.setPointAt(0, pt);
-            } else if (shapeAny?.addPoint && typeof shapeAny.addPoint === 'function') {
-                shapeAny.addPoint(pt);
-            }
-            console.group('Add Point');
-            console.log('Point added (p0):', pt);
-            console.groupEnd();
-        };
         const handleMouseUp = () => {
             if (!createdShape.current || !currentPointRef.current || !renderContext || mode === Mode.drawPolyline) return;
             const endTime = xToTime(currentPointRef.current!.x, renderContext.canvasWidth, renderContext.visibleRange);
             const endPrice = yToPrice(currentPointRef.current!.y, renderContext.canvasHeight, visiblePriceRange);
             const endPoint: DrawingPoint = {time: endTime, price: endPrice};
-            createdShape.current?.addPoint(endPoint);
+            createdShape.current?.updateLastPoint(endPoint);
             let newDraw = createdShape.current!;
+            console.group('Finalize Shape');
+            console.log('Shape ended with last point:', endPoint);
+            console.log('Final shape points:', newDraw.points);
             setDrawings(prev => [...prev, newDraw]);
             createdShape.current = null;
             setMode(Mode.none);
@@ -567,6 +578,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                         ref={hoverCanvasRef}
                         onMouseMove={handleMouseMove}
                         onMouseLeave={handleMouseLeave}
+                        onMouseEnter={handleMouseMove}
                         onMouseDown={handleMouseDown}
                         onMouseUp={handleMouseUp}
                         onWheel={handleWheelBlock}

@@ -231,15 +231,13 @@ export const Tooltip: React.FC<TooltipProps> = ({
                                 ref={tipRef}
                                 id="ce-tooltip"
                                 role="tooltip"
-                                left={(posStyle as any).left as number}
-                                top={(posStyle as any).top as number}
-                                // --- START OF FIX ---
+                                $left={(posStyle as any).left as number}
+                                $top={(posStyle as any).top as number}
                                 $transformCss={(posStyle as any).transform as string}
                                 $bg={t.bg}
                                 $border={t.border}
                                 $text={t.text}
                                 $shadow={t.shadow}
-                                // --- END OF FIX ---
                             >
                                 <TooltipArrow
                                     $placement={effectivePlacement}

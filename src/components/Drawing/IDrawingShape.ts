@@ -34,5 +34,11 @@ export interface IDrawingShape {
 
     setPointAt(index: number, point: DrawingPoint): void;
 
+    setFirstPoint(point: DrawingPoint): void;
+
     addPoint(point: DrawingPoint): void;
+
+    updateLastPoint(point: DrawingPoint): void;
+
+    getPoints(): DrawingPoint[];
 }

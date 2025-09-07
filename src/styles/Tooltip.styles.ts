@@ -23,8 +23,8 @@ const shadowDark =
     '0 8px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)';
 
 export const TooltipBox = styled.span<{
-    left: number;
-    top: number;
+    $left: number;
+    $top: number;
     $transformCss: string;
     $bg: string;
     $border: string;
@@ -44,9 +44,8 @@ export const TooltipBox = styled.span<{
     box-shadow: ${({$shadow}) => $shadow || shadowLight};
     backdrop-filter: blur(6px);
     pointer-events: none;
-
-    left: ${({left}) => left}px;
-    top: ${({top}) => top}px;
+    left: ${({$left}) => $left}px;
+    top: ${({$top}) => $top}px;
     transform: ${({$transformCss}) => $transformCss};
 `;
 
