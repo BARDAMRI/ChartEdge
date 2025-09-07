@@ -1,5 +1,4 @@
 import {IDrawingShape} from "./IDrawingShape";
-import {ShapeBaseArgs} from "./types";
 import {timeToX, priceToY} from "../Canvas/utils/GraphHelpers";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
@@ -32,7 +31,9 @@ export class LineShape implements IDrawingShape {
         style: FinalDrawingStyle
     ): void {
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
-
+        if (this.points.length < 2) {
+            return;
+        }
         const x1 = timeToX(this.points[0].time, canvasWidth, visibleRange);
         const y1 = priceToY(this.points[0].price, canvasHeight, visiblePriceRange);
         const x2 = timeToX(this.points[1].time, canvasWidth, visibleRange);

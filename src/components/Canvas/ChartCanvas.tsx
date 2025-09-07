@@ -71,7 +71,12 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         const createdShape = useRef<IDrawingShape | null>(null);
         const [_, setChartDimensions] = React.useState<ChartDimensionsData | null>(null);
         const chartDimensionsRef = React.useRef<ChartDimensionsData | null>(null);
+        const isInteractionMode = mode === Mode.none || mode === Mode.select;
 
+
+        const {renderContext, hoveredCandle, intervalSeconds} = useChartData(
+            intervalsArray, visibleRange, hoverPoint, canvasSizes.width, canvasSizes.height
+        );
 
         useEffect(() => {
             if (mode != Mode.none && mode != Mode.select) {
@@ -84,9 +89,6 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 createdShape.current = null;
             }
         }, [mode]);
-        const {renderContext, hoveredCandle, intervalSeconds} = useChartData(
-            intervalsArray, visibleRange, hoverPoint, canvasSizes.width, canvasSizes.height
-        );
 
         useEffect(() => {
             const dpr = window.devicePixelRatio || 1;
@@ -244,51 +246,51 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             }
 
         }, [mainCanvasRef.current, backBufferRef.current]);
+
         const drawDrawingsToBuffer = (drawingsBackBufferRef: any, dims: any, renderContext: any) => {
             const {cssWidth, cssHeight, dpr} = dims;
             if (!renderContext) return;
-            if (drawingsBackBufferRef.current) {
-                const ctx = drawingsBackBufferRef.current.getContext('2d');
-                if (ctx) {
-                    if (drawingsBackBufferRef.current.width !== cssWidth * dpr || drawingsBackBufferRef.current.height !== cssHeight * dpr) {
-                        drawingsBackBufferRef.current.width = cssWidth * dpr;
-                        drawingsBackBufferRef.current.height = cssHeight * dpr;
-                    }
-                    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                    ctx.clearRect(0, 0, cssWidth, cssHeight);
-                    drawDrawings(ctx, drawings, selectedIndex, renderContext, visiblePriceRange);
+            if (!drawingsBackBufferRef.current) drawingsBackBufferRef.current = document.createElement('canvas');
+            const ctx = drawingsBackBufferRef.current!.getContext('2d');
+            if (ctx) {
+                if (drawingsBackBufferRef.current.width !== cssWidth * dpr || drawingsBackBufferRef.current.height !== cssHeight * dpr) {
+                    drawingsBackBufferRef.current.width = cssWidth * dpr;
+                    drawingsBackBufferRef.current.height = cssHeight * dpr;
                 }
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.clearRect(0, 0, cssWidth, cssHeight);
+                console.log('Drawing all shapes to buffer:', drawings);
+                drawDrawings(ctx, drawings, selectedIndex, renderContext, visiblePriceRange);
             }
+
         }
 
         const drawShapes = useCallback((dims: any, panOffset: number) => {
+
             const {cssWidth, cssHeight, dpr} = dims;
-            if (!drawingsBackBufferRef.current) {
-                drawingsBackBufferRef.current = document.createElement('canvas');
-            }
-            if (!drawingsCanvasRef.current || !drawingsBackBufferRef.current) return;
             const drawingsCanvas = drawingsCanvasRef.current;
             const drawingsBackBuffer = drawingsBackBufferRef.current;
+
             if (drawingsCanvas && drawingsBackBuffer) {
                 const dctx = drawingsCanvas.getContext('2d');
-                if (!dctx) return;
-                dctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                dctx.clearRect(0, 0, cssWidth, cssHeight);
-                dctx.drawImage(drawingsBackBuffer, -panOffset, 0, cssWidth, cssHeight);
+                if (dctx) {
+                    const dRect = drawingsCanvas.getBoundingClientRect();
+                    if (drawingsCanvas.width !== dRect.width * dpr || drawingsCanvas.height !== dRect.height * dpr) {
+                        drawingsCanvas.width = dRect.width * dpr;
+                        drawingsCanvas.height = dRect.height * dpr;
+                    }
+                    dctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    dctx.clearRect(0, 0, dRect.width, dRect.height);
+                    dctx.drawImage(drawingsBackBuffer, -panOffset, 0, dRect.width, dRect.height);
+                }
             }
-
-        }, [drawingsCanvasRef.current, drawingsBackBufferRef.current, drawings, selectedIndex, renderContext, visiblePriceRange, chartOptions]);
+        }, [mode, drawingsCanvasRef.current, drawingsBackBufferRef.current, drawings, selectedIndex, renderContext, visiblePriceRange, chartOptions]);
 
         const drawCreatedShapes = useCallback((dims: any) => {
             const {cssWidth, cssHeight, dpr} = dims;
             const hoverCanvas = hoverCanvasRef.current;
             const point = currentPointRef.current;
             if (!renderContext || !hoverCanvas) {
-                console.group('No renderContext or hoverCanvas or point available for drawCreatedShapes');
-                console.log('renderContext:', renderContext);
-                console.log('hoverCanvas:', hoverCanvas);
-                console.log('point:', point);
-                console.groupEnd();
                 return;
 
             }
@@ -301,7 +303,6 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 }
                 hoverCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 hoverCtx.clearRect(0, 0, cssWidth, cssHeight);
-                const isInteractionMode = mode === Mode.none || mode === Mode.select;
                 if (isInteractionMode && point && !isPanning && !isWheeling && hoverCtx) {
                     hoverCtx.strokeStyle = 'rgba(100, 100, 100, 0.7)';
                     hoverCtx.lineWidth = 1;
@@ -312,6 +313,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                     hoverCtx.lineTo(cssWidth, point.y);
                     hoverCtx.stroke();
                 } else if (renderContext) {
+                    console.log('Drawing created shape:', createdShape.current);
                     drawDrawings(hoverCtx, [createdShape.current!], selectedIndex, renderContext, visiblePriceRange);
                 }
             }
@@ -398,6 +400,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 }
             };
         }, [renderContext, drawSceneToBuffer, scheduleDraw]);
+
         useEffect(() => {
             if (!renderContext) return;
             drawSceneToBuffer();
@@ -447,11 +450,9 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             },
         }), [visibleRange, setVisibleRange, scheduleDraw, canvasSizes.width]);
 
-        const isInteractionMode = mode === Mode.none || mode === Mode.select;
-        const panZoomEnabled = (mode === Mode.none || mode === Mode.select);
         usePanAndZoom(
             hoverCanvasRef,
-            panZoomEnabled,
+            isInteractionMode,
             intervalsArray,
             visibleRange,
             setVisibleRange,
@@ -462,7 +463,6 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
 
         const handleMouseLeave = () => {
-            console.log('Mouse Leave - Clearing hover point and current point ref');
             currentPointRef.current = undefined;
             setHoverPoint(null);
             scheduleDraw();
@@ -477,14 +477,8 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             const pt = {time, price};
             if (mode !== Mode.drawPolyline || createdShape.current?.points.length! >= 1) {
                 createdShape.current?.setFirstPoint(pt);
-                console.group('Add Point');
-                console.log('Point added (p0):', pt);
-                console.groupEnd();
             } else if (mode === Mode.drawPolyline && createdShape.current?.points.length === 1) {
                 createdShape.current?.addPoint(pt);
-                console.group('Add Point');
-                console.log(`Point added (p${createdShape.current?.getPoints().length}):`, pt);
-                console.groupEnd();
             }
         };
         const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -516,9 +510,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             const endPoint: DrawingPoint = {time: endTime, price: endPrice};
             createdShape.current?.updateLastPoint(endPoint);
             let newDraw = createdShape.current!;
-            console.group('Finalize Shape');
-            console.log('Shape ended with last point:', endPoint);
-            console.log('Final shape points:', newDraw.points);
+            // add the original args to the shape before inserting it into the array
             setDrawings(prev => [...prev, newDraw]);
             createdShape.current = null;
             setMode(Mode.none);
@@ -534,7 +526,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             setMode(Mode.none);
         };
         const handleWheelBlock: React.WheelEventHandler<HTMLCanvasElement> = (e) => {
-            if (!panZoomEnabled) {
+            if (!isInteractionMode) {
                 e.preventDefault();
                 e.stopPropagation();
             }
@@ -586,7 +578,8 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                         $heightPrecent={100}
                         $zIndex={4}
                         style={{
-                            cursor: panZoomEnabled ? (isPanning ? 'grabbing' : 'grab') : 'crosshair'
+                            cursor: isInteractionMode ? (isPanning ? 'grabbing' : 'grab') : 'crosshair',
+                            backgroundColor: 'transparent',
                         }}
                     />
                 </ChartingContainer>

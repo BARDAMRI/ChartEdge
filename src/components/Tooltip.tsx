@@ -50,6 +50,8 @@ export const Tooltip: React.FC<TooltipProps> = ({
     const [effectivePlacement, setEffectivePlacement] = useState<Placement>(Placement.top);
     const arrowSize = 8; // px
 
+    const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+
     const measure = () => {
         const el = containerRef.current;
         if (!el) return;
@@ -170,47 +172,66 @@ export const Tooltip: React.FC<TooltipProps> = ({
         });
     }, [open, anchorRect, placement, axis, tipSize.w, tipSize.h]);
 
-    const posStyle: React.CSSProperties = (() => {
+    const {posStyle, arrowX, arrowY} = (() => {
         const rect = anchorRect;
         const base: React.CSSProperties = {position: 'fixed'};
-        if (!rect) return base;
+        if (!rect) return {
+            posStyle: base,
+            arrowX: undefined as number | undefined,
+            arrowY: undefined as number | undefined
+        };
+
         const vw = window.innerWidth;
         const vh = window.innerHeight;
 
-        let left = 0,
-            top = 0,
-            transform = '';
+        let left = 0, top = 0, transform = '';
         const pad = 6;
+        const arrowHalf = arrowSize / 2;
 
         if (effectivePlacement === Placement.bottom || effectivePlacement === Placement.top) {
-            let centerX = rect.left + rect.width / 2;
-            if (align === TooltipAlign.start) centerX = rect.left + tipSize.w / 2;
-            if (align === TooltipAlign.end) centerX = rect.right - tipSize.w / 2;
+            // Horizontal axis (top/bottom): compute clamped center and arrowX
+            const rawCenterX =
+                align === TooltipAlign.start ? rect.left + tipSize.w / 2 :
+                    align === TooltipAlign.end ? rect.right - tipSize.w / 2 :
+                        rect.left + rect.width / 2;
+
             const halfW = tipSize.w / 2;
-            centerX = Math.max(pad + halfW, Math.min(vw - pad - halfW, centerX));
+            const centerX = clamp(rawCenterX, pad + halfW, vw - pad - halfW);
 
             left = centerX;
-            top =
-                effectivePlacement === Placement.bottom ? rect.bottom + offset : rect.top - offset;
-            transform = `translate(-50%, ${
-                effectivePlacement === Placement.bottom ? '0' : '-100%'
-            })`;
+            top = effectivePlacement === Placement.bottom ? rect.bottom + offset : rect.top - offset;
+            transform = `translate(-50%, ${effectivePlacement === Placement.bottom ? '0' : '-100%'})`;
+
+            // Arrow X: anchor center (true) relative to tooltip's left edge after transform centering
+            // Because we centered via translateX(-50%), the tooltip's left edge in screen coords is (left - halfW)
+            const tooltipLeft = centerX - halfW;
+            const anchorCenterX = rect.left + rect.width / 2;
+            const rawArrowX = anchorCenterX - tooltipLeft;
+            const arrowX = clamp(rawArrowX, arrowHalf, tipSize.w - arrowHalf);
+
+            return {posStyle: {...base, left, top, transform}, arrowX, arrowY: undefined};
         } else {
-            let centerY = rect.top + rect.height / 2;
-            if (align === TooltipAlign.start) centerY = rect.top + tipSize.h / 2;
-            if (align === TooltipAlign.end) centerY = rect.bottom - tipSize.h / 2;
+            // Vertical axis (left/right): compute clamped center and arrowY
+            const rawCenterY =
+                align === TooltipAlign.start ? rect.top + tipSize.h / 2 :
+                    align === TooltipAlign.end ? rect.bottom - tipSize.h / 2 :
+                        rect.top + rect.height / 2;
+
             const halfH = tipSize.h / 2;
-            centerY = Math.max(pad + halfH, Math.min(vh - pad - halfH, centerY));
+            const centerY = clamp(rawCenterY, pad + halfH, vh - pad - halfH);
 
             top = centerY;
-            left =
-                effectivePlacement === Placement.right ? rect.right + offset : rect.left - offset;
-            transform = `translate(${
-                effectivePlacement === Placement.right ? '0' : '-100%'
-            }, -50%)`;
-        }
+            left = effectivePlacement === Placement.right ? rect.right + offset : rect.left - offset;
+            transform = `translate(${effectivePlacement === Placement.right ? '0' : '-100%'}, -50%)`;
 
-        return {...base, left, top, transform};
+            // Arrow Y: anchor center relative to tooltip's top edge after translateY(-50%)
+            const tooltipTop = centerY - halfH;
+            const anchorCenterY = rect.top + rect.height / 2;
+            const rawArrowY = anchorCenterY - tooltipTop;
+            const arrowY = clamp(rawArrowY, arrowHalf, tipSize.h - arrowHalf);
+
+            return {posStyle: {...base, left, top, transform}, arrowX: undefined, arrowY};
+        }
     })();
 
     return (
@@ -231,13 +252,15 @@ export const Tooltip: React.FC<TooltipProps> = ({
                                 ref={tipRef}
                                 id="ce-tooltip"
                                 role="tooltip"
-                                $left={(posStyle as any).left as number}
-                                $top={(posStyle as any).top as number}
-                                $transformCss={(posStyle as any).transform as string}
+                                $left={posStyle.left as number}
+                                $top={posStyle.top as number}
+                                $transformCss={posStyle.transform as string}
                                 $bg={t.bg}
                                 $border={t.border}
                                 $text={t.text}
                                 $shadow={t.shadow}
+                                $placement={effectivePlacement}
+                                $arrowSize={arrowSize}
                             >
                                 <TooltipArrow
                                     $placement={effectivePlacement}
@@ -245,6 +268,8 @@ export const Tooltip: React.FC<TooltipProps> = ({
                                     $bg={t.bg}
                                     $border={t.border}
                                     $shadow={t.shadow}
+                                    $anchorX={effectivePlacement === Placement.top || effectivePlacement === Placement.bottom ? arrowX : undefined}
+                                    $anchorY={effectivePlacement === Placement.left || effectivePlacement === Placement.right ? arrowY : undefined}
                                     aria-hidden
                                 />
                                 {content}

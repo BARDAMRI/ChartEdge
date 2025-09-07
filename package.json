@@ -13,6 +13,11 @@
     "combine-code": "node combineFiles.cjs",
     "test": "jest"
   },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "styled-components": "^6.0.0"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/react-dom": "^19.1.2",
@@ -23,7 +28,8 @@
     "sass-embedded": "^1.87.0",
     "ts-jest": "^29.3.4",
     "typescript": "~5.7.2",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "styled-components": "^6.1.19"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

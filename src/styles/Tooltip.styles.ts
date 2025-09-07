@@ -3,24 +3,14 @@ import {Placement} from '../types/buttons';
 
 export const TooltipWrapper = styled.span.attrs({className: 'tooltip-wrapper'})`
     position: relative;
-    display: contents;
+    display: inline-block;
 `;
 
-/** Light theme tokens (defaults) */
 const bgGradLight =
     'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(240,246,255,0.96) 100%)';
 const borderColorLight = 'rgba(123, 97, 255, 0.35)';
 const textColorLight = '#1e2a44';
-const shadowLight =
-    '0 8px 24px rgba(17,19,39,0.18), inset 0 1px 0 rgba(255,255,255,0.45)';
-
-/** Dark theme tokens */
-const bgGradDark =
-    'linear-gradient(180deg, rgba(22,24,36,0.92) 0%, rgba(16,18,30,0.94) 100%)';
-const borderColorDark = 'rgba(160, 170, 255, 0.40)';
-const textColorDark = 'rgba(235,240,255,0.92)';
-const shadowDark =
-    '0 8px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)';
+const shadowLight = '0 8px 24px rgba(17,19,39,0.18), inset 0 1px 0 rgba(255,255,255,0.45)';
 
 export const TooltipBox = styled.span<{
     $left: number;
@@ -30,10 +20,19 @@ export const TooltipBox = styled.span<{
     $border: string;
     $text: string;
     $shadow: string;
+    $placement: Placement;
+    $arrowSize?: number;
 }>`
     position: fixed;
     z-index: 1000;
-    padding: 2px 3px;
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    ${({$placement}) =>
+            $placement === Placement.left && css`padding-left: 14px;`}
+    ${({$placement}) =>
+            $placement === Placement.right && css`padding-right: 14px;`}
+    /* For top and bottom, keep original vertical padding only (6px), no extra logic */
     border-radius: 10px;
     font-size: 12px;
     line-height: 1;
@@ -56,6 +55,8 @@ export const TooltipArrow = styled.span<{
     $bg: string;
     $border: string;
     $shadow: string;
+    $anchorX?: number;
+    $anchorY?: number;
 }>`
     position: absolute;
     width: ${({$size}) => $size}px;
@@ -65,14 +66,14 @@ export const TooltipArrow = styled.span<{
     pointer-events: none;
     transform: rotate(45deg);
 
-    ${({$placement, $size, $border}) => {
+    ${({$placement, $size, $border, $anchorX, $anchorY}) => {
         const borderCss = $border || borderColorLight;
         const half = $size / 2;
         switch ($placement) {
             case Placement.bottom:
                 return css`
                     top: -${half}px;
-                    left: 50%;
+                    left: ${$anchorX == null ? '50%' : `${$anchorX}px`};
                     transform: translateX(-50%) rotate(45deg);
                     border-left: 1px solid ${borderCss};
                     border-top: 1px solid ${borderCss};
@@ -80,7 +81,7 @@ export const TooltipArrow = styled.span<{
             case Placement.top:
                 return css`
                     bottom: -${half}px;
-                    left: 50%;
+                    left: ${$anchorX == null ? '50%' : `${$anchorX}px`};
                     transform: translateX(-50%) rotate(45deg);
                     border-right: 1px solid ${borderCss};
                     border-bottom: 1px solid ${borderCss};
@@ -88,7 +89,7 @@ export const TooltipArrow = styled.span<{
             case Placement.left:
                 return css`
                     right: -${half}px;
-                    top: 50%;
+                    top: ${$anchorY == null ? '50%' : `${$anchorY}px`};
                     transform: translateY(-50%) rotate(45deg);
                     border-right: 1px solid ${borderCss};
                     border-top: 1px solid ${borderCss};
@@ -96,11 +97,13 @@ export const TooltipArrow = styled.span<{
             case Placement.right:
                 return css`
                     left: -${half}px;
-                    top: 50%;
+                    top: ${$anchorY == null ? '50%' : `${$anchorY}px`};
                     transform: translateY(-50%) rotate(45deg);
                     border-left: 1px solid ${borderCss};
                     border-bottom: 1px solid ${borderCss};
                 `;
+            default:
+                return css``;
         }
     }}
 `;

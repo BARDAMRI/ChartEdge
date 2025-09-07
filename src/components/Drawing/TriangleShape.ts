@@ -38,6 +38,9 @@ export class TriangleShape implements IDrawingShape {
 
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
+        if (this.points.length < 3) {
+            return;
+        }
 
         const p1 = {
             x: timeToX(this.points[0].time, canvasWidth, visibleRange),

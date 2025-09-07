@@ -23,6 +23,9 @@ export class AngleShape implements IDrawingShape {
     ): void {
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
+        if (this.points.length < 2) {
+            return;
+        }
         const x1 = timeToX(this.points[0].time, canvasWidth, visibleRange);
         const y1 = priceToY(this.points[0].price, canvasHeight, visiblePriceRange);
         const x2 = timeToX(this.points[1].time, canvasWidth, visibleRange);
