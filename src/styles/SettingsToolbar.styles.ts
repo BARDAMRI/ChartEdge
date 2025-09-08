@@ -6,7 +6,6 @@ export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-t
     display: flex;
     align-items: center;
     gap: 2px;
-    /* Transparent surface with subtle frame and depth (matches Toolbar) */
     background-color: white;
     border-radius: 12px;
     border: 1px solid rgba(128, 140, 255, 0.18);

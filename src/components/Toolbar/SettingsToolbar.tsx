@@ -1,20 +1,8 @@
 import React from 'react';
-import {
-    SettingsToolbarContainer,
-    SymbolInput,
-    ChartTypeSelect,
-} from '../../styles/SettingsToolbar.styles';
+import {ChartTypeSelect, SettingsToolbarContainer, SymbolInput,} from '../../styles/SettingsToolbar.styles';
 
 import {Button} from './Buttons';
-import {
-    IconCamera,
-    IconDownload,
-    IconGear,
-    IconRange,
-    IconRefresh,
-    IconSearch,
-    IconTheme,
-} from './icons';
+import {IconCamera, IconDownload, IconGear, IconRange, IconRefresh, IconSearch, IconTheme,} from './icons';
 import {ChartType} from "../../types/chartOptions";
 import {Placement, TooltipAlign, TooltipAxis} from "../../types/buttons";
 import {Tooltip} from "../Tooltip";
@@ -62,7 +50,6 @@ export const SettingsToolbar: React.FC = () => {
             <SymbolInput className={'symbol-choose-icon'} name={'symbol-input'} placeholder="Symbol"/>
             <ChartTypeSelect className={'chart-type-select-container'} name={'symbol-select'} defaultValue="candlestick"
                              aria-label="Chart type">
-                {/* iterate the chart types */}
                 {chartTypes.map((type) => (
                     <option key={type} value={type}>
                         {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -70,43 +57,50 @@ export const SettingsToolbar: React.FC = () => {
                 ))}
             </ChartTypeSelect>
 
-            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                     axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={openSettingsMenu}>
                     <IconGear/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                     axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={handleDownload}>
                     <IconCamera/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                     axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={openSearch}>
                     <IconSearch/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                     axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={openRange}>
                     <IconRange/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                     axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={doDownload}>
                     <IconDownload/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                     axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={doRefresh}>
                     <IconRefresh/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" placement={Placement.bottom} axis={TooltipAxis.vertical}
+            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                     axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={toggleTheme}>
                     <IconTheme/>

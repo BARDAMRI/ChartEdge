@@ -19,7 +19,8 @@ export const Toolbar: React.FC = () => {
     return (
         <ToolbarContainer className="toolbar-container">
             <ToolbarContent>
-                <Tooltip content="Draw Line" placement={Placement.auto} axis={TooltipAxis.vertical}
+                <Tooltip content="Draw Line" tooltipAxis={TooltipAxis.vertical} placement={Placement.auto}
+                         axis={TooltipAxis.vertical}
                          align={TooltipAlign.center}>
                     <ModeButton
                         mode={Mode.drawLine}
@@ -30,7 +31,8 @@ export const Toolbar: React.FC = () => {
                     </ModeButton>
                 </Tooltip>
 
-                <Tooltip content="Draw Rectangle" placement={Placement.right} axis={TooltipAxis.vertical}
+                <Tooltip content="Draw Rectangle" tooltipAxis={TooltipAxis.vertical} placement={Placement.right}
+                         axis={TooltipAxis.vertical}
                          align={TooltipAlign.center}>
                     <ModeButton
                         mode={Mode.drawRectangle}
@@ -39,7 +41,8 @@ export const Toolbar: React.FC = () => {
                     ><IconRect active={mode === Mode.drawRectangle}/></ModeButton>
                 </Tooltip>
 
-                <Tooltip content="Draw Circle" placement={Placement.auto} axis={TooltipAxis.vertical}
+                <Tooltip content="Draw Circle" tooltipAxis={TooltipAxis.vertical} placement={Placement.auto}
+                         axis={TooltipAxis.vertical}
                          align={TooltipAlign.center}>
                     <ModeButton
                         mode={Mode.drawCircle}
@@ -48,7 +51,8 @@ export const Toolbar: React.FC = () => {
                     ><IconCircle active={mode === Mode.drawCircle}/></ModeButton>
                 </Tooltip>
 
-                <Tooltip content="Draw Triangle" placement={Placement.auto} axis={TooltipAxis.vertical}
+                <Tooltip content="Draw Triangle" tooltipAxis={TooltipAxis.vertical} placement={Placement.auto}
+                         axis={TooltipAxis.vertical}
                          align={TooltipAlign.center}>
                     <ModeButton
                         mode={Mode.drawTriangle}
@@ -57,7 +61,8 @@ export const Toolbar: React.FC = () => {
                     ><IconTriangle active={mode === Mode.drawTriangle}/></ModeButton>
                 </Tooltip>
 
-                <Tooltip content="Draw Angle" placement={Placement.auto} axis={TooltipAxis.vertical}
+                <Tooltip content="Draw Angle" tooltipAxis={TooltipAxis.vertical} placement={Placement.auto}
+                         axis={TooltipAxis.vertical}
                          align={TooltipAlign.center}>
                     <ModeButton
                         mode={Mode.drawAngle}
@@ -66,7 +71,8 @@ export const Toolbar: React.FC = () => {
                     ><IconAngle active={mode === Mode.drawAngle}/></ModeButton>
                 </Tooltip>
 
-                <Tooltip content="Select" placement={Placement.auto} axis={TooltipAxis.vertical}
+                <Tooltip content="Select" tooltipAxis={TooltipAxis.vertical} placement={Placement.auto}
+                         axis={TooltipAxis.vertical}
                          align={TooltipAlign.center}>
                     <ModeButton
                         mode={Mode.select}
@@ -75,7 +81,8 @@ export const Toolbar: React.FC = () => {
                     ><IconSelect active={mode === Mode.select}/></ModeButton>
                 </Tooltip>
 
-                <Tooltip content="Edit Shape" placement={Placement.auto} axis={TooltipAxis.vertical}
+                <Tooltip content="Edit Shape" tooltipAxis={TooltipAxis.vertical} placement={Placement.auto}
+                         axis={TooltipAxis.vertical}
                          align={TooltipAlign.center}>
                     <ModeButton
                         mode={Mode.editShape}

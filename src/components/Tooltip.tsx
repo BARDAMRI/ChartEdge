@@ -22,6 +22,7 @@ import {TooltipArrow, TooltipBox, TooltipWrapper} from "../styles/Tooltip.styles
 
 type TooltipProps = {
     content: React.ReactNode;
+    tooltipAxis: TooltipAxis;
     placement?: Placement;
     axis?: TooltipAxis;
     align?: TooltipAlign;
@@ -33,6 +34,7 @@ type TooltipProps = {
 
 export const Tooltip: React.FC<TooltipProps> = ({
                                                     content,
+                                                    tooltipAxis,
                                                     placement = Placement.auto,
                                                     axis = TooltipAxis.horizontal,
                                                     align = TooltipAlign.center,
@@ -48,7 +50,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     const tipRef = useRef<HTMLSpanElement | null>(null);
     const [tipSize, setTipSize] = useState<{ w: number; h: number }>({w: 0, h: 0});
     const [effectivePlacement, setEffectivePlacement] = useState<Placement>(Placement.top);
-    const arrowSize = 8; // px
+    const arrowSize = 8;
 
     const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
@@ -224,7 +226,6 @@ export const Tooltip: React.FC<TooltipProps> = ({
             left = effectivePlacement === Placement.right ? rect.right + offset : rect.left - offset;
             transform = `translate(${effectivePlacement === Placement.right ? '0' : '-100%'}, -50%)`;
 
-            // Arrow Y: anchor center relative to tooltip's top edge after translateY(-50%)
             const tooltipTop = centerY - halfH;
             const anchorCenterY = rect.top + rect.height / 2;
             const rawArrowY = anchorCenterY - tooltipTop;
@@ -236,6 +237,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
     return (
         <TooltipWrapper
+            $axis={tooltipAxis}
             ref={containerRef}
             onMouseEnter={show}
             onMouseLeave={hide}

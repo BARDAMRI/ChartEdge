@@ -1,9 +1,21 @@
 import styled, {css} from 'styled-components';
-import {Placement} from '../types/buttons';
+import {Placement, TooltipAxis} from '../types/buttons';
 
-export const TooltipWrapper = styled.span.attrs({className: 'tooltip-wrapper'})`
+export const TooltipWrapper = styled.span.attrs({className: 'tooltip-wrapper'})<{
+    $axis: TooltipAxis;
+}>`
     position: relative;
     display: inline-block;
+    ${({$axis}) =>
+            $axis === TooltipAxis.vertical
+                    ? css`
+                        width: 100%;
+                    `
+                    : css`
+                        height: 100%;
+                    `
+    }
+
 `;
 
 const bgGradLight =
@@ -28,6 +40,9 @@ export const TooltipBox = styled.span<{
     padding: 6px 10px;
     display: inline-flex;
     align-items: center;
+    max-height: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 auto !important;
     ${({$placement}) =>
             $placement === Placement.left && css`padding-left: 14px;`}
     ${({$placement}) =>
