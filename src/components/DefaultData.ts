@@ -2,7 +2,7 @@ import {AxesPosition, DeepRequired} from "../types/types";
 import {
     AreaStyleOptions, AxesStyleOptions,
     BarStyleOptions,
-    CandleStyleOptions, ChartOptions, GridStyleOptions,
+    CandleStyleOptions, ChartOptions, ChartType, GridStyleOptions,
     HistogramStyleOptions,
     LineStyleOptions, StyleOptions
 } from "../types/chartOptions";
@@ -88,6 +88,7 @@ const DEFAULT_STYLES: DeepRequired<StyleOptions> = {
 };
 export const DEFAULT_GRAPH_OPTIONS: DeepRequired<ChartOptions> = {
     base: {
+        chartType: ChartType.Candlestick,
         theme: 'light',
         showOverlayLine: false,
         showHistogram: true,

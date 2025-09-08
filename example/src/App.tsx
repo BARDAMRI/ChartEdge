@@ -132,9 +132,9 @@ export default function App() {
                 initialTimeFormat12h={false}
                 initialVisibleTimeRange={exampleVisibleRange}
                 initialVisiblePriceRange={{min: minPrice, max: maxPrice}}
-                chartType={ChartType.Candlestick}
                 chartOptions={{
                     base: {
+                        chartType: ChartType.Candlestick,
                         showOverlayLine: true,
                         // overlays: demoOverlays,
                         // style: {

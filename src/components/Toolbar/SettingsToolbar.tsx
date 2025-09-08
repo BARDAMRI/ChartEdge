@@ -7,7 +7,11 @@ import {ChartType} from "../../types/chartOptions";
 import {Placement, TooltipAlign, TooltipAxis} from "../../types/buttons";
 import {Tooltip} from "../Tooltip";
 
-export const SettingsToolbar: React.FC = () => {
+interface SettingToolbarProps {
+    handleChartTypeChange: (type: ChartType) => void;
+}
+
+export const SettingsToolbar = ({handleChartTypeChange}: SettingToolbarProps) => {
     const handleDownload = () => {
         const canvas = document.querySelector('canvas');
         if (!(canvas instanceof HTMLCanvasElement)) {
@@ -44,14 +48,16 @@ export const SettingsToolbar: React.FC = () => {
         console.log('Toggling theme...');
     };
 
-    const chartTypes = (Object.values(ChartType).filter(v => typeof v === 'string') as string[]);
     return (
         <SettingsToolbarContainer className="settings-toolbar">
             <SymbolInput className={'symbol-choose-icon'} name={'symbol-input'} placeholder="Symbol"/>
-            <ChartTypeSelect className={'chart-type-select-container'} name={'symbol-select'} defaultValue="candlestick"
+            <ChartTypeSelect className={'chart-type-select-container'}
+                             name={'symbol-select'}
+                             defaultValue="candlestick"
+                             onChange={(e) => handleChartTypeChange(e.target.value as ChartType)}
                              aria-label="Chart type">
-                {chartTypes.map((type) => (
-                    <option key={type} value={type}>
+                {Object.keys(ChartType).map((type) => (
+                    <option key={type} value={type as ChartType}>
                         {type.charAt(0).toUpperCase() + type.slice(1)}
                     </option>
                 ))}

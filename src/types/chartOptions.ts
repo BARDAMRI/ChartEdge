@@ -15,10 +15,10 @@ export enum TimeDetailLevel {
 }
 
 export enum ChartType {
-    Candlestick,
-    Line,
-    Area,
-    Bar,
+    Candlestick = 'Candlestick',
+    Line = 'Line',
+    Area = 'Area',
+    Bar = 'Bar',
 }
 
 
@@ -103,6 +103,7 @@ export type StyleOptions = {
 }
 
 interface BaseChartOptions {
+    chartType?: ChartType;
     theme: ChartTheme;
     showOverlayLine: boolean;
     showHistogram: boolean;

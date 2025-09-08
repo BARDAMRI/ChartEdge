@@ -29,7 +29,6 @@ interface ChartCanvasProps {
     visibleRange: TimeRange;
     setVisibleRange: (range: TimeRange) => void;
     visiblePriceRange: PriceRange;
-    chartType: ChartType;
     chartOptions: DeepRequired<ChartOptions>;
     canvasSizes: CanvasSizes;
     parentContainerRef?: React.RefObject<HTMLDivElement>;
@@ -44,7 +43,6 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                                                             drawings,
                                                             setDrawings,
                                                             selectedIndex,
-                                                            chartType,
                                                             chartOptions,
                                                             canvasSizes,
                                                             parentContainerRef,
@@ -163,7 +161,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             }
             backBufferCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
             backBufferCtx.clearRect(0, 0, cssWidth, cssHeight);
-            switch (chartType) {
+            switch (chartOptions?.base?.chartType) {
                 case ChartType.Candlestick:
                     drawCandlestickChart(backBufferCtx, renderContext, chartOptions, visiblePriceRange);
                     break;
@@ -345,7 +343,7 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
 
             drawDrawingsToBuffer(drawingsBackBufferRef, dims, renderContext);
 
-        }, [renderContext, chartType, chartOptions, drawings, selectedIndex, canvasSizes, visiblePriceRange]);
+        }, [renderContext, chartOptions?.base?.chartType, chartOptions, drawings, selectedIndex, canvasSizes, visiblePriceRange]);
 
         const drawFrame = useCallback(() => {
             requestAnimationIdRef.current = null;

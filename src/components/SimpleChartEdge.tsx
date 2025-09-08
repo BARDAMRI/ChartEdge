@@ -38,7 +38,6 @@ export type SimpleChartEdgeProps = {
     initialTimeDetailLevel?: TimeDetailLevel;
     initialTimeFormat12h?: boolean;
     initialVisibleTimeRange?: TimeRange;
-    chartType?: ChartType;
     chartOptions?: DeepPartial<ChartOptions>
 };
 
@@ -47,19 +46,27 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                                                                     initialNumberOfYTicks = 5,
                                                                     initialTimeDetailLevel = TimeDetailLevel.Auto,
                                                                     initialTimeFormat12h = false,
-                                                                    chartType = ChartType.Candlestick,
                                                                     chartOptions = {} as DeepPartial<ChartOptions>
                                                                 }) => {
 
-    const finalStyleOptions: DeepRequired<ChartOptions> = useMemo(() => deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions), [chartOptions]);
+    const [finalStyleOptions, setStyleOptions] = useState<DeepRequired<ChartOptions>>(deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions));
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
 
+    const handleChartTypeChange = (newType: ChartType) => {
+        setSelectedIndex(null);
+        setStyleOptions(prev => {
+            const updated = prev;
+            updated.base.chartType = newType;
+            return {...updated};
+        });
+        console.log(`Chart type changed to: ${newType}`);
+    }
     return (
         <ModeProvider>
             <GlobalStyle/>
             <MainAppWindow>
                 <SettingsArea className={"settings-area"}>
-                    <SettingsToolbar/>
+                    <SettingsToolbar handleChartTypeChange={handleChartTypeChange}/>
                 </SettingsArea>
                 <LowerContainer className={"lower-container"}>
                     <ToolbarArea className={"toolbar-area"}>
@@ -71,7 +78,6 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                             numberOfYTicks={initialNumberOfYTicks}
                             timeDetailLevel={initialTimeDetailLevel}
                             timeFormat12h={initialTimeFormat12h}
-                            chartType={chartType}
                             selectedIndex={selectedIndex}
                             chartOptions={finalStyleOptions}
                         />

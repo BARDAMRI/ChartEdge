@@ -79,7 +79,6 @@ interface ChartStageProps {
     numberOfYTicks: number;
     timeDetailLevel: TimeDetailLevel;
     timeFormat12h: boolean;
-    chartType: ChartType;
     selectedIndex: number | null;
     chartOptions: DeepRequired<ChartOptions>;
     showTopBar?: boolean;
@@ -90,9 +89,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                                           intervalsArray,
                                                           numberOfYTicks,
                                                           timeDetailLevel,
-                                                          timeFormat12h,
-                                                          chartType,
-                                                          selectedIndex,
+                                                          timeFormat12h, selectedIndex,
                                                           chartOptions
                                                           , showTopBar = true
                                                           , showLeftBar = true
@@ -229,7 +226,6 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                         visibleRange={visibleRange}
                                         setVisibleRange={updateVisibleRange}
                                         visiblePriceRange={visiblePriceRange}
-                                        chartType={chartType}
                                         chartOptions={chartOptions}
                                         canvasSizes={canvasSizes}
                                         windowSpread={windowSpread}
@@ -265,7 +261,6 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                                         visibleRange={visibleRange}
                                         setVisibleRange={updateVisibleRange}
                                         visiblePriceRange={visiblePriceRange}
-                                        chartType={chartType}
                                         chartOptions={chartOptions}
                                         canvasSizes={canvasSizes}
                                         windowSpread={windowSpread}
