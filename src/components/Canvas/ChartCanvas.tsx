@@ -66,13 +66,12 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
         const [isPanning, setIsPanning] = useState(false);
         const [isWheeling, setIsWheeling] = useState(false);
         const [hoverPoint, setHoverPoint] = useState<CanvasPoint | null>(null);
+        const [hoveredCandle, setHoveredCandle] = useState<Interval | null>(null);
         const createdShape = useRef<IDrawingShape | null>(null);
         const [_, setChartDimensions] = React.useState<ChartDimensionsData | null>(null);
         const chartDimensionsRef = React.useRef<ChartDimensionsData | null>(null);
         const isInteractionMode = mode === Mode.none || mode === Mode.select;
-
-
-        const {renderContext, hoveredCandle, intervalSeconds} = useChartData(
+        const {renderContext, intervalSeconds} = useChartData(
             intervalsArray, visibleRange, hoverPoint, canvasSizes.width, canvasSizes.height
         );
 
@@ -484,7 +483,6 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
             const point = {x: e.clientX - rect.left, y: e.clientY - rect.top};
             currentPointRef.current = point;
 
-            // If we are in a drawing mode (except polyline), update the "tail" point live
             const isDrawingMode = !(mode === Mode.none || mode === Mode.select) && mode !== Mode.drawPolyline;
             if (isDrawingMode && createdShape.current && renderContext && (createdShape.current?.points.length ?? 0) > 0) {
                 const endTime = xToTime(point.x, renderContext.canvasWidth, renderContext.visibleRange);
@@ -493,13 +491,17 @@ export const ChartCanvas: React.FC<ChartCanvasProps> = ({
                 createdShape.current?.updateLastPoint(pt);
             }
 
-            scheduleDraw();
-            if (throttleTimerRef.current) {
-                clearTimeout(throttleTimerRef.current!);
+            if (renderContext) {
+                const mouseTime = xToTime(point.x, renderContext.canvasWidth, renderContext.visibleRange);
+                const candle = intervalsArray.find(
+                    c => mouseTime >= c.t && mouseTime < c.t + intervalSeconds
+                );
+                if (candle?.t !== hoveredCandle?.t) {
+                    setHoveredCandle(candle || null);
+                }
             }
-            throttleTimerRef.current = setTimeout(() => {
-                setHoverPoint(point);
-            }, 50);
+
+            scheduleDraw();
         };
         const handleMouseUp = () => {
             if (!createdShape.current || !currentPointRef.current || !renderContext || mode === Mode.drawPolyline) return;

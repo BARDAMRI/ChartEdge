@@ -122,21 +122,44 @@ export const SymbolInput = styled(Control).attrs({as: 'input', type: 'text'})`
     }
 `;
 
-export const ChartTypeSelect = styled(Control).attrs({className: 'settings-charttype-select', as: 'select'})`
-    flex: 0 0 150px;
-    padding: 0 5px;
-    font-size: 13px;
-    appearance: none;
-    background-image: linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65)),
-    linear-gradient(45deg, transparent 50%, rgba(231, 235, 255, 0.85) 50%),
-    linear-gradient(135deg, rgba(231, 235, 255, 0.85) 50%, transparent 50%);
-    background-origin: border-box, content-box, content-box;
-    background-clip: border-box, content-box, content-box;
-    background-position: right 12px center, right 6px center, right 6px center;
-    background-size: auto, 6px 6px, 6px 6px;
-    background-repeat: no-repeat;
+export const ChartTypeWrapper = styled.div`
+    position: relative;
+    display: inline-block;
+    flex: 0 0 100px;
+    width: 100px;
+    height: 36px;
 `;
 
+export const ChartTypeSelect = styled.select`
+    appearance: none;
+    background: linear-gradient(180deg, #6bc0ff 0%, #7d5bff 100%);
+    color: white;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    padding: 3px 14px 3px 5px; 
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+    width: 100%;
+    height: 100%;
+
+    &:focus {
+        box-shadow: 0 0 0 2px rgba(123, 97, 255, 0.4);
+    }
+`;
+export const ChartTypeArrow = styled.span`
+    position: absolute;
+    pointer-events: none;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid rgba(231, 235, 255, 0.85);
+    border-bottom: 2px solid rgba(231, 235, 255, 0.85);
+    z-index: 1;
+`;
 
 export const ToolbarHorizontalButtons = styled.button.attrs({className: 'toolbar-button'})`
     position: relative;

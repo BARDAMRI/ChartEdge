@@ -1,5 +1,10 @@
 import React from 'react';
-import {ChartTypeSelect, SettingsToolbarContainer, SymbolInput,} from '../../styles/SettingsToolbar.styles';
+import {
+    ChartTypeArrow,
+    ChartTypeSelect, ChartTypeWrapper,
+    SettingsToolbarContainer,
+    SymbolInput,
+} from '../../styles/SettingsToolbar.styles';
 
 import {Button} from './Buttons';
 import {IconCamera, IconDownload, IconGear, IconRange, IconRefresh, IconSearch, IconTheme,} from './icons';
@@ -51,18 +56,20 @@ export const SettingsToolbar = ({handleChartTypeChange}: SettingToolbarProps) =>
     return (
         <SettingsToolbarContainer className="settings-toolbar">
             <SymbolInput className={'symbol-choose-icon'} name={'symbol-input'} placeholder="Symbol"/>
-            <ChartTypeSelect className={'chart-type-select-container'}
-                             name={'symbol-select'}
-                             defaultValue="candlestick"
-                             onChange={(e) => handleChartTypeChange(e.target.value as ChartType)}
-                             aria-label="Chart type">
-                {Object.keys(ChartType).map((type) => (
-                    <option key={type} value={type as ChartType}>
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </option>
-                ))}
-            </ChartTypeSelect>
-
+            <ChartTypeWrapper>
+                <ChartTypeSelect className={'chart-type-select-container'}
+                                 name={'symbol-select'}
+                                 defaultValue="candlestick"
+                                 onChange={(e) => handleChartTypeChange(e.target.value as ChartType)}
+                                 aria-label="Chart type">
+                    {Object.keys(ChartType).map((type) => (
+                        <option key={type} value={type as ChartType}>
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </option>
+                    ))}
+                </ChartTypeSelect>
+                <ChartTypeArrow/>
+            </ChartTypeWrapper>
             <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
                      axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
@@ -70,42 +77,42 @@ export const SettingsToolbar = ({handleChartTypeChange}: SettingToolbarProps) =>
                     <IconGear/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+            <Tooltip content="Download" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
                      axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={handleDownload}>
                     <IconCamera/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+            <Tooltip content="Search" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
                      axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={openSearch}>
                     <IconSearch/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+            <Tooltip content="Range" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
                      axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={openRange}>
                     <IconRange/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+            <Tooltip content="Download" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
                      axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={doDownload}>
                     <IconDownload/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+            <Tooltip content="Refresh" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
                      axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={doRefresh}>
                     <IconRefresh/>
                 </Button>
             </Tooltip>
-            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+            <Tooltip content="Toggle Theme" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
                      axis={TooltipAxis.vertical}
                      align={TooltipAlign.center}>
                 <Button onClickHandler={toggleTheme}>

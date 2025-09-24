@@ -10,7 +10,7 @@ export function useChartData(
     currentPoint: { x: number; y: number } | null,
     canvasWidth: number,
     canvasHeight: number
-): { renderContext: ChartRenderContext | null; hoveredCandle: Interval | null; intervalSeconds: number } {
+): { renderContext: ChartRenderContext | null; intervalSeconds: number } {
     const intervalSeconds = useMemo(() => {
         if (intervalsArray.length < 2) return 3600;
         return intervalsArray[1].t - intervalsArray[0].t;
@@ -29,7 +29,6 @@ export function useChartData(
         };
     }, [intervalsArray, visibleRange, intervalSeconds]);
 
-    // --- החלק שתוקן כדי להתאים ל-PriceRange ---
     const visiblePriceRange = useMemo<PriceRange>(() => {
         const {startIndex, endIndex} = visibleCandles;
         if (startIndex >= endIndex || !intervalsArray.length) {
@@ -58,15 +57,6 @@ export function useChartData(
             range: finalMax - finalMin,
         };
     }, [intervalsArray, visibleCandles]);
-    // --- סוף החלק המתוקן ---
-
-    const hoveredCandle = useMemo<Interval | null>(() => {
-        if (!currentPoint || !canvasWidth || !intervalsArray.length || isNaN(currentPoint.x)) {
-            return null;
-        }
-        const mouseTime = visibleRange.start + (currentPoint.x / canvasWidth) * (visibleRange.end - visibleRange.start);
-        return intervalsArray.find(c => mouseTime >= c.t && mouseTime < c.t + intervalSeconds) || null;
-    }, [currentPoint, canvasWidth, visibleRange, intervalsArray, intervalSeconds]);
 
     const renderContext = useMemo<ChartRenderContext | null>(() => {
         if (canvasWidth === 0 || canvasHeight === 0) {
@@ -92,5 +82,5 @@ export function useChartData(
         canvasHeight,
     ]);
 
-    return {renderContext, hoveredCandle, intervalSeconds};
+    return {renderContext, intervalSeconds};
 }
