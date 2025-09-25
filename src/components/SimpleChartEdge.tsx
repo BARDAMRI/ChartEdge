@@ -130,7 +130,7 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
     return (
         <ModeProvider>
             <GlobalStyle/>
-            <MainAppWindow>
+            <MainAppWindow className={'simple-chart-window'}>
                 <SettingsArea className={"settings-area"}>
                     <SettingsToolbar handleChartTypeChange={handleChartTypeChange}/>
                 </SettingsArea>

@@ -2,10 +2,7 @@ import styled from 'styled-components';
 
 export const ToolbarContainer = styled.div.attrs({className: 'toolbar-container'})`
     box-sizing: border-box;
-    width: 40px;
-    min-width: 40px;
-    max-width: 40px;
-    flex: 0 0 40px;
+    width: clamp(30px, 6vw, 40px); 
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -27,13 +24,11 @@ export const ToolbarContent = styled.div.attrs({className: 'toolbar-content'})`
     height: 100%;
     display: flex;
     flex-direction: column;
-    grid-template-columns: 1fr;
-    grid-auto-rows: 1fr;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
     gap: 2px;
     padding: 1px;
-    align-content: start;
-    justify-items: stretch;
-    overflow: hidden;
 `;
 
 interface ToolbarButtonProps {
@@ -47,7 +42,6 @@ export const ToolbarVerticalButton = styled.button.attrs({className: 'toolbar-bu
     justify-content: center;
     width: 100%;
     aspect-ratio: 1 / 1;
-    flex: 0 0 auto; /* keep height from aspect-ratio; don't grow vertically */
     padding: 0;
     margin: 0;
     overflow: hidden;
@@ -105,8 +99,8 @@ export const ToolbarVerticalButton = styled.button.attrs({className: 'toolbar-bu
     `}
         /* Make inner SVG breathe inside the square */
     svg {
-        width: calc(100% - 12px);
-        height: calc(100% - 12px);
+        width: 100%;
+        height: 100%;
         display: block;
     }
 

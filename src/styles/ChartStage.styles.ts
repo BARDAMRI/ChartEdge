@@ -43,7 +43,7 @@ export const CanvasAxisContainer = styled.div<XAxisProps>`
     display: grid;
     grid-column: 2;
     grid-row: 1 / span 2;
-    grid-template-rows: 1fr ${({xAxisHeight}) => (xAxisHeight ? `${xAxisHeight}px` : '40px')};
+    grid-template-rows: 1fr ${({xAxisHeight}) => (xAxisHeight ? `${xAxisHeight}px` : '30px')};
     grid-template-columns: 1fr;
     height: 100%;
     min-width: 0;

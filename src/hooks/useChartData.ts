@@ -45,12 +45,10 @@ export function useChartData(
             if (candle.h > max) max = candle.h;
         }
 
-        // Add padding
         const padding = (max - min) * 0.1;
         const finalMin = min - padding;
         const finalMax = max + padding;
 
-        // Return the object in the correct structure
         return {
             min: finalMin,
             max: finalMax,

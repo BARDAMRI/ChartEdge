@@ -34,7 +34,7 @@ export function pointInTriangle(
     const v2x = px - a.x, v2y = py - a.y;
 
     const den = v0x * v1y - v1x * v0y;
-    if (den === 0) return false; // דגנרטיבי (קו/שטח אפס)
+    if (den === 0) return false;
 
     const u = (v2x * v1y - v1x * v2y) / den;
     const v = (v0x * v2y - v2x * v0y) / den;

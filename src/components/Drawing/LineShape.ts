@@ -103,7 +103,6 @@ export class LineShape implements IDrawingShape {
     }
 
     updateLastPoint(point: DrawingPoint): void {
-        // Updating the seconds point of the line or adding it if it doesn't exist
         if (this.points.length === 0) {
             this.points.push(point);
         } else if (this.points.length === 1) {

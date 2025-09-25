@@ -17,13 +17,11 @@ import {DeepPartial, DeepRequired} from "../../../types/types";
 
 /** Factory helpers for calculation specs */
 export const OverlaySpecs = {
-    // direct accessors
     close: (): OverlayCalcSpec => ({kind: OverlayPriceKey.close}),
     open: (): OverlayCalcSpec => ({kind: OverlayPriceKey.open}),
     high: (): OverlayCalcSpec => ({kind: OverlayPriceKey.high}),
     low: (): OverlayCalcSpec => ({kind: OverlayPriceKey.low}),
 
-    // moving averages
     sma: (period: number, price: OverlayPriceKey = OverlayPriceKey.close): OverlayCalcSpec => (
         {kind: OverlayKind.sma, period, price}
     ),
@@ -34,10 +32,8 @@ export const OverlaySpecs = {
         {kind: OverlayKind.wma, period, price}
     ),
 
-    // volume-weighted average price
     vwap: (): OverlayCalcSpec => ({kind: OverlayKind.vwap}),
 
-    // Bollinger Bands (three separate helpers)
     bbandsMid: (period: number, price: OverlayPriceKey = OverlayPriceKey.close): OverlayCalcSpec => (
         {kind: OverlayKind.bbands_mid, period, price}
     ),
@@ -164,7 +160,7 @@ function computeWMA(values: (number | null | undefined)[], period: number): (num
         for (let i = 0; i < values.length; i++) out[i] = values[i] ?? null;
         return out;
     }
-    const wsum = period * (period + 1) / 2; // 1..p
+    const wsum = period * (period + 1) / 2;
     const win: (number | null)[] = Array(period).fill(null);
     for (let i = 0; i < values.length; i++) {
         win.shift();
@@ -249,7 +245,7 @@ export function computeSeriesBySpec(intervals: Interval[], spec: OverlayCalcSpec
             const period = Math.max(1, (spec as any).period ?? 20);
             const base = intervals.map(acc);
             const sma = computeSMA(base, period);
-            const std = rollingStd(sma, period); // approx on SMA
+            const std = rollingStd(sma, period);
             const k = (spec as any).stddev ?? 2;
             return sma.map((m, i) => (m == null || std[i] == null) ? null : (m + k * (std[i] as number)));
         }
@@ -330,7 +326,7 @@ export function drawOverlays(
         ctx.save();
         applyStrokeStyle(ctx, series.options);
 
-        const useCenter = series.useCenterX !== false; // default true
+        const useCenter = series.useCenterX;
         const getX = useCenter ? xCenterOf : xStartOf;
 
         let started = false;

@@ -16,7 +16,7 @@ export function findPriceRange(allCandles: Interval[], startIndex: number, endIn
 export function isPointNearLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number, tolerance: number): boolean {
     const dx = x2 - x1;
     const dy = y2 - y1;
-    if (dx === 0 && dy === 0) return false; // It's a point
+    if (dx === 0 && dy === 0) return false;
 
     const t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
     const closestX = t < 0 ? x1 : t > 1 ? x2 : x1 + t * dx;

@@ -63,7 +63,7 @@ function selectTimeDetailLevel(
             stepFactor: 1
         },
         {
-            condition: true, // fallback to minimal detail
+            condition: true,
             intervalFn: addYears,
             startOfFn: startOfYear,
             diffFn: differenceInYears,
@@ -189,7 +189,6 @@ export function generateAndDrawTimeTicks(
 }
 
 
-// Generate and draw Y-axis ticks
 export function generateAndDrawYTicks(
     canvas: HTMLCanvasElement,
     minValue: number,
@@ -244,7 +243,6 @@ function drawXTicks(
 
     const crisp = (v: number) => Math.round(v) + 0.5;
 
-    // drawing the axis line
     ctx.strokeStyle = tickColor;
     ctx.lineWidth = 1;
     ctx.beginPath();

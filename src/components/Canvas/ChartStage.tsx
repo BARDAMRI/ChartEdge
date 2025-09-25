@@ -17,19 +17,9 @@ import {AxesPosition, DeepRequired, windowSpread} from "../../types/types";
 import {useElementSize} from '../../hooks/useElementSize';
 import {findPriceRange} from "./utils/helpers";
 import {IDrawingShape} from "../Drawing/IDrawingShape";
-import {LineShape} from '../Drawing/LineShape';
-import {RectangleShape} from '../Drawing/RectangleShape';
-import {CircleShape} from '../Drawing/CircleShape';
-import {TriangleShape} from '../Drawing/TriangleShape';
-import {AngleShape} from '../Drawing/AngleShape';
-import {deepMerge} from "../../utils/deepMerge";
-import {DrawingStyleOptions} from "../../types/Drawings";
-import {Polyline} from "../Drawing/Polyline";
-import {CustomSymbolShape} from "../Drawing/CustomSymbolShape";
-import {ArrowShape} from "../Drawing/ArrowShape";
 import {validateAndNormalizeShape} from "../Drawing/drawHelper";
 
-// --- Simple helpers ---
+
 const median = (nums: number[]): number => {
     if (nums.length === 0) return 0;
     const mid = Math.floor(nums.length / 2);
@@ -53,7 +43,6 @@ function findVisibleIndexRange(arr: Interval[], vrange: TimeRange, intervalSecon
     if (n === 0) return [0, 0];
     const half = intervalSeconds / 2;
 
-    // lowerBound: first index whose center (t+half) >= vrange.start
     let lo = 0, hi = n - 1, start = n;
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
@@ -65,7 +54,6 @@ function findVisibleIndexRange(arr: Interval[], vrange: TimeRange, intervalSecon
         }
     }
 
-    // upperBound: first index whose center (t+half) > vrange.end
     lo = 0;
     hi = n - 1;
     let ub = n;
@@ -110,7 +98,6 @@ export interface ChartStageHandle {
         visiblePriceRange: PriceRange;
         canvasSize: { width: number; height: number; dpr: number };
     };
-    // Forwarded from ChartCanvasHandle:
     getCanvasSize: () => { width: number; height: number; dpr: number };
     clearCanvas: () => void;
     redrawCanvas: () => void;
@@ -147,7 +134,6 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
 
     function updateVisibleRange(newRangeTime: TimeRange) {
         if (!intervals || intervals.length === 0) return;
-        // Derive a reasonable intervalSeconds for center-based bounds
         const intervalSeconds = getIntervalSeconds(intervals, 60);
         const [startIndex, endIndex] = findVisibleIndexRange(intervals, newRangeTime, intervalSeconds);
         setVisibleRange({...newRangeTime, startIndex, endIndex});
@@ -180,14 +166,12 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
         const vr = visibleRange;
         const n = intervals?.length ?? 0;
         if (n === 0) return;
-        if (!(vr.end > vr.start)) return; // invalid time window
-        if (vr.startIndex > vr.endIndex) return; // nothing visible
+        if (!(vr.end > vr.start)) return;
+        if (vr.startIndex > vr.endIndex) return;
 
-        // Clamp indices to data bounds
         const s = Math.max(0, Math.min(vr.startIndex, n - 1));
         const e = Math.max(s, Math.min(vr.endIndex, n - 1));
 
-        // Slight padding on the window to avoid chopping extremes
         const paddedStart = Math.max(0, s - 1);
         const paddedEnd = Math.min(n - 1, e + 1);
         const newPr = findPriceRange(intervals, paddedStart, paddedEnd);
@@ -248,7 +232,6 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
                 canvasSize: canvasRef.current?.getCanvasSize() ?? {width: 0, height: 0, dpr: 1},
             };
         },
-        // Forward ChartCanvasHandle methods via canvasRef
         getCanvasSize() {
             return canvasRef.current?.getCanvasSize() ?? {width: 0, height: 0, dpr: 1};
         },
@@ -260,7 +243,6 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
             canvasRef.current?.redrawCanvas();
         },
         reloadCanvas() {
-            // reset the canvas draw and visualization to its initial state
             setVisibleRange({
                 start: intervals.length > 0 ? intervals[0].t - 60 : 0,
                 end: intervals.length > 0 ? intervals[intervals.length - 1].t + 60 : 0,
@@ -270,32 +252,16 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
             setDrawings([]);
         }
     }));
-
-    const gridRows = useMemo(() => (showTopBar ? `${windowSpread.TOP_BAR_PX}px 1fr` : `1fr`), [showTopBar]);
-    const gridCols = useMemo(() => (showLeftBar ? `${windowSpread.LEFT_BAR_PX}px 1fr` : `1fr`), [showLeftBar]);
-
+    
     return (
         <ChartStageContainer
             ref={containerRef}
             className={"chart-stage-container"}
             style={{
-                gridTemplateRows: gridRows,
-                gridTemplateColumns: gridCols,
+                gridTemplateRows: 1,
+                gridTemplateColumns: 1,
             }}
         >
-            {showTopBar && (
-                <TopBar
-                    className="top-toolbar"
-                    style={{gridColumn: showLeftBar ? '1 / span 2' : '1', height: windowSpread.TOP_BAR_PX}}
-                />
-            )}
-
-            {showLeftBar && (
-                <LeftBar
-                    className="left-toolbar"
-                    style={{gridRow: showTopBar ? 2 : 1, width: windowSpread.LEFT_BAR_PX}}
-                />
-            )}
 
             <ChartView
                 className="chart-main-cell"

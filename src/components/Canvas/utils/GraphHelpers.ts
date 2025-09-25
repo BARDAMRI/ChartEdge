@@ -43,7 +43,6 @@ export const priceToY = (p: number, clientHeight: number, price: PriceRange) => 
  */
 export const timeToX = (time: number, clientWidth: number, visibleRange: TimeRange) => clientWidth * ((time - visibleRange.start) / (visibleRange.end - visibleRange.start));
 
-// Add these two new functions to your GraphHelpers.ts file
 
 /**
  * Converts a horizontal pixel coordinate (from a mouse event) into a time value (timestamp).

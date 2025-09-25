@@ -42,7 +42,6 @@ export class Polyline implements IDrawingShape {
 
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
-        // Apply the final calculated style
         ctx.strokeStyle = style.lineColor;
         ctx.lineWidth = style.lineWidth;
         ctx.fillStyle = style.fillColor;
@@ -61,17 +60,14 @@ export class Polyline implements IDrawingShape {
             ctx.lineTo(pixelPoints[i].x, pixelPoints[i].y);
         }
 
-        // If it's a polygon (more than 2 points), close the path
         if (points.length > 2) {
             ctx.closePath();
         }
 
-        // Fill the shape if a fill color is provided and is not transparent
         if (style.fillColor !== 'transparent') {
             ctx.fill();
         }
 
-        // Draw the stroke last
         ctx.stroke();
     }
 

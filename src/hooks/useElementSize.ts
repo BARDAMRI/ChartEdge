@@ -13,7 +13,6 @@ interface UseElementSizeReturn<T extends HTMLElement> {
  * - Updates on layout changes and window resize (covers DPR/zoom changes)
  */
 export function useElementSize<T extends HTMLElement>(): UseElementSizeReturn<T> {
-    // Use non-null generic with a non-null assertion to satisfy RefObject<T> while runtime current starts null
     const ref = useRef<T>(null!);
     const [size, setSize] = useState<CanvasSizes>({width: 0, height: 0});
 
@@ -23,7 +22,6 @@ export function useElementSize<T extends HTMLElement>(): UseElementSizeReturn<T>
 
         const measure = () => {
             const r = el.getBoundingClientRect();
-            // Avoid needless state updates
             setSize((prev) => {
                 const w = r.width;
                 const h = r.height;
@@ -32,17 +30,13 @@ export function useElementSize<T extends HTMLElement>(): UseElementSizeReturn<T>
             });
         };
 
-        // Initial measure
         measure();
 
-        // Observe element size changes
         const ro = new ResizeObserver(() => {
-            // Coalesce multiple RO callbacks into a single frame
             requestAnimationFrame(measure);
         });
         ro.observe(el);
 
-        // Also react to window resize (covers DPR / zoom switches on many browsers)
         window.addEventListener("resize", measure);
 
         return () => {

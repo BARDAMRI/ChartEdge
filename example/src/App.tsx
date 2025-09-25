@@ -224,13 +224,13 @@ export default function App() {
 
     return (
         <div className={'app-root'}>
-            <div style={{marginBottom: 16}}>
-                <button onClick={handleAddShape}>Add Shape</button>
-                <button onClick={handleGetInfo}>Get View Info</button>
-                <button onClick={handleClear}>Clear Canvas</button>
-                <button onClick={handleRedraw}>Redraw Canvas</button>
-                <button onClick={reloadCanvas}>Reload Canvas</button>
-            </div>
+            {/*<div style={{marginBottom: 16}}>*/}
+            {/*    <button onClick={handleAddShape}>Add Shape</button>*/}
+            {/*    <button onClick={handleGetInfo}>Get View Info</button>*/}
+            {/*    <button onClick={handleClear}>Clear Canvas</button>*/}
+            {/*    <button onClick={handleRedraw}>Redraw Canvas</button>*/}
+            {/*    <button onClick={reloadCanvas}>Reload Canvas</button>*/}
+            {/*</div>*/}
             <SimpleChartEdge
                 ref={chartRef}
                 className="simple-chart-edge"

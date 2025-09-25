@@ -1,13 +1,13 @@
 import {ShapeBaseArgs} from "../components/Drawing/types";
 
 export interface DrawingPoint {
-    time: number; // time value
-    price: number; // price value
+    time: number;
+    price: number;
 }
 
 export interface CanvasPoint {
-    x: number; // x coordinate on canvas
-    y: number; // y coordinate on canvas
+    x: number;
+    y: number;
 }
 
 

@@ -1,21 +1,16 @@
 import styled, {css} from 'styled-components';
 import {Placement, TooltipAxis} from '../types/buttons';
 
-export const TooltipWrapper = styled.span.attrs({className: 'tooltip-wrapper'})<{
-    $axis: TooltipAxis;
-}>`
+export const TooltipWrapper = styled.span.attrs({className: 'tooltip-wrapper'})`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    line-height: 0;
+    width: auto;
+    height: auto;
     position: relative;
-    display: inline-block;
-    ${({$axis}) =>
-            $axis === TooltipAxis.vertical
-                    ? css`
-                        width: 100%;
-                    `
-                    : css`
-                        height: 100%;
-                    `
-    }
-
 `;
 
 const bgGradLight =

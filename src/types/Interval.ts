@@ -1,10 +1,10 @@
 export interface Interval {
-    t: number; // timestamp
-    o: number; // open
-    c: number; // close
-    l: number; // low
-    h: number; // high
-    v?: number; // volume (optional)
+    t: number;
+    o: number;
+    c: number;
+    l: number;
+    h: number;
+    v?: number;
 }
 
 export interface CandleWithIndex extends Interval {

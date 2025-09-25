@@ -1,6 +1,5 @@
 // chartOptions.ts
 
-// Candles style
 import {AxesOptions, AxesPosition, ChartTheme} from "./types";
 import type {Interval} from "./Interval";
 import type {TimeRange} from "./Graph";
@@ -32,7 +31,6 @@ export interface ChartRenderContext {
     canvasHeight: number;
 }
 
-// --- Nested Style Types ---
 export interface CandleStyleOptions {
     bullColor: string;
     bearColor: string;
@@ -87,7 +85,6 @@ export interface AxesStyleOptions {
     numberFractionDigits: number; // Number of decimal places to format axis values
 }
 
-// --- Main Combined Interface ---
 export type StyleOptions = {
     candles: CandleStyleOptions;
     line: LineStyleOptions;

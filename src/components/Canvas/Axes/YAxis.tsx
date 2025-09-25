@@ -26,20 +26,17 @@ export default function YAxis({
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
 
-        // Sync backing store to CSS size * DPR
         const needResize = canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr);
         if (needResize) {
             canvas.width = Math.round(rect.width * dpr);
             canvas.height = Math.round(rect.height * dpr);
         }
-        // Ensure CSS size stays in CSS px (grid manages layout)
         canvas.style.width = `${rect.width}px`;
         canvas.style.height = `${rect.height}px`;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Work in CSS pixels for crisp HiDPI rendering
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, rect.width, rect.height);
 
@@ -59,22 +56,18 @@ export default function YAxis({
         );
     };
 
-    // Redraw on canvas size changes driven by CSS Grid
     useLayoutEffect(() => {
         const el = canvasRef.current;
         if (!el) return;
 
         const ro = new ResizeObserver(() => {
-            // coalesce to animation frame to avoid multiple redraws per layout
             requestAnimationFrame(draw);
         });
         ro.observe(el);
-        // initial draw
         draw();
         return () => ro.disconnect();
     }, []);
 
-    // Redraw when data props change (price range, ticks, position)
     useEffect(() => {
         draw();
     }, [minPrice, maxPrice, numberOfYTicks, yAxisPosition]);

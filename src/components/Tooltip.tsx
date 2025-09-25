@@ -237,7 +237,6 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
     return (
         <TooltipWrapper
-            $axis={tooltipAxis}
             ref={containerRef}
             onMouseEnter={show}
             onMouseLeave={hide}

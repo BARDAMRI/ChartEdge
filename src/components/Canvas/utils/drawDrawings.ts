@@ -14,7 +14,6 @@ export function drawDrawings(
     drawings.forEach((shape, index) => {
 
         if (shape) {
-            // 1. Start with the global default style
             let finalStyle: FinalDrawingStyle = {
                 lineColor: shape.style.lineColor as string,
                 lineWidth: shape.style.lineWidth as number,
@@ -22,7 +21,6 @@ export function drawDrawings(
                 fillColor: shape.style.fillColor as string
             };
 
-            // 3. Override again with the "selected" style if the shape is selected
             if (selectedIndex === index) {
                 finalStyle.lineColor = shape.style.selected.lineColor as string;
                 finalStyle.lineWidth = (finalStyle.lineWidth || 1) + (shape.style.selected.lineWidthAdd || 1) as number;

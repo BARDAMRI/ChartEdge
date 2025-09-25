@@ -28,7 +28,6 @@ export default function XAxis({
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        // Set proper canvas resolution
         const width = canvas.clientWidth;
         const height = canvas.clientHeight;
         canvas.width = width * dpr;
@@ -36,11 +35,9 @@ export default function XAxis({
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        // Apply devicePixelRatio in one step for crisp rendering and to avoid accumulating scales
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
 
-        //  Call tick generator and drawer
         generateAndDrawTimeTicks(
             canvas,
             visibleRange,

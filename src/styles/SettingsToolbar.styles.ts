@@ -3,14 +3,21 @@ import styled from 'styled-components';
 export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-toolbar-container'})`
     box-sizing: border-box;
     width: 100%;
+    max-width: 100%;
+    height: clamp(30px, 10vh, 40px);
     display: flex;
-    align-items: center;
+    align-items: stretch;
     gap: 2px;
     background-color: white;
     border-radius: 12px;
     border: 1px solid rgba(128, 140, 255, 0.18);
     box-shadow: 0 10px 28px rgba(17, 19, 39, 0.10),
     inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+    overflow: hidden;
+
+    & > * {
+        flex-shrink: 0;
+    }
 `;
 
 const Control = styled.div`
@@ -167,9 +174,11 @@ export const ToolbarHorizontalButtons = styled.button.attrs({className: 'toolbar
     align-items: center;
     justify-content: center;
     height: 100%;
+    width: auto;
+    flex: 1 1 auto;
     aspect-ratio: 1 / 1;
     padding: 0;
-    margin: 0;
+    box-sizing: border-box;
     overflow: hidden;
     text-align: center;
     font-size: 18px;

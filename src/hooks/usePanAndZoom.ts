@@ -4,7 +4,7 @@ import {TimeRange} from "../types/Graph";
 
 const PAN_SENSITIVITY = 1.0;
 const ZOOM_SENSITIVITY = 0.1;
-const WHEEL_END_DEBOUNCE = 150; // ms to wait after last wheel event to consider it "ended"
+const WHEEL_END_DEBOUNCE = 150;
 
 interface PanAndZoomHandlers {
     onPanStart: () => void;
@@ -22,11 +22,10 @@ export function usePanAndZoom(
     setVisibleRange: (range: TimeRange) => void,
     intervalSeconds: number,
     handlers: PanAndZoomHandlers,
-    getCssWidth?: () => number, // optional external CSS endTime provider
+    getCssWidth?: () => number,
 ) {
     const wheelingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Ref to hold latest props/handlers to avoid stale closures in event listeners
     const latestPropsRef = useRef({
         visibleRange,
         setVisibleRange,
@@ -55,7 +54,7 @@ export function usePanAndZoom(
         const lastPosRef = {x: 0, y: 0};
 
         const handleMouseDown = (e: MouseEvent) => {
-            if (e.button !== 0) return; // left button only
+            if (e.button !== 0) return;
             isPanningRef.current = true;
             lastPosRef.x = e.clientX;
             lastPosRef.y = e.clientY;
@@ -68,16 +67,13 @@ export function usePanAndZoom(
 
             const dx = e.clientX - lastPosRef.x;
             const dy = e.clientY - lastPosRef.y;
-
-            // choose dominant axis similar to wheel-pan
             const delta = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
-
             const canvas = canvasRef.current!;
             const cssWidth = latestPropsRef.current.getCssWidth?.() ?? canvas.getBoundingClientRect().width;
             const duration = visibleRange.end - visibleRange.start;
             const timePerPixel = cssWidth > 0 ? (duration / cssWidth) : 0;
             if (!isFinite(timePerPixel) || timePerPixel === 0) {
-                lastPosRef.x = e.clientX; // still advance to avoid huge jumps
+                lastPosRef.x = e.clientX;
                 lastPosRef.y = e.clientY;
                 return;
             }
@@ -85,7 +81,6 @@ export function usePanAndZoom(
             const timeOffset = -delta * timePerPixel * PAN_SENSITIVITY;
             let newStart = visibleRange.start + timeOffset;
 
-            // clamp to data range similar to wheel-pan
             const dataStart = intervalsArray[0].t;
             const dataEnd = intervalsArray[intervalsArray.length - 1].t + intervalSeconds;
             const minStart = dataStart - (duration - intervalSeconds);
@@ -94,7 +89,6 @@ export function usePanAndZoom(
             newStart = Math.max(minStart, Math.min(newStart, maxStart));
             setVisibleRange({start: newStart, end: newStart + duration});
 
-            // advance last position for incremental behavior
             lastPosRef.x = e.clientX;
             lastPosRef.y = e.clientY;
         };
@@ -113,7 +107,7 @@ export function usePanAndZoom(
             const {visibleRange, setVisibleRange, intervalsArray, intervalSeconds, handlers} = latestPropsRef.current;
             const isZoomGesture = e.ctrlKey || e.metaKey;
 
-            if (isZoomGesture) { // ZOOM
+            if (isZoomGesture) {
                 handlers.onWheelStart();
                 if (wheelingTimeoutRef.current) {
                     clearTimeout(wheelingTimeoutRef.current!);
@@ -138,19 +132,15 @@ export function usePanAndZoom(
 
                 newStart = Math.max(newStart, intervalsArray[0].t);
                 setVisibleRange({start: newStart, end: newEnd});
-            } else { // PAN (wheel / two-finger / press+scroll)
+            } else {
                 const duration = visibleRange.end - visibleRange.start;
                 const cssWidth = latestPropsRef.current.getCssWidth?.() ?? canvas.getBoundingClientRect().width;
                 const timePerPixel = cssWidth > 0 ? (duration / cssWidth) : 0;
                 if (!isFinite(timePerPixel) || timePerPixel === 0) return;
 
-                // Use dominant axis so vertical scroll also pans when no horizontal component
                 const delta = Math.abs(e.deltaX) >= Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-
-                // Invert sign so visual motion matches scroll direction on the chart
                 const timeOffset = delta * timePerPixel * PAN_SENSITIVITY;
                 let newStart = visibleRange.start + timeOffset;
-
                 const dataStart = intervalsArray[0].t;
                 const dataEnd = intervalsArray[intervalsArray.length - 1].t + intervalSeconds;
                 const minStart = dataStart - (duration - intervalSeconds);

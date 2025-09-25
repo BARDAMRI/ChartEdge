@@ -47,18 +47,15 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         const candle = allIntervals[i];
         if (!candle) continue;
 
-        // t is the START of the candle. xLeft is the start edge in CSS px.
         const xLeft = xFromStart(candle.t, canvasWidth, visibleRange);
         const xRight = xLeft + candleWidth;
 
-        // Skip if completely outside the viewport
         if (xRight < 0 || xLeft > canvasWidth) {
             continue;
         }
 
         candlesDrawn++;
 
-        // Y positions from price to canvas Y (CSS px)
         const highY = priceToY(candle.h, canvasHeight, visiblePriceRange);
         const lowY = priceToY(candle.l, canvasHeight, visiblePriceRange);
         const openY = priceToY(candle.o, canvasHeight, visiblePriceRange);
@@ -68,7 +65,6 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         const color = isBullish ? (options?.base?.style?.candles?.bullColor || 'green') : (options?.base?.style?.candles?.bearColor || 'red');
         const crisp = (v: number) => Math.floor(v) + 0.5;
 
-        // Draw wick (centered horizontally on the candle)
         const candleMidX = xLeft + candleWidth / 2;
         ctx.beginPath();
         ctx.strokeStyle = color;
@@ -77,7 +73,6 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         ctx.lineTo(crisp(candleMidX), crisp(lowY));
         ctx.stroke();
 
-        // Draw body
         const bodyTop = Math.min(openY, closeY);
         const bodyHeight = Math.abs(openY - closeY);
         ctx.fillStyle = color;
@@ -327,10 +322,9 @@ export function drawHistogramChart(ctx: CanvasRenderingContext2D, context: Chart
         intervalSeconds,
         canvasWidth,
         canvasHeight
-    } = context; //
+    } = context;
     if (!allIntervals.length || visibleEndIndex < visibleStartIndex) return;
-    // Guard against invalid price range when used for derived volume bars elsewhere
-    // (kept for consistency even though histogram uses volumes)
+
     if (!isFinite((visibleRange as any)?.start) || !isFinite((visibleRange as any)?.end)) return;
 
     const visibleDuration = visibleRange.end - visibleRange.start;
