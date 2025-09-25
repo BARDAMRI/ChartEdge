@@ -30,7 +30,7 @@ export function drawDrawings(
                 if (shape.style.selected.fillColor) finalStyle.fillColor = shape.style.selected.fillColor as string;
             }
 
-            shape.draw(ctx, renderContext, visiblePriceRange, finalStyle);
+            shape?.draw(ctx, renderContext, visiblePriceRange, finalStyle);
         }
     });
 }

@@ -1,5 +1,5 @@
-import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {ChartCanvas} from './ChartCanvas';
+import React, {useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle} from 'react';
+import {ChartCanvas, ChartCanvasHandle} from './ChartCanvas';
 import XAxis from "./Axes/XAxis";
 import YAxis from "./Axes/YAxis";
 import {
@@ -12,11 +12,22 @@ import {
 } from '../../styles/ChartStage.styles';
 import {PriceRange, TimeRange} from "../../types/Graph";
 import {Interval} from "../../types/Interval";
-import {ChartOptions, ChartType, TimeDetailLevel} from "../../types/chartOptions";
+import {ChartOptions, TimeDetailLevel} from "../../types/chartOptions";
 import {AxesPosition, DeepRequired, windowSpread} from "../../types/types";
 import {useElementSize} from '../../hooks/useElementSize';
 import {findPriceRange} from "./utils/helpers";
 import {IDrawingShape} from "../Drawing/IDrawingShape";
+import {LineShape} from '../Drawing/LineShape';
+import {RectangleShape} from '../Drawing/RectangleShape';
+import {CircleShape} from '../Drawing/CircleShape';
+import {TriangleShape} from '../Drawing/TriangleShape';
+import {AngleShape} from '../Drawing/AngleShape';
+import {deepMerge} from "../../utils/deepMerge";
+import {DrawingStyleOptions} from "../../types/Drawings";
+import {Polyline} from "../Drawing/Polyline";
+import {CustomSymbolShape} from "../Drawing/CustomSymbolShape";
+import {ArrowShape} from "../Drawing/ArrowShape";
+import {validateAndNormalizeShape} from "../Drawing/drawHelper";
 
 // --- Simple helpers ---
 const median = (nums: number[]): number => {
@@ -85,17 +96,39 @@ interface ChartStageProps {
     showLeftBar?: boolean;
 }
 
-export const ChartStage: React.FC<ChartStageProps> = ({
-                                                          intervalsArray,
-                                                          numberOfYTicks,
-                                                          timeDetailLevel,
-                                                          timeFormat12h, selectedIndex,
-                                                          chartOptions
-                                                          , showTopBar = true
-                                                          , showLeftBar = true
-                                                      }) => {
+export interface ChartStageHandle {
+    addShape: (shape: IDrawingShape) => void;
+    updateShape: (shapeId: string, newShape: IDrawingShape) => void;
+    deleteShape: (shapeId: string) => void;
+    addInterval: (interval: Interval) => void;
+    updateInterval: (index: number, newInterval: Interval) => void;
+    deleteInterval: (index: number) => void;
+    getViewInfo: () => {
+        intervals: Interval[];
+        drawings: IDrawingShape[];
+        visibleRange: TimeRange & { startIndex: number; endIndex: number };
+        visiblePriceRange: PriceRange;
+        canvasSize: { width: number; height: number; dpr: number };
+    };
+    // Forwarded from ChartCanvasHandle:
+    getCanvasSize: () => { width: number; height: number; dpr: number };
+    clearCanvas: () => void;
+    redrawCanvas: () => void;
+    reloadCanvas: () => void;
+}
+
+export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
+                                                                             intervalsArray,
+                                                                             numberOfYTicks,
+                                                                             timeDetailLevel,
+                                                                             timeFormat12h, selectedIndex,
+                                                                             chartOptions
+                                                                             , showTopBar = true
+                                                                             , showLeftBar = true
+                                                                         }, ref) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const {ref: canvasAreaRef, size: canvasSizes} = useElementSize<HTMLDivElement>();
+    const [intervals, setIntervals] = useState<Interval[]>(intervalsArray);
     const [visibleRange, setVisibleRange] = React.useState<TimeRange & {
         startIndex: number,
         endIndex: number
@@ -106,25 +139,30 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         range: Math.max(...intervalsArray.map(inter => inter?.h || 0)) - Math.min(...intervalsArray.map(inter => inter?.l || 0))
     });
     const [drawings, setDrawings] = useState<IDrawingShape[]>([]);
+    const canvasRef = useRef<ChartCanvasHandle | null>(null);
+
+    useEffect(() => {
+        setIntervals(intervalsArray);
+    }, [intervalsArray]);
 
     function updateVisibleRange(newRangeTime: TimeRange) {
-        if (!intervalsArray || intervalsArray.length === 0) return;
+        if (!intervals || intervals.length === 0) return;
         // Derive a reasonable intervalSeconds for center-based bounds
-        const intervalSeconds = getIntervalSeconds(intervalsArray, 60);
-        const [startIndex, endIndex] = findVisibleIndexRange(intervalsArray, newRangeTime, intervalSeconds);
+        const intervalSeconds = getIntervalSeconds(intervals, 60);
+        const [startIndex, endIndex] = findVisibleIndexRange(intervals, newRangeTime, intervalSeconds);
         setVisibleRange({...newRangeTime, startIndex, endIndex});
     }
 
     useEffect(() => {
         setVisibleRange(prev => {
-            if (prev.start === 0 && prev.end === 0 && intervalsArray.length > 0) {
+            if (prev.start === 0 && prev.end === 0 && intervals.length > 0) {
                 return {
-                    start: intervalsArray[0].t - 60,
-                    end: intervalsArray[intervalsArray.length - 1].t + 60,
+                    start: intervals[0].t - 60,
+                    end: intervals[intervals.length - 1].t + 60,
                     startIndex: 0,
-                    endIndex: intervalsArray.length - 1
+                    endIndex: intervals.length - 1
                 };
-            } else if (intervalsArray.length === 0) {
+            } else if (intervals.length === 0) {
                 const d_now = Date.now();
                 return {
                     start: Math.floor((d_now - 7 * 24 * 60 * 60 * 1000) / 1000),
@@ -135,12 +173,12 @@ export const ChartStage: React.FC<ChartStageProps> = ({
             }
             return prev;
         });
-    }, []);
+    }, [intervals]);
 
 
     useEffect(() => {
         const vr = visibleRange;
-        const n = intervalsArray?.length ?? 0;
+        const n = intervals?.length ?? 0;
         if (n === 0) return;
         if (!(vr.end > vr.start)) return; // invalid time window
         if (vr.startIndex > vr.endIndex) return; // nothing visible
@@ -152,7 +190,7 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         // Slight padding on the window to avoid chopping extremes
         const paddedStart = Math.max(0, s - 1);
         const paddedEnd = Math.min(n - 1, e + 1);
-        const newPr = findPriceRange(intervalsArray, paddedStart, paddedEnd);
+        const newPr = findPriceRange(intervals, paddedStart, paddedEnd);
 
         if (
             newPr.min !== visiblePriceRange.min ||
@@ -161,7 +199,77 @@ export const ChartStage: React.FC<ChartStageProps> = ({
         ) {
             setVisiblePriceRange(newPr);
         }
-    }, [visibleRange, intervalsArray]);
+    }, [visibleRange, intervals]);
+
+    useImperativeHandle(ref, () => ({
+        addShape(shape: IDrawingShape) {
+            const normalized = validateAndNormalizeShape(shape, chartOptions);
+            if (!normalized) return;
+            setDrawings(prev => [...prev, normalized]);
+        },
+        updateShape(shapeId: string, newShape: IDrawingShape) {
+            const normalized = validateAndNormalizeShape(newShape, chartOptions);
+            if (!normalized) return;
+            setDrawings(prev => prev.map(s => s.id === shapeId ? normalized : s));
+        },
+        deleteShape(shapeId: string) {
+            setDrawings(prev => prev.filter(s => s.id !== shapeId));
+        },
+        addInterval(interval: Interval) {
+            setIntervals(prev => {
+                const newIntervals = [...prev, interval];
+                newIntervals.sort((a, b) => a.t - b.t);
+                return newIntervals;
+            });
+        },
+        updateInterval(index: number, newInterval: Interval) {
+            setIntervals(prev => {
+                if (index < 0 || index >= prev.length) return prev;
+                const newIntervals = [...prev];
+                newIntervals[index] = newInterval;
+                newIntervals.sort((a, b) => a.t - b.t);
+                return newIntervals;
+            });
+        },
+        deleteInterval(index: number) {
+            setIntervals(prev => {
+                if (index < 0 || index >= prev.length) return prev;
+                const newIntervals = [...prev];
+                newIntervals.splice(index, 1);
+                return newIntervals;
+            });
+        },
+        getViewInfo() {
+            return {
+                intervals,
+                drawings,
+                visibleRange,
+                visiblePriceRange,
+                canvasSize: canvasRef.current?.getCanvasSize() ?? {width: 0, height: 0, dpr: 1},
+            };
+        },
+        // Forward ChartCanvasHandle methods via canvasRef
+        getCanvasSize() {
+            return canvasRef.current?.getCanvasSize() ?? {width: 0, height: 0, dpr: 1};
+        },
+        clearCanvas() {
+            canvasRef.current?.clearCanvas();
+            setDrawings([]);
+        },
+        redrawCanvas() {
+            canvasRef.current?.redrawCanvas();
+        },
+        reloadCanvas() {
+            // reset the canvas draw and visualization to its initial state
+            setVisibleRange({
+                start: intervals.length > 0 ? intervals[0].t - 60 : 0,
+                end: intervals.length > 0 ? intervals[intervals.length - 1].t + 60 : 0,
+                startIndex: 0,
+                endIndex: intervals.length > 0 ? intervals.length - 1 : 0
+            });
+            setDrawings([]);
+        }
+    }));
 
     const gridRows = useMemo(() => (showTopBar ? `${windowSpread.TOP_BAR_PX}px 1fr` : `1fr`), [showTopBar]);
     const gridCols = useMemo(() => (showLeftBar ? `${windowSpread.LEFT_BAR_PX}px 1fr` : `1fr`), [showLeftBar]);
@@ -219,7 +327,8 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                             <CanvasContainer ref={canvasAreaRef} className="canvas-container">
                                 {canvasSizes?.width > 0 && canvasSizes?.height > 0 && (
                                     <ChartCanvas
-                                        intervalsArray={intervalsArray}
+                                        ref={canvasRef}
+                                        intervalsArray={intervals}
                                         drawings={drawings}
                                         setDrawings={setDrawings}
                                         selectedIndex={selectedIndex}
@@ -254,7 +363,8 @@ export const ChartStage: React.FC<ChartStageProps> = ({
                             <CanvasContainer ref={canvasAreaRef} className="canvas-container">
                                 {canvasSizes?.width > 0 && canvasSizes?.height > 0 && (
                                     <ChartCanvas
-                                        intervalsArray={intervalsArray}
+                                        ref={canvasRef}
+                                        intervalsArray={intervals}
                                         drawings={drawings}
                                         setDrawings={setDrawings}
                                         selectedIndex={selectedIndex}
@@ -297,4 +407,4 @@ export const ChartStage: React.FC<ChartStageProps> = ({
             </ChartView>
         </ChartStageContainer>
     );
-};
+});

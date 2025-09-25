@@ -1,18 +1,13 @@
-import React, {useMemo, useState} from 'react';
+import React, {useMemo, useState, forwardRef, useImperativeHandle, useRef} from 'react';
 import {ChartStage} from './Canvas/ChartStage';
 import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {Interval} from '../types/Interval';
 import {TimeRange} from '../types/Graph';
-import {AxesPosition, ChartTheme, DeepPartial, DeepRequired} from '../types/types';
+import {DeepPartial, DeepRequired} from '../types/types';
 import {
-    AreaStyleOptions,
-    AxesStyleOptions,
-    BarStyleOptions,
-    CandleStyleOptions,
     ChartOptions,
-    ChartType, GridStyleOptions, HistogramStyleOptions, LineStyleOptions,
-    StyleOptions,
+    ChartType,
     TimeDetailLevel
 } from '../types/chartOptions';
 import {ModeProvider} from '../contexts/ModeContext';
@@ -25,10 +20,20 @@ import {
     ChartStageArea,
     SettingsArea
 } from '../styles/App.styles';
-import {OverlayOptions} from "../types/overlay";
-import {DrawingStyleOptions} from "../types/Drawings";
 import {DEFAULT_GRAPH_OPTIONS} from "./DefaultData";
 
+export interface SimpleChartEdgeHandle {
+    addShape: (shape: any) => void;
+    updateShape: (shapeId: string, newShape: any) => void;
+    deleteShape: (shapeId: string) => void;
+    addInterval: (interval: Interval) => void;
+    updateInterval: (intervalId: string, newInterval: Interval) => void;
+    deleteInterval: (intervalId: string) => void;
+    getViewInfo: () => any;
+    getCanvasSize: () => { width: number; height: number } | null;
+    clearCanvas: () => void;
+    redrawCanvas: () => void;
+}
 
 export type SimpleChartEdgeProps = {
     intervalsArray?: Interval[];
@@ -41,16 +46,77 @@ export type SimpleChartEdgeProps = {
     chartOptions?: DeepPartial<ChartOptions>
 };
 
-export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
-                                                                    intervalsArray = [],
-                                                                    initialNumberOfYTicks = 5,
-                                                                    initialTimeDetailLevel = TimeDetailLevel.Auto,
-                                                                    initialTimeFormat12h = false,
-                                                                    chartOptions = {} as DeepPartial<ChartOptions>
-                                                                }) => {
+export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdgeProps>(({
+                                                                                            intervalsArray = [],
+                                                                                            initialNumberOfYTicks = 5,
+                                                                                            initialTimeDetailLevel = TimeDetailLevel.Auto,
+                                                                                            initialTimeFormat12h = false,
+                                                                                            chartOptions = {} as DeepPartial<ChartOptions>
+                                                                                        }, ref) => {
 
     const [finalStyleOptions, setStyleOptions] = useState<DeepRequired<ChartOptions>>(deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions));
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
+    const stageRef = useRef<any>(null);
+
+    useImperativeHandle(ref, () => ({
+        addShape: (shape: any) => {
+            if (stageRef.current && stageRef.current.addShape) {
+                stageRef.current.addShape(shape);
+            }
+        },
+        updateShape: (shapeId: string, newShape: any) => {
+            if (stageRef.current && stageRef.current.updateShape) {
+                stageRef.current.updateShape(shapeId, newShape);
+            }
+        },
+        deleteShape: (shapeId: string) => {
+            if (stageRef.current && stageRef.current.deleteShape) {
+                stageRef.current.deleteShape(shapeId);
+            }
+        },
+        addInterval: (interval: Interval) => {
+            if (stageRef.current && stageRef.current.addInterval) {
+                stageRef.current.addInterval(interval);
+            }
+        },
+        updateInterval: (intervalId: string, newInterval: Interval) => {
+            if (stageRef.current && stageRef.current.updateInterval) {
+                stageRef.current.updateInterval(intervalId, newInterval);
+            }
+        },
+        deleteInterval: (intervalId: string) => {
+            if (stageRef.current && stageRef.current.deleteInterval) {
+                stageRef.current.deleteInterval(intervalId);
+            }
+        },
+        getViewInfo: () => {
+            if (stageRef.current && stageRef.current.getViewInfo) {
+                return stageRef.current.getViewInfo();
+            }
+            return null;
+        },
+        getCanvasSize: () => {
+            if (stageRef.current && stageRef.current.getCanvasSize) {
+                return stageRef.current.getCanvasSize();
+            }
+            return null;
+        },
+        clearCanvas: () => {
+            if (stageRef.current && stageRef.current.clearCanvas) {
+                stageRef.current.clearCanvas();
+            }
+        },
+        redrawCanvas: () => {
+            if (stageRef.current && stageRef.current.redrawCanvas) {
+                stageRef.current.redrawCanvas();
+            }
+        },
+        reloadCanvas: () => {
+            if (stageRef.current && stageRef.current.reloadCanvas) {
+                stageRef.current.reloadCanvas();
+            }
+        }
+    }));
 
     const handleChartTypeChange = (newType: ChartType) => {
         setSelectedIndex(null);
@@ -74,6 +140,7 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
                     </ToolbarArea>
                     <ChartStageArea className={"chart-stage-area"}>
                         <ChartStage
+                            ref={stageRef}
                             intervalsArray={intervalsArray}
                             numberOfYTicks={initialNumberOfYTicks}
                             timeDetailLevel={initialTimeDetailLevel}
@@ -86,4 +153,4 @@ export const SimpleChartEdge: React.FC<SimpleChartEdgeProps> = ({
             </MainAppWindow>
         </ModeProvider>
     );
-};
+});

@@ -1,18 +1,21 @@
-import {IDrawingShape} from "./IDrawingShape";
+import {generateDrawingShapeId, IDrawingShape} from "./IDrawingShape";
 import {priceToY, timeToX} from "../Canvas/utils/GraphHelpers";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
 import {isPointNearLine} from "../Canvas/utils/helpers";
 import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle, PolylineShapeArgs} from "../../types/Drawings";
-import {i} from "vite/dist/node/types.d-aGj9QkWt";
+import {ShapeType} from "./types";
 
 
 export class Polyline implements IDrawingShape {
 
+    public id: string;
+    public type = ShapeType.Polyline;
     public style: DrawingStyleOptions;
     public points: DrawingPoint[] = [];
 
-    constructor(public args: PolylineShapeArgs, public styleOverride: DrawingStyleOptions) {
+    constructor(public args: PolylineShapeArgs, public styleOverride: DrawingStyleOptions, id?: string | undefined) {
+        this.id = id ?? generateDrawingShapeId();
         this.style = styleOverride;
 
     }

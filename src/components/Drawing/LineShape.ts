@@ -1,18 +1,21 @@
-import {IDrawingShape} from "./IDrawingShape";
+import {generateDrawingShapeId, IDrawingShape} from "./IDrawingShape";
 import {timeToX, priceToY} from "../Canvas/utils/GraphHelpers";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
 import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle, LineShapeArgs} from "../../types/Drawings";
 import {isPointNearLine} from "../Canvas/utils/helpers";
 import {pointerTolerance} from "./drawHelper";
+import {ShapeType} from "./types";
 
 export class LineShape implements IDrawingShape {
-
+    public id: string;
+    public type = ShapeType.Line;
     public style: DrawingStyleOptions;
     public points: DrawingPoint[] = [];
 
 
-    constructor(public args: LineShapeArgs, public styleOverride: DrawingStyleOptions) {
+    constructor(public args: LineShapeArgs, public styleOverride: DrawingStyleOptions, id?: string | undefined) {
+        this.id = id ?? generateDrawingShapeId();
         this.style = styleOverride;
         this.points = args?.points ?? [];
     }

@@ -1,19 +1,21 @@
-import {IDrawingShape} from "./IDrawingShape";
+import {generateDrawingShapeId, IDrawingShape} from "./IDrawingShape";
 import {priceToY, timeToX} from "../Canvas/utils/GraphHelpers";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
 import {CustomSymbolShapeArgs, DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
-import {s} from "vite/dist/node/types.d-aGj9QkWt";
+import {ShapeType} from "./types";
 
 
 export class CustomSymbolShape implements IDrawingShape {
-
+    public id: string;
+    public type = ShapeType.CustomSymbol;
     public style: DrawingStyleOptions;
     public points: DrawingPoint[] = [];
     public symbol: string;
     public size: number;
 
-    constructor(public args: CustomSymbolShapeArgs, public styleOverride: DrawingStyleOptions) {
+    constructor(public args: CustomSymbolShapeArgs, public styleOverride: DrawingStyleOptions, id?: string | undefined) {
+        this.id = id ?? generateDrawingShapeId();
         this.style = styleOverride;
         this.points = args?.points ?? [];
         this.symbol = args.symbol;

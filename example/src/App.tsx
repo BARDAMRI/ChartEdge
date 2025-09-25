@@ -1,4 +1,5 @@
-import type {Interval} from 'chartedge';
+import React, {useRef} from 'react';
+import type {DrawingPoint, DrawingStyleOptions, Interval, RectangleShapeArgs} from 'chartedge';
 import {
     ChartType,
     OverlayKind,
@@ -7,7 +8,9 @@ import {
     OverlaySpecs,
     overlay,
     withOverlayStyle,
-    OverlayPriceKey
+    OverlayPriceKey,
+    RectangleShape,
+    LineShape
 } from 'chartedge';
 import './App.css';
 
@@ -118,11 +121,118 @@ const vwapOv = overlay(OverlayKind.vwap, {lineColor: '#7e57c2', lineWidth: 1.5, 
 
 const demoOverlays = [sma20, emaDefault, vwapOv];
 
-// --- Demo overlays ---
 export default function App() {
+    const chartRef = useRef<any>(null);
+
+    // Example: add a random shape (rect or line) via API, within visible ranges
+    function handleAddShape() {
+        const view = chartRef.current?.getViewInfo();
+        if (!view) {
+            return;
+        }
+
+        function createRandomShape(view: any) {
+            const {visibleRange, visiblePriceRange} = view;
+            const {start, end} = visibleRange;
+            const {min, max} = visiblePriceRange;
+
+            const randTime = start + Math.random() * (end - start);
+            const randPrice = min + Math.random() * (max - min);
+
+            // Randomly choose shape type
+            if (Math.random() < 0.5) {
+                // RectangleShape
+                const width = (end - start) * 0.05; // 5% of visible time range
+                const height = (max - min) * 0.1;   // 10% of visible price range
+                return new RectangleShape({
+                    points: [
+                        {time: randTime, price: randPrice},
+                        {time: randTime + width, price: randPrice + height}
+                    ]
+                } as RectangleShapeArgs, {color: '#e53935'} as DrawingStyleOptions);
+            } else {
+                // LineShape with two points
+                // Generate two points within visible ranges
+                const time1 = start + Math.random() * (end - start);
+                const price1 = min + Math.random() * (max - min);
+                const time2 = start + Math.random() * (end - start);
+                const price2 = min + Math.random() * (max - min);
+
+                // Ensure LineShape constructor usage
+                return new LineShape(
+                    {points: [{time: time1, price: price1}, {time: time2, price: price2}]},
+                    {color: '#2962ff', lineWidth: 2} as DrawingStyleOptions
+                );
+            }
+        }
+
+        const shape = createRandomShape(view);
+
+        // Validate shape points are within visible ranges
+        function isShapeInRange(shape: any, view: any) {
+            const {visibleRange, visiblePriceRange} = view;
+            const {start, end} = visibleRange;
+            const {min, max} = visiblePriceRange;
+
+            let points: DrawingPoint[] = [];
+
+            if (shape instanceof RectangleShape) {
+                points = shape.getPoints();
+            } else if (shape instanceof LineShape) {
+                points = shape.getPoints();
+            } else {
+                // Unknown shape type, assume out of range
+                return false;
+            }
+
+            // Check all points within time and price ranges
+            return points.every(p => p.time >= start && p.time <= end && p.price >= min && p.price <= max);
+        }
+
+        if (isShapeInRange(shape, view)) {
+            chartRef.current?.addShape(shape);
+        }
+    }
+
+    // Example: get info about the current view
+    function handleGetInfo() {
+        if (chartRef.current && chartRef.current.getViewInfo) {
+            const info = chartRef.current.getViewInfo();
+            alert(JSON.stringify(info, null, 2));
+        }
+    }
+
+    // Example: clear all shapes/canvas
+    function handleClear() {
+        if (chartRef.current && chartRef.current.clearCanvas) {
+            chartRef.current.clearCanvas();
+        }
+    }
+
+    // Example: force redraw
+    function handleRedraw() {
+        if (chartRef.current && chartRef.current.redrawCanvas) {
+            chartRef.current.redrawCanvas();
+        }
+    }
+
+    function reloadCanvas() {
+        if (chartRef.current && chartRef.current.reloadCanvas) {
+            chartRef.current.reloadCanvas();
+        }
+    }
+
     return (
         <div className={'app-root'}>
+            <div style={{marginBottom: 16}}>
+                <button onClick={handleAddShape}>Add Shape</button>
+                <button onClick={handleGetInfo}>Get View Info</button>
+                <button onClick={handleClear}>Clear Canvas</button>
+                <button onClick={handleRedraw}>Redraw Canvas</button>
+                <button onClick={reloadCanvas}>Reload Canvas</button>
+            </div>
             <SimpleChartEdge
+                ref={chartRef}
                 className="simple-chart-edge"
                 intervalsArray={intervalsArray}
                 initialNumberOfYTicks={5}

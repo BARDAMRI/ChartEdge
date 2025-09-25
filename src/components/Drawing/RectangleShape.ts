@@ -1,17 +1,21 @@
-import {IDrawingShape} from "./IDrawingShape";
+import {generateDrawingShapeId, IDrawingShape} from "./IDrawingShape";
 import {priceToY, timeToX} from "../Canvas/utils/GraphHelpers";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
 import {isPointNearLine} from "../Canvas/utils/helpers";
 import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle, RectangleShapeArgs} from "../../types/Drawings";
 import {pointerTolerance} from "./drawHelper";
+import {ShapeType} from "./types";
 
 
 export class RectangleShape implements IDrawingShape {
+    public id: string;
+    public type = ShapeType.Rectangle;
     public style: DrawingStyleOptions;
     public points: DrawingPoint[] = [];
 
-    constructor(public args: RectangleShapeArgs, public styleOverride: DrawingStyleOptions) {
+    constructor(public args: RectangleShapeArgs, public styleOverride: DrawingStyleOptions, id?: string | undefined) {
+        this.id = id ?? generateDrawingShapeId();
         this.style = styleOverride;
         this.points = args?.points ?? [];
     }

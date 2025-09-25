@@ -3,6 +3,7 @@ import {PriceRange} from "../../types/Graph";
 import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
 
 export interface IDrawingShape {
+    id: string ;
     style: DrawingStyleOptions;
     points: DrawingPoint[];
 
@@ -41,4 +42,15 @@ export interface IDrawingShape {
     updateLastPoint(point: DrawingPoint): void;
 
     getPoints(): DrawingPoint[];
+}
+
+// Internal counter for unique IDs
+let _drawingShapeIdCounter = 0;
+
+/**
+ * Helper to generate a unique id string for drawing shapes.
+ */
+export function generateDrawingShapeId(): string {
+    _drawingShapeIdCounter += 1;
+    return `drawing-shape-${_drawingShapeIdCounter}`;
 }

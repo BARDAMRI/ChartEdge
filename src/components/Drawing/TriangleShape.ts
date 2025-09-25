@@ -1,20 +1,22 @@
-import {IDrawingShape} from "./IDrawingShape";
+import {generateDrawingShapeId, IDrawingShape} from "./IDrawingShape";
 import {priceToY, timeToX} from "../Canvas/utils/GraphHelpers";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
 import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle, TriangleShapeArgs} from "../../types/Drawings";
 import {isPointNearLine} from "../Canvas/utils/helpers";
 import {pointerTolerance, pointInTriangle} from "./drawHelper";
-import {c} from "vite/dist/node/types.d-aGj9QkWt";
+import {ShapeType} from "./types";
 
 
 export class TriangleShape implements IDrawingShape {
 
+    public id: string;
+    public type = ShapeType.Triangle;
     public style: DrawingStyleOptions;
     public points: DrawingPoint[] = [];
 
-    constructor(public args: TriangleShapeArgs, public styleOverride: DrawingStyleOptions) {
-
+    constructor(public args: TriangleShapeArgs, public styleOverride: DrawingStyleOptions, id?: string | undefined) {
+        this.id = id ?? generateDrawingShapeId();
         this.style = styleOverride;
         this.points = args?.points ?? [];
         this.recalculateThirdVertex();

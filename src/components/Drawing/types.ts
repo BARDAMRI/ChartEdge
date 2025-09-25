@@ -26,3 +26,15 @@ export type Drawing = {
     args?: ShapeArgs;
     style?: DrawingStyleOptions;
 }
+
+
+export enum ShapeType {
+    Line = "Line",
+    Rectangle = "Rectangle",
+    Circle = "Circle",
+    Triangle = "Triangle",
+    Angle = "Angle",
+    Arrow = "Arrow",
+    Polyline = "Polyline",
+    CustomSymbol = "CustomSymbol",
+}

@@ -1,16 +1,20 @@
-import {IDrawingShape} from "./IDrawingShape";
+import {generateDrawingShapeId, IDrawingShape} from "./IDrawingShape";
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
 import {timeToX, priceToY} from "../Canvas/utils/GraphHelpers";
 import {AngleShapeArgs, CanvasPoint, DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
 import {pointerTolerance} from "./drawHelper";
+import {ShapeType} from "./types";
 
 export class AngleShape implements IDrawingShape {
 
+    public id: string;
+    public type = ShapeType.Triangle;
     public style: DrawingStyleOptions;
     public points: DrawingPoint[] = [];
 
-    constructor(public args: AngleShapeArgs, public styleOptions: DrawingStyleOptions) {
+    constructor(public args: AngleShapeArgs, public styleOptions: DrawingStyleOptions, id?: string | undefined) {
+        this.id = id ?? generateDrawingShapeId();
         this.style = styleOptions;
         this.points = args.points ?? [];
     }
