@@ -1,22 +1,30 @@
 import React from 'react';
 import {
-    ChartTypeArrow,
-    ChartTypeSelect, ChartTypeWrapper,
-    SettingsToolbarContainer,
+    SettingsToolbarContainer, SettingToolbarContent,
     SymbolInput,
 } from '../../styles/SettingsToolbar.styles';
 
 import {Button} from './Buttons';
-import {IconCamera, IconDownload, IconGear, IconRange, IconRefresh, IconSearch, IconTheme,} from './icons';
+import {
+    IconCamera,
+    IconDownload,
+    IconGear,
+    IconRange,
+    IconRefresh,
+    IconSearch,
+    IconTheme,
+} from './icons';
 import {ChartType} from "../../types/chartOptions";
 import {Placement, TooltipAlign, TooltipAxis} from "../../types/buttons";
 import {Tooltip} from "../Tooltip";
+import {ChartTypeSelectDropdown} from "./ChartTypeSelectDropdown";
 
 interface SettingToolbarProps {
     handleChartTypeChange: (type: ChartType) => void;
+    selectedChartType?: ChartType;
 }
 
-export const SettingsToolbar = ({handleChartTypeChange}: SettingToolbarProps) => {
+export const SettingsToolbar = ({handleChartTypeChange, selectedChartType}: SettingToolbarProps) => {
     const handleDownload = () => {
         const canvas = document.querySelector('canvas');
         if (!(canvas instanceof HTMLCanvasElement)) {
@@ -55,70 +63,62 @@ export const SettingsToolbar = ({handleChartTypeChange}: SettingToolbarProps) =>
 
     return (
         <SettingsToolbarContainer className="settings-toolbar">
-            <SymbolInput className={'symbol-choose-icon'} name={'symbol-input'} placeholder="Symbol"/>
-            <ChartTypeWrapper>
-                <ChartTypeSelect className={'chart-type-select-container'}
-                                 name={'symbol-select'}
-                                 defaultValue="candlestick"
-                                 onChange={(e) => handleChartTypeChange(e.target.value as ChartType)}
-                                 aria-label="Chart type">
-                    {Object.keys(ChartType).map((type) => (
-                        <option key={type} value={type as ChartType}>
-                            {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </option>
-                    ))}
-                </ChartTypeSelect>
-                <ChartTypeArrow/>
-            </ChartTypeWrapper>
-            <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                     axis={TooltipAxis.vertical}
-                     align={TooltipAlign.center}>
-                <Button onClickHandler={openSettingsMenu}>
-                    <IconGear/>
-                </Button>
-            </Tooltip>
-            <Tooltip content="Download" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                     axis={TooltipAxis.vertical}
-                     align={TooltipAlign.center}>
-                <Button onClickHandler={handleDownload}>
-                    <IconCamera/>
-                </Button>
-            </Tooltip>
-            <Tooltip content="Search" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                     axis={TooltipAxis.vertical}
-                     align={TooltipAlign.center}>
-                <Button onClickHandler={openSearch}>
-                    <IconSearch/>
-                </Button>
-            </Tooltip>
-            <Tooltip content="Range" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                     axis={TooltipAxis.vertical}
-                     align={TooltipAlign.center}>
-                <Button onClickHandler={openRange}>
-                    <IconRange/>
-                </Button>
-            </Tooltip>
-            <Tooltip content="Download" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                     axis={TooltipAxis.vertical}
-                     align={TooltipAlign.center}>
-                <Button onClickHandler={doDownload}>
-                    <IconDownload/>
-                </Button>
-            </Tooltip>
-            <Tooltip content="Refresh" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                     axis={TooltipAxis.vertical}
-                     align={TooltipAlign.center}>
-                <Button onClickHandler={doRefresh}>
-                    <IconRefresh/>
-                </Button>
-            </Tooltip>
-            <Tooltip content="Toggle Theme" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                     axis={TooltipAxis.vertical}
-                     align={TooltipAlign.center}>
-                <Button onClickHandler={toggleTheme}>
-                    <IconTheme/>
-                </Button>
-            </Tooltip>
+            <SettingToolbarContent>
+                <SymbolInput className={'symbol-choose-icon'} name={'symbol-input'} placeholder="Symbol"/>
+                <ChartTypeSelectDropdown
+                    value={selectedChartType || ChartType.Candlestick}
+                    onChange={handleChartTypeChange}
+                />
+                <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                         axis={TooltipAxis.vertical}
+                         align={TooltipAlign.center}>
+                    <Button onClickHandler={openSettingsMenu}>
+                        <IconGear/>
+                    </Button>
+                </Tooltip>
+                <Tooltip content="Download" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                         axis={TooltipAxis.vertical}
+                         align={TooltipAlign.center}>
+                    <Button onClickHandler={handleDownload}>
+                        <IconCamera/>
+                    </Button>
+                </Tooltip>
+                <Tooltip content="Search" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                         axis={TooltipAxis.vertical}
+                         align={TooltipAlign.center}>
+                    <Button onClickHandler={openSearch}>
+                        <IconSearch/>
+                    </Button>
+                </Tooltip>
+                <Tooltip content="Range" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                         axis={TooltipAxis.vertical}
+                         align={TooltipAlign.center}>
+                    <Button onClickHandler={openRange}>
+                        <IconRange/>
+                    </Button>
+                </Tooltip>
+                <Tooltip content="Download" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                         axis={TooltipAxis.vertical}
+                         align={TooltipAlign.center}>
+                    <Button onClickHandler={doDownload}>
+                        <IconDownload/>
+                    </Button>
+                </Tooltip>
+                <Tooltip content="Refresh" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                         axis={TooltipAxis.vertical}
+                         align={TooltipAlign.center}>
+                    <Button onClickHandler={doRefresh}>
+                        <IconRefresh/>
+                    </Button>
+                </Tooltip>
+                <Tooltip content="Toggle Theme" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                         axis={TooltipAxis.vertical}
+                         align={TooltipAlign.center}>
+                    <Button onClickHandler={toggleTheme}>
+                        <IconTheme/>
+                    </Button>
+                </Tooltip>
+            </SettingToolbarContent>
         </SettingsToolbarContainer>
     );
 };

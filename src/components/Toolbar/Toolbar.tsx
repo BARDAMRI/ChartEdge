@@ -17,7 +17,7 @@ export const Toolbar: React.FC = () => {
     }, [mode]);
 
     return (
-        <ToolbarContainer className="toolbar-container">
+        <ToolbarContainer >
             <ToolbarContent>
                 <Tooltip content="Draw Line" tooltipAxis={TooltipAxis.vertical} placement={Placement.auto}
                          axis={TooltipAxis.vertical}

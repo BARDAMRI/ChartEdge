@@ -49,27 +49,11 @@ export const ToolbarVerticalButton = styled.button.attrs({className: 'toolbar-bu
     font-size: 18px;
     cursor: pointer;
     outline: none;
-    border: none;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.06);
-    transition: transform 140ms ease, box-shadow 200ms ease, background 200ms ease, opacity 200ms ease;
+    border: 1px solid rgba(120, 100, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.06);
+    background-clip: border-box, padding-box;
 
-    /* Gradient border using mask */
-
-    &::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        padding: 1px; /* border thickness */
-        border-radius: 12px;
-        background: linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65));
-        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-        -webkit-mask-composite: xor;
-        mask-composite: exclude;
-        pointer-events: none;
-    }
-
-    /* Inner glass */
 
     &::after {
         content: '';
@@ -80,12 +64,14 @@ export const ToolbarVerticalButton = styled.button.attrs({className: 'toolbar-bu
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
         opacity: 0.9;
         pointer-events: none;
+
     }
 
     &:hover {
         transform: translateY(-1px);
         box-shadow: 0 8px 22px rgba(25, 30, 60, 0.25);
-        background: rgba(255, 255, 255, 0.09);
+        background-color: rgba(255, 255, 255, 0.09);
+        background-image: linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65));
     }
 
     &:active {
@@ -112,7 +98,7 @@ export const ToolbarVerticalButton = styled.button.attrs({className: 'toolbar-bu
 
     /* Icon background reacts on states */
 
-    &:hover svg .icon-bg {
+    &:hover svg {
         fill: rgba(180, 200, 255, 0.30);
         stroke: rgba(120, 100, 255, 0.60);
     }

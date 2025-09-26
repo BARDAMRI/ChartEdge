@@ -132,7 +132,8 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
             <GlobalStyle/>
             <MainAppWindow className={'simple-chart-window'}>
                 <SettingsArea className={"settings-area"}>
-                    <SettingsToolbar handleChartTypeChange={handleChartTypeChange}/>
+                    <SettingsToolbar handleChartTypeChange={handleChartTypeChange}
+                                     selectedChartType={finalStyleOptions.base.chartType as ChartType}/>
                 </SettingsArea>
                 <LowerContainer className={"lower-container"}>
                     <ToolbarArea className={"toolbar-area"}>

@@ -1,31 +1,28 @@
 import styled from 'styled-components';
 
 export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-toolbar-container'})`
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 100%;
-    height: clamp(30px, 10vh, 40px);
     display: flex;
-    align-items: stretch;
-    gap: 2px;
-    background-color: white;
-    border-radius: 12px;
+    flex-direction: row;
+    width: 100%;
+    background: transparent;
+    border-radius: 14px;
+    position: relative;
+    height: clamp(30px, 6vh, 40px);
     border: 1px solid rgba(128, 140, 255, 0.18);
-    box-shadow: 0 10px 28px rgba(17, 19, 39, 0.10),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+    box-shadow: 0 10px 28px rgba(17, 19, 39, 0.20),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
     overflow: hidden;
+    flex: 0 0 auto;
 
-    & > * {
-        flex-shrink: 0;
-    }
 `;
 
 const Control = styled.div`
     height: 36px;
     border-radius: 10px;
     border: 1px solid transparent;
-    background: rgba(255, 255, 255, 0.06) padding-box,
-    linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65)) border-box;
+    background-color: rgba(255, 255, 255, 0.06);
+    background-image: linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65));
+    background-origin: border-box;
     background-clip: padding-box, border-box;
     color: #e7ebff;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
@@ -33,140 +30,42 @@ const Control = styled.div`
     transition: box-shadow 160ms ease, background 160ms ease, transform 120ms ease, border-color 160ms ease;
 
     &:hover {
-        background: rgba(255, 255, 255, 0.09) padding-box,
-        linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65)) border-box;
+        background-color: rgba(255, 255, 255, 0.09);
+        background-image: linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65));
     }
 
     &:focus-within, &:focus {
         box-shadow: 0 0 0 3px rgba(120, 130, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
     }
 `;
-
-export const SymbolField = styled.div.attrs({className: 'settings-symbol-field'})`
-    position: relative;
+export const SettingToolbarContent = styled.div.attrs({className: 'setting-toolbar-content'})`
+    box-sizing: border-box;
+    width: 100%;
     display: flex;
-    align-items: center;
-    flex: 0 1 260px;
-`;
-
-export const LeadingIcon = styled.div`
-    position: absolute;
-    left: 10px;
-    top: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    pointer-events: none;
-
-    svg {
-        width: 16px;
-        height: 16px;
-        opacity: 0.85;
-    }
-`;
-
-export const ClearButton = styled.button`
-    position: absolute;
-    right: 6px;
-    top: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    border: none;
-    background: transparent;
-    color: rgba(30, 40, 80, 0.55);
-    cursor: pointer;
-
-    &:hover {
-        color: rgba(30, 40, 80, 0.85);
-    }
-`;
-
-export const Segmented = styled.div.attrs({className: 'settings-segmented'})`
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px;
-    border-radius: 12px;
-    border: 1px solid transparent;
-    background: rgba(255, 255, 255, 0.06) padding-box,
-    linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65)) border-box;
-    background-clip: padding-box, border-box;
-`;
-
-export const SegBtn = styled.button<{ $active?: boolean }>`
-    height: 30px;
-    min-width: 38px;
-    padding: 0 10px;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    background: ${({$active}) => $active
-            ? 'linear-gradient(180deg, rgba(110,175,255,0.35), rgba(140,125,255,0.35))'
-            : 'transparent'};
-    color: #26304f;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 160ms ease, box-shadow 160ms ease, transform 120ms ease;
-
-    &:hover {
-        background: ${({$active}) => $active ? 'linear-gradient(180deg, rgba(110,175,255,0.45), rgba(140,125,255,0.45))' : 'rgba(255,255,255,0.10)'};
-    }
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
+    gap: 2px;
+    padding: 1px;
 `;
 
 export const SymbolInput = styled(Control).attrs({as: 'input', type: 'text'})`
-    flex: 0 1 150px;
-    padding: 0 12px 0 34px; /* room for clear button (right) and icon (left) */
-    font-size: 14px;
+    width: 70px;
     color: rgba(0, 0, 0, 0.85);
     font-weight: 600;
     background-color: white;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px 0 16px;
 
     &::placeholder {
         color: rgba(50, 60, 90, 0.70);
     }
 `;
 
-export const ChartTypeWrapper = styled.div`
-    position: relative;
-    display: inline-block;
-    flex: 0 0 100px;
-    width: 100px;
-    height: 36px;
-`;
-
-export const ChartTypeSelect = styled.select`
-    appearance: none;
-    background: linear-gradient(180deg, #6bc0ff 0%, #7d5bff 100%);
-    color: white;
-    font-weight: 500;
-    border: none;
-    border-radius: 8px;
-    padding: 3px 14px 3px 5px; 
-    font-size: 14px;
-    cursor: pointer;
-    outline: none;
-    width: 100%;
-    height: 100%;
-
-    &:focus {
-        box-shadow: 0 0 0 2px rgba(123, 97, 255, 0.4);
-    }
-`;
-export const ChartTypeArrow = styled.span`
-    position: absolute;
-    pointer-events: none;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%) rotate(45deg);
-    width: 6px;
-    height: 6px;
-    border-right: 2px solid rgba(231, 235, 255, 0.85);
-    border-bottom: 2px solid rgba(231, 235, 255, 0.85);
-    z-index: 1;
-`;
 
 export const ToolbarHorizontalButtons = styled.button.attrs({className: 'toolbar-button'})`
     position: relative;
@@ -174,36 +73,21 @@ export const ToolbarHorizontalButtons = styled.button.attrs({className: 'toolbar
     align-items: center;
     justify-content: center;
     height: 100%;
-    width: auto;
-    flex: 1 1 auto;
     aspect-ratio: 1 / 1;
-    padding: 0;
     box-sizing: border-box;
+    flex: 0 0 auto;
+    padding: 0;
+    margin: 0;
     overflow: hidden;
     text-align: center;
     font-size: 18px;
     cursor: pointer;
     outline: none;
-    border: none;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.06);
-    transition: transform 140ms ease, box-shadow 200ms ease, background 200ms ease, opacity 200ms ease;
-
-    /* Gradient border using mask */
-
-    &::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        padding: 1px; /* border thickness */
-        border-radius: 12px;
-        background: linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65));
-        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-        -webkit-mask-composite: xor;
-        mask-composite: exclude;
-        pointer-events: none;
-    }
-
+    border: 1px solid rgba(120, 100, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.06);
+    background-clip: border-box, padding-box;
+    flex: 0 0 auto;
     /* Inner glass */
 
     &::after {
@@ -220,7 +104,8 @@ export const ToolbarHorizontalButtons = styled.button.attrs({className: 'toolbar
     &:hover {
         transform: translateY(-1px);
         box-shadow: 0 8px 22px rgba(25, 30, 60, 0.25);
-        background: rgba(255, 255, 255, 0.09);
+        background-color: rgba(255, 255, 255, 0.09);
+        background-image: linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65));
     }
 
     &:active {
@@ -231,8 +116,8 @@ export const ToolbarHorizontalButtons = styled.button.attrs({className: 'toolbar
     /* Make inner SVG breathe inside the square */
 
     svg {
-        width: 70%;
-        height: 70%;
+        width: 100%;
+        height: 100%;
         display: block;
     }
 

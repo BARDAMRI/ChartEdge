@@ -187,3 +187,84 @@ export const IconTheme: React.FC<{ active?: boolean }> = ({active}) => (
         <circle cx="17.6" cy="9.4" r="0.5" strokeWidth={SW.thin}/>
     </IconBase>
 );
+
+/* =========================
+ *  CHART TYPE ICONS
+ * ========================= */
+
+export const IconChartLine: React.FC<{ active?: boolean }> = ({active}) => (
+    <IconBase active={active} name="chart-line">
+        <polyline points="4,16 10,10 16,14 20,6" strokeWidth={SW.thick}/>
+        <circle cx="4" cy="16" r="1" fill="currentColor"/>
+        <circle cx="10" cy="10" r="1" fill="currentColor"/>
+        <circle cx="16" cy="14" r="1" fill="currentColor"/>
+        <circle cx="20" cy="6" r="1" fill="currentColor"/>
+    </IconBase>
+);
+
+export const IconChartBar: React.FC<{ active?: boolean }> = ({active}) => (
+    <IconBase active={active} name="chart-bar">
+        <rect x="5" y="10" width="3" height="8" strokeWidth={SW.thick}/>
+        <rect x="11" y="7" width="3" height="11" strokeWidth={SW.thick}/>
+        <rect x="17" y="4" width="3" height="14" strokeWidth={SW.thick}/>
+    </IconBase>
+);
+
+export const IconChartCandle: React.FC<{ active?: boolean }> = ({active}) => (
+    <IconBase active={active} name="chart-candle">
+        {/* Left candle */}
+        <line x1="8" y1="5" x2="8" y2="19" strokeWidth={SW.thin}/>
+        <rect x="6" y="9" width="4" height="6" strokeWidth={SW.thick}/>
+        <line x1="8" y1="9" x2="8" y2="15" strokeWidth={SW.thin}/>
+        {/* add center wick inside the rectangle */}
+        <line x1="8" y1="9" x2="8" y2="15" strokeWidth={SW.thin}/>
+
+        {/* Right candle */}
+        <line x1="16" y1="5" x2="16" y2="19" strokeWidth={SW.thin}/>
+        <rect x="14" y="7" width="4" height="10" strokeWidth={SW.thick}/>
+        <line x1="16" y1="7" x2="16" y2="17" strokeWidth={SW.thin}/>
+        {/* add center wick inside the rectangle */}
+        <line x1="16" y1="7" x2="16" y2="17" strokeWidth={SW.thin}/>
+    </IconBase>
+);
+
+export const IconChartArea: React.FC<{ active?: boolean }> = ({active}) => (
+    <IconBase active={active} name="chart-area">
+        <path d="M4,16 L8,10 L14,14 L20,8 L20,20 L4,20 Z"
+              strokeWidth={SW.thick}
+              fill="currentColor"
+              fillOpacity={0.2}/>
+        <polyline points="4,16 8,10 14,14 20,8" strokeWidth={SW.thick}/>
+    </IconBase>
+);
+
+
+/* =========================
+ *  DROPDOWN / ARROW ICONS
+ * ========================= */
+
+export const IconArrowDown: React.FC<{ active?: boolean }> = ({active}) => {
+    const gradId = React.useId();
+    return (
+        <svg
+            className="icon-arrow-down"
+            width="100%"
+            height="100%"
+            viewBox="0 0 24 24"
+            preserveAspectRatio="xMidYMid meet"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+        >
+            <defs>
+                <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor={active ? '#3EC5FF' : '#2979FF'}/>
+                    <stop offset="60%" stopColor={active ? '#6A5ACD' : '#4B32C3'}/>
+                    <stop offset="100%" stopColor={active ? '#8A2BE2' : '#5B3FFF'}/>
+                </linearGradient>
+            </defs>
+            <polyline points="6,9 12,15 18,9" stroke={`url(#${gradId})`} strokeWidth="2"/>
+        </svg>
+    );
+};

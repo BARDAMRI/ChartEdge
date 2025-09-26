@@ -275,7 +275,6 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
             }
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             ctx.clearRect(0, 0, cssWidth, cssHeight);
-            console.log('Drawing all shapes to buffer:', drawings);
             drawDrawings(ctx, drawings, selectedIndex, renderContext, visiblePriceRange);
         }
 
