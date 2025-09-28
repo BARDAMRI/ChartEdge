@@ -1,4 +1,10 @@
-import styled from 'styled-components';
+import styled, {css} from 'styled-components';
+
+interface CanvasContainerProps {
+    $heightPrecent: number;
+    $zIndex?: number;
+}
+
 
 interface CanvasContainerProps {
     $heightPrecent: number;
@@ -6,12 +12,10 @@ interface CanvasContainerProps {
 }
 
 export const StyledCanvasNonResponsive = styled.canvas<CanvasContainerProps>`
-    display: flex;
+    display: block;
     width: 100% !important;
-    height: ${({$heightPrecent}) => `${$heightPrecent}%`} !important;
     padding: 0;
     margin: 0;
-    bottom: 0;
     background-color: transparent;
     border: none;
     touch-action: none;
@@ -20,15 +24,29 @@ export const StyledCanvasNonResponsive = styled.canvas<CanvasContainerProps>`
     position: absolute;
     z-index: ${({$zIndex}) => ($zIndex !== undefined ? $zIndex : 0)};
     pointer-events: none;
+    top: 0;
+    left: 0;
+    right: 0;
+
+    ${({$heightPrecent}) => {
+        if ($heightPrecent === 100) {
+            return css`
+                height: 100% !important;
+                bottom: 0;
+            `;
+        }
+        return css`
+            height: ${$heightPrecent}% !important;
+            bottom: 0;
+        `;
+    }}
 `;
 
 export const StyledCanvasResponsive = styled.canvas<CanvasContainerProps>`
-    display: flex;
+    display: block; 
     width: 100% !important;
-    height: ${({$heightPrecent}) => `${$heightPrecent}%`} !important;
     padding: 0;
     margin: 0;
-    bottom: 0;
     background-color: transparent;
     border: none;
     touch-action: none;
@@ -37,8 +55,14 @@ export const StyledCanvasResponsive = styled.canvas<CanvasContainerProps>`
     position: absolute;
     z-index: ${({$zIndex}) => ($zIndex !== undefined ? $zIndex : 0)};
     pointer-events: auto;
-`;
 
+    top: 0;
+    left: 0;
+    right: 0;
+
+    height: 100% !important;
+    bottom: 0;
+`;
 
 interface InnerCanvasContainerProps {
     $xAxisHeight: number;

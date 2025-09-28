@@ -5,9 +5,9 @@ import YAxis from "./Axes/YAxis";
 import {
     CanvasAxisContainer,
     CanvasContainer,
-    ChartStageContainer, ChartView, LeftBar,
+    ChartStageContainer, ChartView,
     LeftYAxisContainer,
-    RightYAxisContainer, TopBar,
+    RightYAxisContainer,
     XAxisContainer
 } from '../../styles/ChartStage.styles';
 import {PriceRange, TimeRange} from "../../types/Graph";

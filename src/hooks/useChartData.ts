@@ -14,47 +14,57 @@ export function useChartData(
     const intervalSeconds = useMemo(() => {
         if (intervalsArray.length < 2) return 3600;
         return intervalsArray[1].t - intervalsArray[0].t;
-    }, [intervalsArray]);
+    }, [
+        intervalsArray.length,
+        intervalsArray[0]?.t,
+        intervalsArray[1]?.t,
+    ]);
 
     const visibleCandles = useMemo<IndexRangePair>(() => {
-        if (!intervalsArray.length || !visibleRange.end || intervalSeconds <= 0) {
-            return {startIndex: 0, endIndex: 0};
+        if (!intervalsArray.length || intervalSeconds <= 0 || visibleRange == null) {
+            return { startIndex: 0, endIndex: 0 };
+        }
+        const { start, end } = visibleRange as TimeRange;
+        if (start == null || end == null) {
+            return { startIndex: 0, endIndex: 0 };
         }
         const firstTime = intervalsArray[0].t;
-        const startIndex = Math.floor((visibleRange.start - firstTime) / intervalSeconds);
-        const endIndex = Math.ceil((visibleRange.end - firstTime) / intervalSeconds);
+        const startIndex = Math.floor((start - firstTime) / intervalSeconds);
+        const endIndex = Math.ceil((end - firstTime) / intervalSeconds);
         return {
             startIndex: Math.max(0, startIndex),
             endIndex: Math.min(intervalsArray.length - 1, endIndex),
         };
-    }, [intervalsArray, visibleRange, intervalSeconds]);
+    }, [
+        intervalsArray.length,
+        intervalsArray[0]?.t,
+        intervalSeconds,
+        visibleRange?.start,
+        visibleRange?.end,
+    ]);
 
-    const visiblePriceRange = useMemo<PriceRange>(() => {
-        const {startIndex, endIndex} = visibleCandles;
+    const visiblePriceRange: PriceRange = (() => {
+        const { startIndex, endIndex } = visibleCandles;
         if (startIndex >= endIndex || !intervalsArray.length) {
-            return {min: 0, max: 100, range: 100};
+            return { min: 0, max: 100, range: 100 };
         }
-
-        const candlesOnScreen = intervalsArray.slice(startIndex, endIndex + 1);
-
         let min = Infinity;
         let max = -Infinity;
-
-        for (const candle of candlesOnScreen) {
-            if (candle.l < min) min = candle.l;
-            if (candle.h > max) max = candle.h;
+        for (let i = startIndex; i <= endIndex; i++) {
+            const c = intervalsArray[i];
+            if (!c) continue;
+            if (c.l < min) min = c.l;
+            if (c.h > max) max = c.h;
         }
-
-        const padding = (max - min) * 0.1;
+        if (!Number.isFinite(min) || !Number.isFinite(max)) {
+            return { min: 0, max: 100, range: 100 };
+        }
+        const paddingBase = Math.max(0, max - min);
+        const padding = paddingBase * 0.1;
         const finalMin = min - padding;
         const finalMax = max + padding;
-
-        return {
-            min: finalMin,
-            max: finalMax,
-            range: finalMax - finalMin,
-        };
-    }, [intervalsArray, visibleCandles]);
+        return { min: finalMin, max: finalMax, range: finalMax - finalMin };
+    })();
 
     const renderContext = useMemo<ChartRenderContext | null>(() => {
         if (canvasWidth === 0 || canvasHeight === 0) {
@@ -72,8 +82,11 @@ export function useChartData(
         };
     }, [
         intervalsArray,
-        visibleCandles,
-        visiblePriceRange,
+        visibleCandles.startIndex,
+        visibleCandles.endIndex,
+        visiblePriceRange.min,
+        visiblePriceRange.max,
+        visiblePriceRange.range,
         visibleRange,
         intervalSeconds,
         canvasWidth,

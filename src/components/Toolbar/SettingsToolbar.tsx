@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    SettingsToolbarContainer, SettingToolbarContent,
+    SettingsToolbarContainer, SettingToolbarContent, Spacer,
     SymbolInput,
 } from '../../styles/SettingsToolbar.styles';
 
@@ -118,6 +118,7 @@ export const SettingsToolbar = ({handleChartTypeChange, selectedChartType}: Sett
                         <IconTheme/>
                     </Button>
                 </Tooltip>
+                <Spacer/>
             </SettingToolbarContent>
         </SettingsToolbarContainer>
     );

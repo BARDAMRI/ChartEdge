@@ -11,6 +11,8 @@ export const ChartStageContainer = styled.div`
     min-height: 0;
     overflow: hidden;
     box-sizing: border-box;
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr);
 `;
 
 export const TopBar = styled.div`
@@ -27,8 +29,8 @@ interface StageViewProps {
 
 export const ChartView = styled.div<StageViewProps>`
     display: grid;
-    grid-template-columns: ${({$yAxisWidth}) => `${$yAxisWidth}px`} 1fr;
-    grid-template-rows: 1fr ${({$xAxisHeight}) => `${$xAxisHeight}px`};
+    grid-template-columns: ${({$yAxisWidth}) => `${$yAxisWidth}px`} minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) ${({$xAxisHeight}) => `${$xAxisHeight}px`};
     position: relative;
     min-width: 0;
     min-height: 0;
@@ -87,4 +89,6 @@ export const CanvasContainer = styled.div`
     min-width: 0;
     min-height: 0;
     box-sizing: border-box;
+    width: 100%;
+
 `;

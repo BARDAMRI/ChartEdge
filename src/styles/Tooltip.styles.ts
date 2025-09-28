@@ -11,6 +11,7 @@ export const TooltipWrapper = styled.span.attrs({className: 'tooltip-wrapper'})`
     width: auto;
     height: auto;
     position: relative;
+    flex: 0 0 auto;
 `;
 
 const bgGradLight =

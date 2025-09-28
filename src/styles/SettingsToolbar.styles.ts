@@ -40,14 +40,16 @@ const Control = styled.div`
 `;
 export const SettingToolbarContent = styled.div.attrs({className: 'setting-toolbar-content'})`
     box-sizing: border-box;
-    width: 100%;
     display: flex;
+    width: 100%;
+    height: 100%;
     flex-direction: row;
     align-items: stretch;
     justify-content: flex-start;
     overflow: hidden;
     gap: 2px;
     padding: 1px;
+    flex: 0 0 auto;
 `;
 
 export const SymbolInput = styled(Control).attrs({as: 'input', type: 'text'})`
@@ -66,14 +68,19 @@ export const SymbolInput = styled(Control).attrs({as: 'input', type: 'text'})`
     }
 `;
 
-
+export const Spacer = styled.div.attrs({className: 'spacer'})`
+    position: relative;
+    display: inline-block;
+    flex-grow: 1;
+    min-width: 0;
+`;
 export const ToolbarHorizontalButtons = styled.button.attrs({className: 'toolbar-button'})`
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     height: 100%;
-    aspect-ratio: 1 / 1;
+    width: clamp(30px, 6vh, 40px);
     box-sizing: border-box;
     flex: 0 0 auto;
     padding: 0;
@@ -87,8 +94,6 @@ export const ToolbarHorizontalButtons = styled.button.attrs({className: 'toolbar
     border: 1px solid rgba(120, 100, 255, 0.5);
     background-color: rgba(255, 255, 255, 0.06);
     background-clip: border-box, padding-box;
-    flex: 0 0 auto;
-    /* Inner glass */
 
     &::after {
         content: '';

@@ -1,3 +1,12 @@
+function ensureCanvasSize(canvas: HTMLCanvasElement, width: number, height: number, dpr: number) {
+    const targetWidth = width * dpr;
+    const targetHeight = height * dpr;
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+    }
+}
+
 import React, {
     useCallback,
     useEffect,
@@ -119,44 +128,9 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
             clientWidth: cssWidth,
             clientHeight: cssHeight,
         };
-        setChartDimensions(prev => {
-            if (
-                prev &&
-                prev.cssWidth === next.cssWidth &&
-                prev.cssHeight === next.cssHeight &&
-                prev.dpr === next.dpr &&
-                prev.width === next.width &&
-                prev.height === next.height
-            ) {
-                chartDimensionsRef.current = next;
-                return prev;
-            }
-            chartDimensionsRef.current = next;
-            return next;
-        });
+        chartDimensionsRef.current = next;
+        setChartDimensions(next);
     }, [canvasSizes?.width, canvasSizes?.height]);
-
-    useEffect(() => {
-        const onResize = () => {
-            const dpr = window.devicePixelRatio || 1;
-            const cssWidth = Math.max(0, canvasSizes?.width || 0);
-            const cssHeight = Math.max(0, canvasSizes?.height || 0);
-            const next: ChartDimensionsData = {
-                cssWidth,
-                cssHeight,
-                dpr,
-                width: Math.round(cssWidth * dpr),
-                height: Math.round(cssHeight * dpr),
-                clientWidth: cssWidth,
-                clientHeight: cssHeight,
-            };
-            chartDimensionsRef.current = next;
-            setChartDimensions(next);
-        };
-        window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-    }, [canvasSizes?.width, canvasSizes?.height]);
-
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -215,54 +189,63 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                 mainCtx.drawImage(backBuffer, -panOffset, 0, cssWidth, cssHeight);
             }
         }
-
     }, [mainCanvasRef.current, backBufferRef.current]);
 
     const drawHistogramBuffer = (histBackBufferRef: any, dims: any, renderContext: any) => {
-        const {dpr} = dims;
+        const {dpr, cssWidth, cssHeight} = dims;
         const histCanvas = histCanvasRef.current;
+
         if (chartOptions.base.showHistogram && histCanvas) {
+            const histogramHeightRatio = Math.max(0.1, Math.min(0.6, chartOptions.base.style.histogram.heightRatio));
+            const cssHistHeight = cssHeight * histogramHeightRatio;
+            const targetWidth = cssWidth;
+            const targetHeight = cssHistHeight;
+
             if (!histBackBufferRef.current) histBackBufferRef.current = document.createElement('canvas');
             const histBackBufferCtx = histBackBufferRef.current!.getContext('2d');
+
             if (histBackBufferCtx) {
-                const hRect = histCanvas.getBoundingClientRect();
-                if (histBackBufferRef.current!.width !== hRect.width * dpr || histBackBufferRef.current!.height !== hRect.height * dpr) {
-                    histBackBufferRef.current!.width = hRect.width * dpr;
-                    histBackBufferRef.current!.height = hRect.height * dpr;
+                if (histBackBufferRef.current!.width !== targetWidth * dpr || histBackBufferRef.current!.height !== targetHeight * dpr) {
+                    histBackBufferRef.current!.width = targetWidth * dpr;
+                    histBackBufferRef.current!.height = targetHeight * dpr;
                 }
+
                 histBackBufferCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                histBackBufferCtx.clearRect(0, 0, hRect.width, hRect.height);
+                histBackBufferCtx.clearRect(0, 0, targetWidth, targetHeight);
 
                 const histogramRenderContext = {
                     ...renderContext,
                     canvasWidth: renderContext.canvasWidth,
-                    canvasHeight: hRect.height
+                    canvasHeight: targetHeight
                 };
                 drawHistogramChart(histBackBufferCtx, histogramRenderContext, chartOptions);
             }
         }
     }
-
     const drawHistogramImage = useCallback((dims: any, panOffset: number) => {
-        const {dpr} = dims;
+        const {dpr, cssWidth, cssHeight} = dims;
         const histCanvas = histCanvasRef.current;
         const histBackBuffer = histBackBufferRef.current;
+
         if (chartOptions.base.showHistogram && histCanvas && histBackBuffer) {
             const hctx = histCanvas.getContext('2d');
             if (hctx) {
-                const hRect = histCanvas.getBoundingClientRect();
-                if (histCanvas.width !== hRect.width * dpr || histCanvas.height !== hRect.height * dpr) {
-                    histCanvas.width = hRect.width * dpr;
-                    histCanvas.height = hRect.height * dpr;
+                const histogramHeightRatio = Math.max(0.1, Math.min(0.6, chartOptions.base.style.histogram.heightRatio));
+                const cssHistHeight = cssHeight * histogramHeightRatio;
+                const targetWidth = cssWidth;
+                const targetHeight = cssHistHeight;
+
+                if (histCanvas.width !== targetWidth * dpr || histCanvas.height !== targetHeight * dpr) {
+                    histCanvas.width = targetWidth * dpr;
+                    histCanvas.height = targetHeight * dpr;
                 }
+
                 hctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                hctx.clearRect(0, 0, hRect.width, hRect.height);
-                hctx.drawImage(histBackBuffer, -panOffset, 0, hRect.width, hRect.height);
+                hctx.clearRect(0, 0, targetWidth, targetHeight);
+                hctx.drawImage(histBackBuffer, -panOffset, 0, targetWidth, targetHeight);
             }
         }
-
-    }, [mainCanvasRef.current, backBufferRef.current]);
-
+    }, [histCanvasRef, histBackBufferRef, chartOptions.base.showHistogram, chartOptions.base.style.histogram.heightRatio]);
     const drawDrawingsToBuffer = (drawingsBackBufferRef: any, dims: any, renderContext: any) => {
         const {cssWidth, cssHeight, dpr} = dims;
         if (!renderContext) return;
@@ -280,45 +263,43 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
 
     }
 
-    const drawShapes = useCallback((dims: any, panOffset: number) => {
-
-        const {cssWidth, cssHeight, dpr} = dims;
+    const drawShapes = useCallback((dims: ChartDimensionsData, panOffset: number) => {
+        const {cssWidth, cssHeight, dpr, width, height} = dims; // נוסיף את width ו-height ל-destructuring
         const drawingsCanvas = drawingsCanvasRef.current;
         const drawingsBackBuffer = drawingsBackBufferRef.current;
 
         if (drawingsCanvas && drawingsBackBuffer) {
             const dctx = drawingsCanvas.getContext('2d');
             if (dctx) {
-                const dRect = drawingsCanvas.getBoundingClientRect();
-                if (drawingsCanvas.width !== dRect.width * dpr || drawingsCanvas.height !== dRect.height * dpr) {
-                    drawingsCanvas.width = dRect.width * dpr;
-                    drawingsCanvas.height = dRect.height * dpr;
-                }
+                ensureCanvasSize(drawingsCanvas, cssWidth, cssHeight, dpr);
+
                 dctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                dctx.clearRect(0, 0, dRect.width, dRect.height);
-                dctx.drawImage(drawingsBackBuffer, -panOffset, 0, dRect.width, dRect.height);
+                dctx.clearRect(0, 0, cssWidth, cssHeight);
+
+                dctx.drawImage(drawingsBackBuffer, -panOffset, 0, cssWidth, cssHeight);
             }
         }
-    }, [mode, drawingsCanvasRef.current, drawingsBackBufferRef.current, drawings, selectedIndex, renderContext, visiblePriceRange, chartOptions]);
-
-    const drawCreatedShapes = useCallback((dims: any) => {
+    }, [
+        drawingsCanvasRef,
+        drawingsBackBufferRef,
+    ]);
+    const drawCreatedShapes = useCallback((dims: ChartDimensionsData) => {
         const {cssWidth, cssHeight, dpr} = dims;
         const hoverCanvas = hoverCanvasRef.current;
         const point = currentPointRef.current;
+
         if (!renderContext || !hoverCanvas) {
             return;
-
         }
-        const hoverCtx = hoverCanvas.getContext('2d');
 
+        const hoverCtx = hoverCanvas.getContext('2d');
         if (hoverCtx) {
-            if (hoverCanvas.width !== cssWidth * dpr || hoverCanvas.height !== cssHeight * dpr) {
-                hoverCanvas.width = cssWidth * dpr;
-                hoverCanvas.height = cssHeight * dpr;
-            }
+            ensureCanvasSize(hoverCanvas, cssWidth, cssHeight, dpr);
+
             hoverCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
             hoverCtx.clearRect(0, 0, cssWidth, cssHeight);
-            if (isInteractionMode && point && !isPanning && !isWheeling && hoverCtx) {
+
+            if (isInteractionMode && point && !isPanning && !isWheeling) {
                 hoverCtx.strokeStyle = 'rgba(100, 100, 100, 0.7)';
                 hoverCtx.lineWidth = 1;
                 hoverCtx.beginPath();
@@ -327,40 +308,47 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                 hoverCtx.moveTo(0, point.y);
                 hoverCtx.lineTo(cssWidth, point.y);
                 hoverCtx.stroke();
-            } else if (renderContext) {
-                console.log('Drawing created shape:', createdShape.current);
+            } else if (createdShape.current && renderContext) {
                 drawDrawings(hoverCtx, [createdShape.current!], selectedIndex, renderContext, visiblePriceRange);
             }
         }
-
-    }, [hoverCanvasRef.current, currentPointRef.current, mode, isPanning, isWheeling, selectedIndex, drawDrawings, renderContext, visiblePriceRange, chartOptions]);
-
+    }, [
+        hoverCanvasRef,
+        currentPointRef,
+        mode,
+        isPanning,
+        isWheeling,
+        selectedIndex,
+        drawDrawings,
+        renderContext,
+        visiblePriceRange,
+        chartOptions
+    ]);
     const drawSceneToBuffer = useCallback(() => {
         if (!renderContext) return;
-        const mainCanvas = mainCanvasRef.current;
-        if (!mainCanvas) return;
+
+        const dims = chartDimensionsRef.current;
+        if (!dims) {
+            return;
+        }
 
         if (!backBufferRef.current) backBufferRef.current = document.createElement('canvas');
         const backBufferCtx = backBufferRef.current!.getContext('2d');
         if (!backBufferCtx) return;
-
-        const dims = chartDimensionsRef.current || {
-            cssWidth: Math.max(0, canvasSizes.width),
-            cssHeight: Math.max(0, canvasSizes.height),
-            dpr: window.devicePixelRatio || 1,
-            width: Math.max(0, Math.round(canvasSizes.width * (window.devicePixelRatio || 1))),
-            height: Math.max(0, Math.round(canvasSizes.height * (window.devicePixelRatio || 1))),
-            clientWidth: Math.max(0, canvasSizes.width),
-            clientHeight: Math.max(0, canvasSizes.height),
-        };
 
         drawBackBuffer(backBufferCtx, dims, renderContext);
 
         drawHistogramBuffer(histBackBufferRef, dims, renderContext);
 
         drawDrawingsToBuffer(drawingsBackBufferRef, dims, renderContext);
+    }, [
+        renderContext,
+        chartOptions,
+        drawings,
+        selectedIndex,
+        visiblePriceRange
+    ]);
 
-    }, [renderContext, chartOptions?.base?.chartType, chartOptions, drawings, selectedIndex, canvasSizes, visiblePriceRange]);
 
     const drawFrame = useCallback(() => {
         requestAnimationIdRef.current = null;
@@ -383,16 +371,20 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         // 3. Persistent Drawings Canvas
         // --------------------------------------------------
         drawShapes(dims, panOffset);
+
         // --------------------------------------------------
         // 4. Hover & Interaction Canvas
         // --------------------------------------------------
         drawCreatedShapes(dims);
 
     }, [
-        isPanning, isWheeling, createdShape, mode,
-        chartOptions, drawSceneToBuffer, drawGraphImage, drawHistogramImage, drawShapes, drawCreatedShapes,
-        visibleRange, visiblePriceRange, canvasSizes.width, canvasSizes.height,
-        renderContext
+        isPanning,
+        isWheeling,
+        mode,
+        drawGraphImage,
+        drawHistogramImage,
+        drawShapes,
+        drawCreatedShapes,
     ]);
 
     const scheduleDraw = useCallback(() => {
@@ -441,15 +433,16 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         },
         onPanEnd: (dx: number) => {
             setIsPanning(false);
-            const hover = hoverCanvasRef.current;
-            const main = mainCanvasRef.current;
-            if ((!hover && !main) || dx === 0) {
+            const dims = chartDimensionsRef.current; // 🔥 שימוש ב-Ref!
+
+            if (!dims || dx === 0) {
                 panOffsetRef.current = 0;
                 scheduleDraw();
                 return;
             }
-            const mainRectW = main ? main.getBoundingClientRect().width : 0;
-            const widthPx = canvasSizes.width || mainRectW || (hover ? hover.clientWidth : 0) || 1; // prefer external measured endTime
+
+            const widthPx = dims.cssWidth;
+
             const timePerPixel = (visibleRange.end - visibleRange.start) / widthPx;
             const timeOffset = dx * timePerPixel;
             const newStart = Math.round(visibleRange.start - timeOffset);
@@ -484,12 +477,18 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
     };
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (isInteractionMode || !renderContext) return;
+
+        const dims = chartDimensionsRef.current;
+        if (!dims) return;
         const rect = e.currentTarget.getBoundingClientRect();
+
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
+
         const time = xToTime(x, renderContext!.canvasWidth, renderContext!.visibleRange);
         const price = yToPrice(y, renderContext!.canvasHeight, visiblePriceRange);
         const pt = {time, price};
+
         if (mode !== Mode.drawPolyline || createdShape.current?.points.length! >= 1) {
             createdShape.current?.setFirstPoint(pt);
         } else if (mode === Mode.drawPolyline && createdShape.current?.points.length === 1) {
@@ -497,7 +496,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         }
     };
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect();
+        const rect = e.currentTarget.getBoundingClientRect(); // נשארת כדי לקבל מיקום ב-Viewport
         const point = {x: e.clientX - rect.left, y: e.clientY - rect.top};
         currentPointRef.current = point;
 
