@@ -6,11 +6,13 @@ export interface ModeButtonProps {
     currentMode: Mode;
     onClickHandler: any;
     children?: ReactNode;
+    className?: string;
 }
 
 export interface ButtonProps {
     onClickHandler: any;
     children?: ReactNode;
+    className?: string;
 }
 
 

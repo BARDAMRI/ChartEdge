@@ -22,28 +22,19 @@ export const StyledCanvasNonResponsive = styled.canvas<CanvasContainerProps>`
     overscroll-behavior: none;
     font-size: 12px;
     position: absolute;
-    z-index: ${({$zIndex}) => ($zIndex !== undefined ? $zIndex : 0)};
-    pointer-events: none;
-    top: 0;
+    bottom: 0;
     left: 0;
     right: 0;
+    z-index: ${({$zIndex}) => ($zIndex !== undefined ? $zIndex : 0)};
+    pointer-events: none;
 
-    ${({$heightPrecent}) => {
-        if ($heightPrecent === 100) {
-            return css`
-                height: 100% !important;
-                bottom: 0;
-            `;
-        }
-        return css`
-            height: ${$heightPrecent}% !important;
-            bottom: 0;
-        `;
-    }}
+    height: ${({$heightPrecent}) => ($heightPrecent ? `${$heightPrecent}%` : '100%')} !important;
+
+    top: ${({$heightPrecent}) => ($heightPrecent === 100 ? '0' : 'auto')};
 `;
 
 export const StyledCanvasResponsive = styled.canvas<CanvasContainerProps>`
-    display: block; 
+    display: block;
     width: 100% !important;
     padding: 0;
     margin: 0;

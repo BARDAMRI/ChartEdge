@@ -7,7 +7,7 @@ export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-t
     background: transparent;
     border-radius: 14px;
     position: relative;
-    height: clamp(30px, 6vh, 40px);
+    height: clamp(24px, 5vmin, 40px);
     border: 1px solid rgba(128, 140, 255, 0.18);
     box-shadow: 0 10px 28px rgba(17, 19, 39, 0.20),
     inset 0 0 0 1px rgba(255, 255, 255, 0.12);
@@ -50,10 +50,15 @@ export const SettingToolbarContent = styled.div.attrs({className: 'setting-toolb
     gap: 2px;
     padding: 1px;
     flex: 0 0 auto;
+
+    & .tooltip-wrapper {
+        height: 100%;
+        aspect-ratio: 1 / 1;
+    }
 `;
 
 export const SymbolInput = styled(Control).attrs({as: 'input', type: 'text'})`
-    width: 70px;
+    width: clamp(40px, 10vmin, 70px);
     color: rgba(0, 0, 0, 0.85);
     font-weight: 600;
     background-color: white;
@@ -74,13 +79,13 @@ export const Spacer = styled.div.attrs({className: 'spacer'})`
     flex-grow: 1;
     min-width: 0;
 `;
-export const ToolbarHorizontalButtons = styled.button.attrs({className: 'toolbar-button'})`
+export const ToolbarHorizontalButtons = styled.button.attrs({className: 'settings-toolbar-button'})`
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     height: 100%;
-    width: clamp(30px, 6vh, 40px);
+    width: 100%;
     box-sizing: border-box;
     flex: 0 0 auto;
     padding: 0;

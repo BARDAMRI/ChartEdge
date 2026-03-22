@@ -1,6 +1,6 @@
 function ensureCanvasSize(canvas: HTMLCanvasElement, width: number, height: number, dpr: number) {
-    const targetWidth = width * dpr;
-    const targetHeight = height * dpr;
+    const targetWidth = Math.round(width * dpr);
+    const targetHeight = Math.round(height * dpr);
     if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
         canvas.width = targetWidth;
         canvas.height = targetHeight;
@@ -25,7 +25,7 @@ import {
     StyledCanvasResponsive
 } from '../../styles/ChartCanvas.styles';
 import {ChartOptions, ChartType} from "../../types/chartOptions";
-import {drawAreaChart, drawBarChart, drawCandlestickChart, drawHistogramChart, drawLineChart} from "./utils/GraphDraw";
+import {drawAreaChart, drawBarChart, drawCandlestickChart, drawGrid, drawHistogramChart, drawLineChart} from "./utils/GraphDraw";
 import {drawDrawings} from './utils/drawDrawings';
 import {useChartData} from '../../hooks/useChartData';
 import {usePanAndZoom} from '../../hooks/usePanAndZoom';
@@ -146,13 +146,17 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
 
 
     const drawBackBuffer = (backBufferCtx: any, dims: any, renderContext: any) => {
-        const {cssWidth, cssHeight, dpr} = dims;
-        if (backBufferRef.current!.width !== cssWidth * dpr || backBufferRef.current!.height !== cssHeight * dpr) {
-            backBufferRef.current!.width = cssWidth * dpr;
-            backBufferRef.current!.height = cssHeight * dpr;
+        const {cssWidth, cssHeight, dpr, width, height} = dims;
+        if (backBufferRef.current!.width !== width || backBufferRef.current!.height !== height) {
+            backBufferRef.current!.width = width;
+            backBufferRef.current!.height = height;
         }
         backBufferCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
         backBufferCtx.clearRect(0, 0, cssWidth, cssHeight);
+
+        // Draw grid behind everything else
+        drawGrid(backBufferCtx, cssWidth, cssHeight, chartOptions);
+
         switch (chartOptions?.base?.chartType) {
             case ChartType.Candlestick:
                 drawCandlestickChart(backBufferCtx, renderContext, chartOptions, visiblePriceRange);
@@ -173,24 +177,31 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
     }
 
     const drawGraphImage = useCallback((dims: any, panOffset: number) => {
-        const {cssWidth, cssHeight, dpr} = dims;
+        const {cssWidth, cssHeight, dpr, width, height} = dims;
         const mainCanvas = mainCanvasRef.current;
         const backBuffer = backBufferRef.current;
         if (mainCanvas && backBuffer) {
             const mainCtx = mainCanvas.getContext('2d');
             if (mainCtx) {
-                if (mainCanvas.width !== cssWidth * dpr || mainCanvas.height !== cssHeight * dpr) {
-                    mainCanvas.width = cssWidth * dpr;
-                    mainCanvas.height = cssHeight * dpr;
-                    drawSceneToBuffer();
+                if (mainCanvas.width !== width || mainCanvas.height !== height) {
+                    mainCanvas.width = width;
+                    mainCanvas.height = height;
                 }
                 mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 mainCtx.clearRect(0, 0, cssWidth, cssHeight);
                 mainCtx.drawImage(backBuffer, -panOffset, 0, cssWidth, cssHeight);
             }
         }
-    }, [mainCanvasRef.current, backBufferRef.current]);
+    }, []);
 
+    /**
+     * Prepares the off-screen buffer for the volume histogram and triggers the drawing sequence.
+     * Calculates the proportional height for the histogram section and sets up a dedicated rendering context.
+     * * @param {any} histBackBufferRef - Reference to the off-screen canvas element.
+     * @param histBackBufferRef
+     * @param {any} dims - Dimensions object containing cssWidth, cssHeight, and device pixel ratio (dpr).
+     * @param {any} renderContext - The main rendering context containing visible intervals and drawing utilities.
+     */
     const drawHistogramBuffer = (histBackBufferRef: any, dims: any, renderContext: any) => {
         const {dpr, cssWidth, cssHeight} = dims;
         const histCanvas = histCanvasRef.current;
@@ -215,29 +226,36 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
 
                 const histogramRenderContext = {
                     ...renderContext,
-                    canvasWidth: renderContext.canvasWidth,
-                    canvasHeight: targetHeight
+                    canvasWidth: targetWidth,
+                    canvasHeight: targetHeight,
+                    isHistogram: true
                 };
+
                 drawHistogramChart(histBackBufferCtx, histogramRenderContext, chartOptions);
             }
         }
-    }
+    };
     const drawHistogramImage = useCallback((dims: any, panOffset: number) => {
         const {dpr, cssWidth, cssHeight} = dims;
         const histCanvas = histCanvasRef.current;
         const histBackBuffer = histBackBufferRef.current;
 
-        if (chartOptions.base.showHistogram && histCanvas && histBackBuffer) {
+        if (chartOptions?.base?.showHistogram && histCanvas && histBackBuffer) {
             const hctx = histCanvas.getContext('2d');
             if (hctx) {
-                const histogramHeightRatio = Math.max(0.1, Math.min(0.6, chartOptions.base.style.histogram.heightRatio));
+                const ratio = chartOptions?.base?.style?.histogram?.heightRatio ?? 0.2;
+                const histogramHeightRatio = Math.max(0.1, Math.min(0.6, ratio));
                 const cssHistHeight = cssHeight * histogramHeightRatio;
                 const targetWidth = cssWidth;
                 const targetHeight = cssHistHeight;
 
-                if (histCanvas.width !== targetWidth * dpr || histCanvas.height !== targetHeight * dpr) {
-                    histCanvas.width = targetWidth * dpr;
-                    histCanvas.height = targetHeight * dpr;
+                // עיגול לפיקסלים שלמים כדי למנוע לולאת איפוס של הקנבס
+                const physicalWidth = Math.round(targetWidth * dpr);
+                const physicalHeight = Math.round(targetHeight * dpr);
+
+                if (histCanvas.width !== physicalWidth || histCanvas.height !== physicalHeight) {
+                    histCanvas.width = physicalWidth;
+                    histCanvas.height = physicalHeight;
                 }
 
                 hctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -245,24 +263,26 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                 hctx.drawImage(histBackBuffer, -panOffset, 0, targetWidth, targetHeight);
             }
         }
-    }, [histCanvasRef, histBackBufferRef, chartOptions.base.showHistogram, chartOptions.base.style.histogram.heightRatio]);
+    }, [histCanvasRef, histBackBufferRef, chartOptions?.base?.showHistogram, chartOptions?.base?.style?.histogram?.heightRatio]);
+
     const drawDrawingsToBuffer = (drawingsBackBufferRef: any, dims: any, renderContext: any) => {
         const {cssWidth, cssHeight, dpr} = dims;
         if (!renderContext) return;
         if (!drawingsBackBufferRef.current) drawingsBackBufferRef.current = document.createElement('canvas');
         const ctx = drawingsBackBufferRef.current!.getContext('2d');
         if (ctx) {
-            if (drawingsBackBufferRef.current.width !== cssWidth * dpr || drawingsBackBufferRef.current.height !== cssHeight * dpr) {
-                drawingsBackBufferRef.current.width = cssWidth * dpr;
-                drawingsBackBufferRef.current.height = cssHeight * dpr;
+            const physicalWidth = Math.round(cssWidth * dpr);
+            const physicalHeight = Math.round(cssHeight * dpr);
+
+            if (drawingsBackBufferRef.current.width !== physicalWidth || drawingsBackBufferRef.current.height !== physicalHeight) {
+                drawingsBackBufferRef.current.width = physicalWidth;
+                drawingsBackBufferRef.current.height = physicalHeight;
             }
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             ctx.clearRect(0, 0, cssWidth, cssHeight);
             drawDrawings(ctx, drawings, selectedIndex, renderContext, visiblePriceRange);
         }
-
     }
-
     const drawShapes = useCallback((dims: ChartDimensionsData, panOffset: number) => {
         const {cssWidth, cssHeight, dpr, width, height} = dims; // נוסיף את width ו-height ל-destructuring
         const drawingsCanvas = drawingsCanvasRef.current;
@@ -279,10 +299,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                 dctx.drawImage(drawingsBackBuffer, -panOffset, 0, cssWidth, cssHeight);
             }
         }
-    }, [
-        drawingsCanvasRef,
-        drawingsBackBufferRef,
-    ]);
+    }, []);
     const drawCreatedShapes = useCallback((dims: ChartDimensionsData) => {
         const {cssWidth, cssHeight, dpr} = dims;
         const hoverCanvas = hoverCanvasRef.current;
@@ -589,6 +606,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         <InnerCanvasContainer className={'inner-canvas-container'} $xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
                               ref={parentContainerRef}>
             <ChartingContainer className={'charting-container'}>
+
                 <StyledCanvasNonResponsive
                     className={'chart-data-canvas'}
                     ref={mainCanvasRef}
@@ -604,7 +622,6 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                         $zIndex={2}
                         style={{
                             opacity: chartOptions.base.style.histogram.opacity,
-                            bottom: 0,
                         }}
                     />
                 )}
@@ -615,7 +632,6 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                     ref={drawingsCanvasRef}
                     $heightPrecent={100}
                     $zIndex={3}
-                    style={{pointerEvents: 'none'}}
                 />
 
                 <StyledCanvasResponsive
@@ -636,6 +652,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                     }}
                 />
             </ChartingContainer>
+
             {hoveredCandle && !isPanning && !mode && !isWheeling && (
                 <HoverTooltip className={'intervals-data-tooltip'} $isPositive={hoveredCandle.c > hoveredCandle.o}>
                     Time: {new Date(hoveredCandle.t * 1000).toLocaleString()} |

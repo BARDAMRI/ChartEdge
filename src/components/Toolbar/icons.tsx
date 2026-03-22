@@ -268,3 +268,19 @@ export const IconArrowDown: React.FC<{ active?: boolean }> = ({active}) => {
         </svg>
     );
 };
+
+export const IconClose: React.FC<{ active?: boolean }> = ({active}) => (
+    <IconBase active={active} name="close">
+        <line x1="5" y1="5" x2="19" y2="19" strokeWidth={SW.thick}/>
+        <line x1="5" y1="19" x2="19" y2="5" strokeWidth={SW.thick}/>
+    </IconBase>
+);
+
+export const IconSave: React.FC<{ active?: boolean }> = ({active}) => (
+    <IconBase active={active} name="save">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" strokeWidth={SW.medium} fill="none"/>
+        <polyline points="17 21 17 13 7 13 7 21" strokeWidth={SW.medium} fill="none"/>
+        <polyline points="7 3 7 8 15 8" strokeWidth={SW.medium} fill="none"/>
+    </IconBase>
+);
+

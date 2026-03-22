@@ -9,6 +9,43 @@ import {drawOverlay, overlay as buildOverlay} from "./drawOverlay";
 // == CHART DRAWING FUNCTIONS (Corrected)
 // =================================================================================
 
+/**
+ * Draws horizontal and vertical grid lines on the canvas.
+ * Respects options.base.style.showGrid to be shown or hidden.
+ */
+export function drawGrid(
+    ctx: CanvasRenderingContext2D,
+    canvasWidth: number,
+    canvasHeight: number,
+    options: DeepRequired<ChartOptions>
+) {
+    if (!options.base.style.showGrid) return;
+    const { lineColor, lineWidth, gridSpacing, lineDash } = options.base.style.grid;
+    ctx.save();
+    ctx.strokeStyle = lineColor || '#e0e0e0';
+    ctx.lineWidth = lineWidth || 1;
+    ctx.setLineDash(lineDash as unknown as number[] || []);
+    ctx.globalAlpha = 0.6;
+
+    // Vertical lines
+    for (let x = 0; x <= canvasWidth; x += gridSpacing || 50) {
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, canvasHeight);
+        ctx.stroke();
+    }
+
+    // Horizontal lines
+    for (let y = 0; y <= canvasHeight; y += gridSpacing || 50) {
+        ctx.beginPath();
+        ctx.moveTo(0, y + 0.5);
+        ctx.lineTo(canvasWidth, y + 0.5);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
 export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: ChartRenderContext, options: DeepRequired<ChartOptions>, visiblePriceRange: PriceRange) {
 
     const {

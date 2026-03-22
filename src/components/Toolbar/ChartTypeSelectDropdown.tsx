@@ -17,9 +17,10 @@ const icons: Record<ChartType, React.ReactNode> = {
 interface Props {
     value: ChartType;
     onChange: (type: ChartType) => void;
+    className?: string;
 }
 
-export const ChartTypeSelectDropdown: React.FC<Props> = ({value, onChange}) => {
+export const ChartTypeSelectDropdown: React.FC<Props> = ({value, onChange, className}) => {
     const [open, setOpen] = useState(false);
 
     const handleSelect = (type: ChartType) => {
@@ -28,7 +29,7 @@ export const ChartTypeSelectDropdown: React.FC<Props> = ({value, onChange}) => {
     };
 
     return (
-        <ChartTypeSelectContainer className={"chart-type-select-dropdown"}>
+        <ChartTypeSelectContainer className={className || "chart-type-select-dropdown"}>
             <ChartTypeTrigger onClick={() => setOpen(!open)}>
                 {icons[value]}
                 <IconArrowDown />

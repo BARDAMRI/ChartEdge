@@ -2,7 +2,7 @@ import styled from 'styled-components';
 
 export const ToolbarContainer = styled.div.attrs({className: 'toolbar-container'})`
     box-sizing: border-box;
-    width: clamp(30px, 6vw, 40px); 
+    width: clamp(24px, 5vmin, 40px); 
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -29,13 +29,17 @@ export const ToolbarContent = styled.div.attrs({className: 'toolbar-content'})`
     overflow: hidden;
     gap: 2px;
     padding: 1px;
+
+    & .tooltip-wrapper {
+        width: 100%;
+    }
 `;
 
 interface ToolbarButtonProps {
     $selected?: boolean;
 }
 
-export const ToolbarVerticalButton = styled.button.attrs({className: 'toolbar-button'})<ToolbarButtonProps>`
+export const ToolbarVerticalButton = styled.button.attrs({className: 'vertical-toolbar-button'})<ToolbarButtonProps>`
     position: relative;
     display: inline-flex;
     align-items: center;

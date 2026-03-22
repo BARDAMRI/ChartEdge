@@ -13,19 +13,22 @@ export const GlobalStyle = createGlobalStyle`
         min-width: 0;
         box-sizing: border-box;
         background-color: white;
+        overflow: hidden;
     }
 `;
 
 export const MainAppWindow = styled.div`
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
     width: 100%;
     margin: 0;
     padding: 0;
-    min-height: fit-content;
-    min-width: 0;
+    min-height: 450px;
+    min-width: 350px;
     box-sizing: border-box;
+    overflow: auto;
 `;
 
 export const LowerContainer = styled.div`

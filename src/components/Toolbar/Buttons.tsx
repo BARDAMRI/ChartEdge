@@ -4,10 +4,11 @@ import {ButtonProps, ModeButtonProps} from "../../types/buttons";
 import {ToolbarHorizontalButtons} from "../../styles/SettingsToolbar.styles";
 
 
-export const ModeButton: React.FC<ModeButtonProps> = ({mode, currentMode, onClickHandler, children}) => {
+export const ModeButton: React.FC<ModeButtonProps> = ({mode, currentMode, onClickHandler, children, className}) => {
 
     return (
         <ToolbarVerticalButton
+            className={className}
             $selected={mode === currentMode}
             onClick={() => onClickHandler(mode)}
         >
@@ -16,10 +17,11 @@ export const ModeButton: React.FC<ModeButtonProps> = ({mode, currentMode, onClic
     );
 };
 
-export const Button: React.FC<ButtonProps> = ({onClickHandler, children}) => {
+export const Button: React.FC<ButtonProps> = ({onClickHandler, children, className}) => {
 
     return (
         <ToolbarHorizontalButtons
+            className={className}
             onClick={() => onClickHandler()}
         >
             {children}

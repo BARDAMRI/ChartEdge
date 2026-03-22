@@ -2,6 +2,7 @@ import React, {useMemo, useState, forwardRef, useImperativeHandle, useRef} from 
 import {ChartStage} from './Canvas/ChartStage';
 import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
+import {SettingsModal, SettingsState} from './SettingsModal/SettingsModal';
 import {Interval} from '../types/Interval';
 import {TimeRange} from '../types/Graph';
 import {DeepPartial, DeepRequired} from '../types/types';
@@ -43,7 +44,11 @@ export type SimpleChartEdgeProps = {
     initialTimeDetailLevel?: TimeDetailLevel;
     initialTimeFormat12h?: boolean;
     initialVisibleTimeRange?: TimeRange;
-    chartOptions?: DeepPartial<ChartOptions>
+    chartOptions?: DeepPartial<ChartOptions>;
+    showSidebar?: boolean;
+    showTopBar?: boolean;
+    /** When false hides the settings gear icon even if the top toolbar is visible */
+    showSettingsBar?: boolean;
 };
 
 export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdgeProps>(({
@@ -51,12 +56,23 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                                                                                             initialNumberOfYTicks = 5,
                                                                                             initialTimeDetailLevel = TimeDetailLevel.Auto,
                                                                                             initialTimeFormat12h = false,
-                                                                                            chartOptions = {} as DeepPartial<ChartOptions>
+                                                                                            chartOptions = {} as DeepPartial<ChartOptions>,
+                                                                                            showSidebar = true,
+                                                                                            showTopBar = true,
+                                                                                            showSettingsBar = true,
                                                                                         }, ref) => {
 
     const [finalStyleOptions, setStyleOptions] = useState<DeepRequired<ChartOptions>>(deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions));
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
     const stageRef = useRef<any>(null);
+
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [layoutOptions, setLayoutOptions] = useState({
+        showSidebar,
+        showTopBar,
+        showSettingsBar,
+        timeFormat12h: initialTimeFormat12h,
+    });
 
     useImperativeHandle(ref, () => ({
         addShape: (shape: any) => {
@@ -127,30 +143,95 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         });
         console.log(`Chart type changed to: ${newType}`);
     }
+
+    const handleSaveSettings = (newSettings: SettingsState) => {
+        // Layout-only flags live in layoutOptions
+        setLayoutOptions(prev => ({
+            ...prev,
+            showSidebar: newSettings.showSidebar,
+            showTopBar: newSettings.showTopBar,
+            timeFormat12h: newSettings.timeFormat12h,
+        }));
+
+        // Chart data options: use a deep clone to avoid mutating previous state references
+        setStyleOptions(prev => ({
+            ...prev,
+            base: {
+                ...prev.base,
+                showHistogram: newSettings.showHistogram,
+                style: {
+                    ...prev.base.style,
+                    showGrid: newSettings.showGrid,
+                },
+            },
+            axes: {
+                ...prev.axes,
+                yAxisPosition: newSettings.yAxisPosition,
+                numberOfYTicks: newSettings.numberOfYTicks,
+            },
+        }));
+    };
+
+    // Memoized so the object reference only changes when actual values change.
+    // This prevents the SettingsModal's useEffect from seeing a "new" initialSettings
+    // on every parent render and resetting the user's in-progress edits.
+    const currentSettingsData: SettingsState = useMemo(() => ({
+        showSidebar: layoutOptions.showSidebar,
+        showTopBar: layoutOptions.showTopBar,
+        showHistogram: finalStyleOptions.base.showHistogram,
+        showGrid: finalStyleOptions.base.style.showGrid,
+        timeFormat12h: layoutOptions.timeFormat12h,
+        yAxisPosition: finalStyleOptions.axes.yAxisPosition,
+        numberOfYTicks: finalStyleOptions.axes.numberOfYTicks,
+    }), [
+        layoutOptions.showSidebar,
+        layoutOptions.showTopBar,
+        layoutOptions.timeFormat12h,
+        finalStyleOptions.base.showHistogram,
+        finalStyleOptions.base.style.showGrid,
+        finalStyleOptions.axes.yAxisPosition,
+        finalStyleOptions.axes.numberOfYTicks,
+    ]);
+
     return (
         <ModeProvider>
             <GlobalStyle/>
-            <MainAppWindow className={'simple-chart-window'}>
-                <SettingsArea className={"settings-area"}>
-                    <SettingsToolbar handleChartTypeChange={handleChartTypeChange}
-                                     selectedChartType={finalStyleOptions.base.chartType as ChartType}/>
-                </SettingsArea>
+            <MainAppWindow className={'chart-edge-root'}>
+                {layoutOptions.showTopBar && (
+                    <SettingsArea className={"settings-area"}>
+                        <SettingsToolbar handleChartTypeChange={handleChartTypeChange}
+                                         selectedChartType={finalStyleOptions.base.chartType as ChartType}
+                                         openSettingsMenu={() => setIsSettingsOpen(true)}
+                                         showSettingsBar={layoutOptions.showSettingsBar} />
+                    </SettingsArea>
+                )}
                 <LowerContainer className={"lower-container"}>
-                    <ToolbarArea className={"toolbar-area"}>
-                        <Toolbar/>
-                    </ToolbarArea>
+                    {layoutOptions.showSidebar && (
+                        <ToolbarArea className={"toolbar-area"}>
+                            <Toolbar/>
+                        </ToolbarArea>
+                    )}
                     <ChartStageArea className={"chart-stage-area"}>
                         <ChartStage
                             ref={stageRef}
                             intervalsArray={intervalsArray}
-                            numberOfYTicks={initialNumberOfYTicks}
+                            numberOfYTicks={finalStyleOptions.axes.numberOfYTicks}
                             timeDetailLevel={initialTimeDetailLevel}
-                            timeFormat12h={initialTimeFormat12h}
+                            timeFormat12h={layoutOptions.timeFormat12h}
                             selectedIndex={selectedIndex}
                             chartOptions={finalStyleOptions}
+                            showTopBar={layoutOptions.showTopBar}
+                            showLeftBar={layoutOptions.showSidebar}
                         />
                     </ChartStageArea>
                 </LowerContainer>
+
+                <SettingsModal 
+                    isOpen={isSettingsOpen} 
+                    onClose={() => setIsSettingsOpen(false)} 
+                    onSave={handleSaveSettings} 
+                    initialSettings={currentSettingsData} 
+                />
             </MainAppWindow>
         </ModeProvider>
     );

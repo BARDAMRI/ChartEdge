@@ -30,6 +30,7 @@ type TooltipProps = {
     autoFlip?: boolean;
     delayHideMs?: number;
     children: React.ReactElement<any>;
+    className?: string;
 };
 
 export const Tooltip: React.FC<TooltipProps> = ({
@@ -42,6 +43,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
                                                     autoFlip = true,
                                                     delayHideMs = 120,
                                                     children,
+                                                    className,
                                                 }) => {
     const [open, setOpen] = useState(false);
     const timer = useRef<number | undefined>(undefined);
@@ -238,6 +240,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     return (
         <TooltipWrapper
             ref={containerRef}
+            className={className}
             onMouseEnter={show}
             onMouseLeave={hide}
             onFocus={show}
