@@ -5,7 +5,7 @@ import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {SettingsModal, SettingsState} from './SettingsModal/SettingsModal';
 import {Interval} from '../types/Interval';
 import {TimeRange} from '../types/Graph';
-import {DeepPartial, DeepRequired} from '../types/types';
+import {AxesPosition, DeepPartial, DeepRequired} from '../types/types';
 import {
     ChartOptions,
     ChartType,
@@ -182,7 +182,7 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         showGrid: finalStyleOptions.base.style.showGrid,
         timeFormat12h: layoutOptions.timeFormat12h,
         yAxisPosition: finalStyleOptions.axes.yAxisPosition,
-        numberOfYTicks: finalStyleOptions.axes.numberOfYTicks,
+        numberOfYTicks: finalStyleOptions.axes.numberOfYTicks
     }), [
         layoutOptions.showSidebar,
         layoutOptions.showTopBar,
@@ -191,46 +191,32 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         finalStyleOptions.base.style.showGrid,
         finalStyleOptions.axes.yAxisPosition,
         finalStyleOptions.axes.numberOfYTicks,
-    ]);
+    ]) as SettingsState;
 
     return (
         <ModeProvider>
             <GlobalStyle/>
             <MainAppWindow className={'chart-edge-root'}>
-                {layoutOptions.showTopBar && (
-                    <SettingsArea className={"settings-area"}>
-                        <SettingsToolbar handleChartTypeChange={handleChartTypeChange}
-                                         selectedChartType={finalStyleOptions.base.chartType as ChartType}
-                                         openSettingsMenu={() => setIsSettingsOpen(true)}
-                                         showSettingsBar={layoutOptions.showSettingsBar} />
-                    </SettingsArea>
-                )}
-                <LowerContainer className={"lower-container"}>
-                    {layoutOptions.showSidebar && (
-                        <ToolbarArea className={"toolbar-area"}>
-                            <Toolbar/>
-                        </ToolbarArea>
-                    )}
-                    <ChartStageArea className={"chart-stage-area"}>
-                        <ChartStage
-                            ref={stageRef}
-                            intervalsArray={intervalsArray}
-                            numberOfYTicks={finalStyleOptions.axes.numberOfYTicks}
-                            timeDetailLevel={initialTimeDetailLevel}
-                            timeFormat12h={layoutOptions.timeFormat12h}
-                            selectedIndex={selectedIndex}
-                            chartOptions={finalStyleOptions}
-                            showTopBar={layoutOptions.showTopBar}
-                            showLeftBar={layoutOptions.showSidebar}
-                        />
-                    </ChartStageArea>
-                </LowerContainer>
+                <ChartStage
+                    ref={stageRef}
+                    intervalsArray={intervalsArray}
+                    numberOfYTicks={finalStyleOptions.axes.numberOfYTicks}
+                    timeDetailLevel={initialTimeDetailLevel}
+                    timeFormat12h={layoutOptions.timeFormat12h}
+                    selectedIndex={selectedIndex}
+                    chartOptions={finalStyleOptions}
+                    showTopBar={layoutOptions.showTopBar}
+                    showLeftBar={layoutOptions.showSidebar}
+                    handleChartTypeChange={handleChartTypeChange}
+                    openSettingsMenu={() => setIsSettingsOpen(true)}
+                    showSettingsBar={layoutOptions.showSettingsBar}
+                />
 
-                <SettingsModal 
-                    isOpen={isSettingsOpen} 
-                    onClose={() => setIsSettingsOpen(false)} 
-                    onSave={handleSaveSettings} 
-                    initialSettings={currentSettingsData} 
+                <SettingsModal
+                    isOpen={isSettingsOpen}
+                    onClose={() => setIsSettingsOpen(false)}
+                    onSave={handleSaveSettings}
+                    initialSettings={currentSettingsData}
                 />
             </MainAppWindow>
         </ModeProvider>

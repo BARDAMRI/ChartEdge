@@ -1,8 +1,8 @@
 import styled from 'styled-components';
-import {windowSpread} from "../types/types";
+import {AxesPosition, windowSpread} from "../types/types";
 import XAxis from "../components/Canvas/Axes/XAxis";
 
-export const ChartStageContainer = styled.div`
+export const ChartStageContainer = styled.div<{ $showTopBar: boolean; $showLeftBar: boolean }>`
     display: grid;
     flex: 1 1 auto;
     height: 100%;
@@ -11,27 +11,38 @@ export const ChartStageContainer = styled.div`
     min-height: 0;
     overflow: hidden;
     box-sizing: border-box;
-    grid-template-rows: minmax(0, 1fr) auto;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: ${({$showTopBar}) => $showTopBar ? 'auto 1fr' : '0px 1fr'};
+    grid-template-columns: ${({$showLeftBar}) => $showLeftBar ? 'auto 1fr' : '0px 1fr'};
 `;
 
 export const TopBar = styled.div`
     grid-row: 1;
+    grid-column: 1 / span 2;
+    overflow: hidden;
 `;
 export const LeftBar = styled.div`
+    grid-row: 2;
     grid-column: 1;
+    overflow: hidden;
 `;
 
 interface StageViewProps {
-    $yAxisWidth: number,
-    $xAxisHeight: number
+    $yAxisWidth: number;
+    $xAxisHeight: number;
+    $yAxisPosition: AxesPosition;
 }
 
 export const ChartView = styled.div<StageViewProps>`
     display: grid;
-    grid-template-columns: ${({$yAxisWidth}) => `${$yAxisWidth}px`} minmax(0, 1fr);
+    grid-template-columns: ${({$yAxisPosition, $yAxisWidth}) => 
+        $yAxisPosition === AxesPosition.left 
+            ? `${$yAxisWidth}px minmax(0, 1fr)` 
+            : `minmax(0, 1fr) ${$yAxisWidth}px`
+    };
     grid-template-rows: minmax(0, 1fr) ${({$xAxisHeight}) => `${$xAxisHeight}px`};
     position: relative;
+    grid-row: 2;
+    grid-column: 2;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
@@ -39,11 +50,12 @@ export const ChartView = styled.div<StageViewProps>`
 
 interface XAxisProps {
     xAxisHeight?: number;
+    $yAxisPosition?: AxesPosition;
 }
 
 export const CanvasAxisContainer = styled.div<XAxisProps>`
     display: grid;
-    grid-column: 2;
+    grid-column: ${({$yAxisPosition}) => $yAxisPosition === AxesPosition.right ? 1 : 2};
     grid-row: 1 / span 2;
     grid-template-rows: 1fr ${({xAxisHeight}) => (xAxisHeight ? `${xAxisHeight}px` : '30px')};
     grid-template-columns: 1fr;
@@ -54,24 +66,14 @@ export const CanvasAxisContainer = styled.div<XAxisProps>`
     box-sizing: border-box;
 `;
 
-export const LeftYAxisContainer = styled.div`
+export const YAxisContainer = styled.div<{$yAxisPosition: AxesPosition}>`
     flex: 0 0 auto;
     height: 100%;
     min-width: 0;
     min-height: 0;
     box-sizing: border-box;
-    grid-column: 1;
+    grid-column: ${({$yAxisPosition}) => $yAxisPosition === AxesPosition.left ? 1 : 2};
     grid-row: 1 / span 1;
-`;
-
-export const RightYAxisContainer = styled.div`
-    flex: 0 0 auto;
-    height: 100%;
-    min-width: 0;
-    min-height: 0;
-    box-sizing: border-box;
-    grid-column: 2;
-    grid-row: 1
 `;
 
 

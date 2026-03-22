@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle} from 'react';
+import React, {useEffect, useRef, useState, forwardRef, useImperativeHandle} from 'react';
 import {ChartCanvas, ChartCanvasHandle} from './ChartCanvas';
 import XAxis from "./Axes/XAxis";
 import YAxis from "./Axes/YAxis";
@@ -6,18 +6,21 @@ import {
     CanvasAxisContainer,
     CanvasContainer,
     ChartStageContainer, ChartView,
-    LeftYAxisContainer,
-    RightYAxisContainer,
-    XAxisContainer
+    YAxisContainer,
+    XAxisContainer,
+    TopBar,
+    LeftBar
 } from '../../styles/ChartStage.styles';
 import {PriceRange, TimeRange} from "../../types/Graph";
 import {Interval} from "../../types/Interval";
-import {ChartOptions, TimeDetailLevel} from "../../types/chartOptions";
+import {ChartOptions, ChartType, TimeDetailLevel} from "../../types/chartOptions";
 import {AxesPosition, DeepRequired, windowSpread} from "../../types/types";
 import {useElementSize} from '../../hooks/useElementSize';
 import {findPriceRange} from "./utils/helpers";
 import {IDrawingShape} from "../Drawing/IDrawingShape";
 import {validateAndNormalizeShape} from "../Drawing/drawHelper";
+import {Toolbar} from '../Toolbar/Toolbar';
+import {SettingsToolbar} from '../Toolbar/SettingsToolbar';
 
 
 const median = (nums: number[]): number => {
@@ -82,6 +85,9 @@ interface ChartStageProps {
     chartOptions: DeepRequired<ChartOptions>;
     showTopBar?: boolean;
     showLeftBar?: boolean;
+    handleChartTypeChange: (newType: ChartType) => void;
+    openSettingsMenu: () => void;
+    showSettingsBar: boolean;
 }
 
 export interface ChartStageHandle {
@@ -105,14 +111,17 @@ export interface ChartStageHandle {
 }
 
 export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
-                                                                             intervalsArray,
-                                                                             numberOfYTicks,
-                                                                             timeDetailLevel,
-                                                                             timeFormat12h, selectedIndex,
-                                                                             chartOptions
-                                                                             , showTopBar = true
-                                                                             , showLeftBar = true
-                                                                         }, ref) => {
+                                                                              intervalsArray,
+                                                                              numberOfYTicks,
+                                                                              timeDetailLevel,
+                                                                              timeFormat12h, selectedIndex,
+                                                                              chartOptions,
+                                                                              showTopBar = true,
+                                                                              showLeftBar = true,
+                                                                              handleChartTypeChange,
+                                                                              openSettingsMenu,
+                                                                              showSettingsBar,
+                                                                          }, ref) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const {ref: canvasAreaRef, size: canvasSizes} = useElementSize<HTMLDivElement>();
     const [intervals, setIntervals] = useState<Interval[]>(intervalsArray);
@@ -252,124 +261,84 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
             setDrawings([]);
         }
     }));
-    
+
     return (
         <ChartStageContainer
             ref={containerRef}
             className={"chart-stage-container"}
-            style={{
-                gridTemplateRows: 1,
-                gridTemplateColumns: 1,
-            }}
+            $showTopBar={showTopBar}
+            $showLeftBar={showLeftBar}
         >
+            {showTopBar && (
+                <TopBar className="top-toolbar-cell">
+                    <SettingsToolbar
+                        handleChartTypeChange={handleChartTypeChange}
+                        selectedChartType={chartOptions.base.chartType as ChartType}
+                        openSettingsMenu={openSettingsMenu}
+                        showSettingsBar={showSettingsBar}
+                    />
+                </TopBar>
+            )}
+
+            {showLeftBar && (
+                <LeftBar className="side-toolbar-cell">
+                    <Toolbar />
+                </LeftBar>
+            )}
 
             <ChartView
                 className="chart-main-cell"
                 $yAxisWidth={windowSpread.INITIAL_Y_AXIS_WIDTH}
                 $xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
-                style={{
-                    gridRow: showTopBar ? 2 : 1,
-                    gridColumn: showLeftBar ? 2 : 1,
-                }}
+                $yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
             >
-                {chartOptions.axes.yAxisPosition === AxesPosition.left ? (
-                    <>
-                        <LeftYAxisContainer
-                            className="left-y-axis-container"
-                            style={{width: `${windowSpread.INITIAL_Y_AXIS_WIDTH}px`}}
-                        >
-                            <YAxis
-                                yAxisPosition={AxesPosition.left}
-                                xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
-                                minPrice={visiblePriceRange.min}
-                                maxPrice={visiblePriceRange.max}
-                                numberOfYTicks={numberOfYTicks}
+                <YAxisContainer
+                    className={chartOptions.axes.yAxisPosition === AxesPosition.left ? "left-y-axis-container" : "right-y-axis-container"}
+                    $yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
+                    style={{width: `${windowSpread.INITIAL_Y_AXIS_WIDTH}px`}}
+                >
+                    <YAxis
+                        yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
+                        xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
+                        minPrice={visiblePriceRange.min}
+                        maxPrice={visiblePriceRange.max}
+                        numberOfYTicks={numberOfYTicks}
+                    />
+                </YAxisContainer>
+
+                <CanvasAxisContainer
+                    className="canvas-axis-container"
+                    $yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
+                >
+                    <CanvasContainer ref={canvasAreaRef} className="canvas-container">
+                        {canvasSizes?.width > 0 && canvasSizes?.height > 0 && (
+                            <ChartCanvas
+                                ref={canvasRef}
+                                intervalsArray={intervals}
+                                drawings={drawings}
+                                setDrawings={setDrawings}
+                                selectedIndex={selectedIndex}
+                                visibleRange={visibleRange}
+                                setVisibleRange={updateVisibleRange}
+                                visiblePriceRange={visiblePriceRange}
+                                chartOptions={chartOptions}
+                                canvasSizes={canvasSizes}
+                                windowSpread={windowSpread}
                             />
-                        </LeftYAxisContainer>
+                        )}
+                    </CanvasContainer>
 
-                        <CanvasAxisContainer
-                            className="canvas-axis-container"
-                        >
-                            <CanvasContainer ref={canvasAreaRef} className="canvas-container">
-                                {canvasSizes?.width > 0 && canvasSizes?.height > 0 && (
-                                    <ChartCanvas
-                                        ref={canvasRef}
-                                        intervalsArray={intervals}
-                                        drawings={drawings}
-                                        setDrawings={setDrawings}
-                                        selectedIndex={selectedIndex}
-                                        visibleRange={visibleRange}
-                                        setVisibleRange={updateVisibleRange}
-                                        visiblePriceRange={visiblePriceRange}
-                                        chartOptions={chartOptions}
-                                        canvasSizes={canvasSizes}
-                                        windowSpread={windowSpread}
-                                    />
-                                )}
-                            </CanvasContainer>
-
-                            <XAxisContainer className="x-axis-container">
-                                <XAxis
-                                    canvasSizes={canvasSizes}
-                                    parentContainerRef={containerRef}
-                                    timeDetailLevel={timeDetailLevel}
-                                    timeFormat12h={timeFormat12h}
-                                    visibleRange={visibleRange}
-                                    xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
-                                />
-                            </XAxisContainer>
-                        </CanvasAxisContainer>
-                    </>
-                ) : (
-                    <>
-                        <CanvasAxisContainer
-                            className="canvas-axis-container"
-                            style={{gridColumn: 1, gridRow: '1 / span 2'}}
-                        >
-                            <CanvasContainer ref={canvasAreaRef} className="canvas-container">
-                                {canvasSizes?.width > 0 && canvasSizes?.height > 0 && (
-                                    <ChartCanvas
-                                        ref={canvasRef}
-                                        intervalsArray={intervals}
-                                        drawings={drawings}
-                                        setDrawings={setDrawings}
-                                        selectedIndex={selectedIndex}
-                                        visibleRange={visibleRange}
-                                        setVisibleRange={updateVisibleRange}
-                                        visiblePriceRange={visiblePriceRange}
-                                        chartOptions={chartOptions}
-                                        canvasSizes={canvasSizes}
-                                        windowSpread={windowSpread}
-                                    />
-                                )}
-                            </CanvasContainer>
-
-                            <XAxisContainer className="x-axis-container">
-                                <XAxis
-                                    canvasSizes={canvasSizes}
-                                    parentContainerRef={containerRef}
-                                    timeDetailLevel={timeDetailLevel}
-                                    timeFormat12h={timeFormat12h}
-                                    visibleRange={visibleRange}
-                                    xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
-                                />
-                            </XAxisContainer>
-                        </CanvasAxisContainer>
-
-                        <RightYAxisContainer
-                            className="right-y-axis-container"
-                            style={{width: `${windowSpread.INITIAL_Y_AXIS_WIDTH}px`}}
-                        >
-                            <YAxis
-                                yAxisPosition={AxesPosition.right}
-                                xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
-                                minPrice={visiblePriceRange.min}
-                                maxPrice={visiblePriceRange.max}
-                                numberOfYTicks={numberOfYTicks}
-                            />
-                        </RightYAxisContainer>
-                    </>
-                )}
+                    <XAxisContainer className="x-axis-container">
+                        <XAxis
+                            canvasSizes={canvasSizes}
+                            parentContainerRef={containerRef}
+                            timeDetailLevel={timeDetailLevel}
+                            timeFormat12h={timeFormat12h}
+                            visibleRange={visibleRange}
+                            xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
+                        />
+                    </XAxisContainer>
+                </CanvasAxisContainer>
             </ChartView>
         </ChartStageContainer>
     );

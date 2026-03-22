@@ -10,7 +10,7 @@ import {
     withOverlayStyle,
     OverlayPriceKey,
     RectangleShape,
-    LineShape
+    LineShape, AxesPosition
 } from 'chartedge';
 import './App.css';
 
@@ -252,6 +252,10 @@ export default function App() {
                         // },
                         // overlayKinds: [OverlayKind.sma, OverlayKind.bbands_lower],
                         showHistogram: true,
+
+                    },
+                    axes: {
+                        yAxisPosition: AxesPosition.left
                     }
                 }}
             />
