@@ -12,6 +12,7 @@ import {
     ModalHeader,
     ModalOverlay,
     NumberInput,
+    ColorInput,
     SectionTitle,
     SelectDropdown,
     SubMenuPane,
@@ -32,9 +33,14 @@ export interface SettingsState {
     timeFormat12h: boolean;
     yAxisPosition: AxesPosition;
     numberOfYTicks: number;
+    backgroundColor: string;
+    textColor: string;
+    bullColor: string;
+    bearColor: string;
+    lineColor: string;
 }
 
-type Category = 'chart' | 'axes' | 'time' | 'layout';
+type Category = 'chart' | 'axes' | 'time' | 'layout' | 'colors';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -53,6 +59,7 @@ const CATEGORIES: { id: Category; icon: string; label: string }[] = [
     { id: 'axes',   icon: '📐', label: 'Axes'         },
     { id: 'time',   icon: '⏱',  label: 'Time'         },
     { id: 'layout', icon: '🖥',  label: 'Layout'       },
+    { id: 'colors', icon: '🎨', label: 'Colors'       },
 ];
 
 const CATEGORY_TITLE: Record<Category, string> = {
@@ -60,7 +67,9 @@ const CATEGORY_TITLE: Record<Category, string> = {
     axes:   'Axes',
     time:   'Time',
     layout: 'Layout',
+    colors: 'Colors',
 };
+
 
 /* ──────────────────────────────────────────────────
  *  Component
@@ -136,7 +145,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <SelectDropdown
                                 className="settings-select-dropdown"
                                 value={settings.yAxisPosition}
-                                onChange={e => change('yAxisPosition', parseInt(e.target.value))}
+                                onChange={(e: any) => change('yAxisPosition', parseInt(e.target.value))}
                             >
                                 <option value={AxesPosition.right}>Right</option>
                                 <option value={AxesPosition.left}>Left</option>
@@ -148,7 +157,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 className="settings-number-input"
                                 type="number" min="2" max="30"
                                 value={settings.numberOfYTicks}
-                                onChange={e => change('numberOfYTicks', parseInt(e.target.value) || 2)}
+                                onChange={(e: any) => change('numberOfYTicks', parseInt(e.target.value) || 2)}
                             />
                         </FormRow>
                     </SubMenuPane>
@@ -183,6 +192,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </FormRow>
                     </SubMenuPane>
                 );
+            case 'colors':
+                return (
+                    <SubMenuPane $back={goingBack} className="settings-submenu-pane">
+                        <SectionTitle className="settings-section-title">Theme Colors</SectionTitle>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label">Background Color</FormLabel>
+                            <ColorInput
+                                type="color"
+                                value={settings.backgroundColor}
+                                onChange={(e: any) => change('backgroundColor', e.target.value)}
+                            />
+                        </FormRow>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label">Text & Axis Color</FormLabel>
+                            <ColorInput
+                                type="color"
+                                value={settings.textColor}
+                                onChange={(e: any) => change('textColor', e.target.value)}
+                            />
+                        </FormRow>
+                        <SectionTitle className="settings-section-title">Chart Elements</SectionTitle>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label">Bull (Up) Color</FormLabel>
+                            <ColorInput
+                                type="color"
+                                value={settings.bullColor}
+                                onChange={(e: any) => change('bullColor', e.target.value)}
+                            />
+                        </FormRow>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label">Bear (Down) Color</FormLabel>
+                            <ColorInput
+                                type="color"
+                                value={settings.bearColor}
+                                onChange={(e: any) => change('bearColor', e.target.value)}
+                            />
+                        </FormRow>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label">Line Color</FormLabel>
+                            <ColorInput
+                                type="color"
+                                value={settings.lineColor}
+                                onChange={(e: any) => change('lineColor', e.target.value)}
+                            />
+                        </FormRow>
+                    </SubMenuPane>
+                );
             default:
                 return null;
         }
@@ -190,7 +246,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     return (
         <ModalOverlay onClick={onClose} className="settings-modal-overlay">
-            <ModalContainer onClick={e => e.stopPropagation()} className="settings-modal-container">
+            <ModalContainer onClick={(e: any) => e.stopPropagation()} className="settings-modal-container">
 
                 {/* ── Header ── */}
                 <ModalHeader className="settings-header">

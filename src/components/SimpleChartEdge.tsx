@@ -1,4 +1,4 @@
-import React, {useMemo, useState, forwardRef, useImperativeHandle, useRef} from 'react';
+import React, {useEffect, useMemo, useState, forwardRef, useImperativeHandle, useRef} from 'react';
 import {ChartStage} from './Canvas/ChartStage';
 import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
@@ -73,6 +73,21 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         showSettingsBar,
         timeFormat12h: initialTimeFormat12h,
     });
+
+    useEffect(() => {
+        setStyleOptions(prev => deepMerge(prev, chartOptions));
+    }, [chartOptions]);
+
+    useEffect(() => {
+        setLayoutOptions(prev => ({
+            ...prev,
+            showSidebar: showSidebar ?? prev.showSidebar,
+            showTopBar: showTopBar ?? prev.showTopBar,
+            showSettingsBar: showSettingsBar ?? prev.showSettingsBar,
+        }));
+    }, [showSidebar, showTopBar, showSettingsBar]);
+
+
 
     useImperativeHandle(ref, () => ({
         addShape: (shape: any) => {
@@ -162,6 +177,32 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                 style: {
                     ...prev.base.style,
                     showGrid: newSettings.showGrid,
+                    backgroundColor: newSettings.backgroundColor,
+                    axes: {
+                        ...prev.base.style.axes,
+                        textColor: newSettings.textColor,
+                    },
+                    candles: {
+                        ...prev.base.style.candles,
+                        bullColor: newSettings.bullColor,
+                        upColor: newSettings.bullColor,
+                        bearColor: newSettings.bearColor,
+                        downColor: newSettings.bearColor,
+                    },
+                    histogram: {
+                        ...prev.base.style.histogram,
+                        bullColor: newSettings.bullColor,
+                        bearColor: newSettings.bearColor,
+                    },
+                    bar: {
+                        ...prev.base.style.bar,
+                        bullColor: newSettings.bullColor,
+                        bearColor: newSettings.bearColor,
+                    },
+                    line: {
+                        ...prev.base.style.line,
+                        color: newSettings.lineColor,
+                    }
                 },
             },
             axes: {
@@ -182,7 +223,12 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         showGrid: finalStyleOptions.base.style.showGrid,
         timeFormat12h: layoutOptions.timeFormat12h,
         yAxisPosition: finalStyleOptions.axes.yAxisPosition,
-        numberOfYTicks: finalStyleOptions.axes.numberOfYTicks
+        numberOfYTicks: finalStyleOptions.axes.numberOfYTicks,
+        backgroundColor: finalStyleOptions.base.style.backgroundColor,
+        textColor: finalStyleOptions.base.style.axes.textColor,
+        bullColor: finalStyleOptions.base.style.candles.bullColor,
+        bearColor: finalStyleOptions.base.style.candles.bearColor,
+        lineColor: finalStyleOptions.base.style.line.color,
     }), [
         layoutOptions.showSidebar,
         layoutOptions.showTopBar,
@@ -191,6 +237,11 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         finalStyleOptions.base.style.showGrid,
         finalStyleOptions.axes.yAxisPosition,
         finalStyleOptions.axes.numberOfYTicks,
+        finalStyleOptions.base.style.backgroundColor,
+        finalStyleOptions.base.style.axes.textColor,
+        finalStyleOptions.base.style.candles.bullColor,
+        finalStyleOptions.base.style.candles.bearColor,
+        finalStyleOptions.base.style.line.color,
     ]) as SettingsState;
 
     return (

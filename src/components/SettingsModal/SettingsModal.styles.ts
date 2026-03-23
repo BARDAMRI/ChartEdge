@@ -10,7 +10,8 @@ const slideInRight = keyframes`
     to   { transform: translateX(0);     opacity: 1; }
 `;
 
-/* ─── Overlay: covers the full chart container ───────────────────────────── */
+
+
 export const ModalOverlay = styled.div`
     position: absolute;
     inset: 0;
@@ -273,6 +274,26 @@ export const NumberInput = styled.input`
     outline: none;
     &:focus { border-color: rgba(62,197,255,0.8); box-shadow: 0 0 0 2px rgba(62,197,255,0.2); }
 `;
+
+export const ColorInput = styled.input`
+    flex-shrink: 0;
+    width: clamp(24px, 4vmin, 32px);
+    height: clamp(24px, 4vmin, 32px);
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    outline: none;
+    &::-webkit-color-swatch-wrapper {
+        padding: 0;
+    }
+    &::-webkit-color-swatch {
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+    }
+`;
+
 
 export const SelectDropdown = styled.select`
     flex-shrink: 0;
