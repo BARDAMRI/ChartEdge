@@ -9,7 +9,8 @@ import {
     YAxisContainer,
     XAxisContainer,
     TopBar,
-    LeftBar
+    LeftBar,
+    FloatingSettingsButton
 } from '../../styles/ChartStage.styles';
 import {PriceRange, TimeRange} from "../../types/Graph";
 import {Interval} from "../../types/Interval";
@@ -21,6 +22,7 @@ import {IDrawingShape} from "../Drawing/IDrawingShape";
 import {validateAndNormalizeShape} from "../Drawing/drawHelper";
 import {Toolbar} from '../Toolbar/Toolbar';
 import {SettingsToolbar} from '../Toolbar/SettingsToolbar';
+import {IconGear} from "../Toolbar/icons";
 
 
 const median = (nums: number[]): number => {
@@ -310,6 +312,15 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
                     className="canvas-axis-container"
                     $yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
                 >
+                    {!showTopBar && showSettingsBar && (
+                        <FloatingSettingsButton
+                            $yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
+                            onClick={openSettingsMenu}
+                            className="floating-settings-btn"
+                        >
+                            <IconGear />
+                        </FloatingSettingsButton>
+                    )}
                     <CanvasContainer ref={canvasAreaRef} className="canvas-container">
                         {canvasSizes?.width > 0 && canvasSizes?.height > 0 && (
                             <ChartCanvas
