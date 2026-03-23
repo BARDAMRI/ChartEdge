@@ -18,6 +18,7 @@ import { ChartType } from "../../types/chartOptions";
 import { Placement, TooltipAlign, TooltipAxis } from "../../types/buttons";
 import { Tooltip } from "../Tooltip";
 import { ChartTypeSelectDropdown } from "./ChartTypeSelectDropdown";
+import { translate, getLocaleDefaults } from '../../utils/i18n';
 
 /* Minimum toolbar width (px) below which the gear/settings icon is hidden */
 const MIN_WIDTH_FOR_SETTINGS_ICON = 260;
@@ -28,6 +29,8 @@ interface SettingToolbarProps {
     openSettingsMenu: () => void;
     /** When false the entire toolbar renders nothing */
     showSettingsBar?: boolean;
+    language?: string;
+    locale?: string;
 }
 
 export const SettingsToolbar = ({
@@ -35,10 +38,14 @@ export const SettingsToolbar = ({
     selectedChartType,
     openSettingsMenu,
     showSettingsBar = true,
+    language = 'en',
+    locale = 'en-US',
 }: SettingToolbarProps) => {
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [toolbarWidth, setToolbarWidth] = useState<number>(Infinity);
+
+    const direction = getLocaleDefaults(locale).direction;
 
     useEffect(() => {
         const el = containerRef.current;
@@ -72,52 +79,64 @@ export const SettingsToolbar = ({
     return (
         <SettingsToolbarContainer className="settings-toolbar-container" ref={containerRef}>
             <SettingToolbarContent className="settings-toolbar-content">
-                <SymbolInput className="settings-symbol-input" name="symbol-input" placeholder="Symbol" />
+                <SymbolInput 
+                    className="settings-symbol-input" 
+                    name="symbol-input" 
+                    placeholder={translate('symbol_placeholder', language)} 
+                    dir={direction}
+                />
                 <ChartTypeSelectDropdown
                     className="settings-chart-type-dropdown"
                     value={selectedChartType || ChartType.Candlestick}
                     onChange={handleChartTypeChange}
                 />
                 {showGear && (
-                    <Tooltip content="Settings" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                        axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-gear">
+                    <Tooltip content={translate('settings', language)} tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                        axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-gear" 
+                        dir={direction}>
                         <Button className="settings-gear-button" onClickHandler={openSettingsMenu}>
                             <IconGear />
                         </Button>
                     </Tooltip>
                 )}
-                <Tooltip content="Download" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-camera">
+                <Tooltip content={translate('download', language)} tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-camera" 
+                    dir={direction}>
                     <Button className="settings-camera-button" onClickHandler={handleDownload}>
                         <IconCamera />
                     </Button>
                 </Tooltip>
-                <Tooltip content="Search" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-search">
+                <Tooltip content={translate('search', language)} tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-search" 
+                    dir={direction}>
                     <Button className="settings-search-button" onClickHandler={() => {}}>
                         <IconSearch />
                     </Button>
                 </Tooltip>
-                <Tooltip content="Range" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-range">
+                <Tooltip content={translate('range', language)} tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-range" 
+                    dir={direction}>
                     <Button className="settings-range-button" onClickHandler={() => {}}>
                         <IconRange />
                     </Button>
                 </Tooltip>
-                <Tooltip content="Export" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-download">
+                <Tooltip content={translate('export', language)} tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-download" 
+                    dir={direction}>
                     <Button className="settings-download-button" onClickHandler={() => {}}>
                         <IconDownload />
                     </Button>
                 </Tooltip>
-                <Tooltip content="Refresh" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-refresh">
+                <Tooltip content={translate('refresh', language)} tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-refresh" 
+                    dir={direction}>
                     <Button className="settings-refresh-button" onClickHandler={() => {}}>
                         <IconRefresh />
                     </Button>
                 </Tooltip>
-                <Tooltip content="Toggle Theme" tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-theme">
+                <Tooltip content={translate('toggle_theme', language)} tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
+                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-theme" 
+                    dir={direction}>
                     <Button className="settings-theme-button" onClickHandler={() => {}}>
                         <IconTheme />
                     </Button>

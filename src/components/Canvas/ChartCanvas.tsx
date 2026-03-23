@@ -37,6 +37,8 @@ import {xToTime, yToPrice} from "./utils/GraphHelpers";
 import {Drawing} from "../Drawing/types";
 import {IDrawingShape} from "../Drawing/IDrawingShape";
 import {createShape} from "../Drawing/drawHelper";
+import {formatNumber} from './utils/formatters';
+import {format as formatDate} from 'date-fns';
 
 interface ChartCanvasProps {
     intervalsArray: Interval[];
@@ -654,11 +656,32 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
             </ChartingContainer>
 
             {hoveredCandle && !isPanning && !mode && !isWheeling && (
-                <HoverTooltip className={'intervals-data-tooltip'} $isPositive={hoveredCandle.c > hoveredCandle.o}>
-                    Time: {new Date(hoveredCandle.t * 1000).toLocaleString()} |
-                    O: {hoveredCandle.o} | H: {hoveredCandle.h} | L: {hoveredCandle.l} | C: {hoveredCandle.c}
-                    {hoveredCandle.v !== undefined && ` | V: ${hoveredCandle.v}`}
-                </HoverTooltip>
+            <HoverTooltip className={'intervals-data-tooltip'} $isPositive={hoveredCandle.c > hoveredCandle.o}>
+                {(() => {
+                    const axes = chartOptions.base.style.axes;
+                    const frac   = axes.numberFractionDigits ?? 2;
+                    const dec    = axes.decimalSeparator   ?? '.';
+                    const thou   = axes.thousandsSeparator ?? ',';
+                    const dateFmt = (axes as any).dateFormat ?? 'MMM d';
+                    const fmt = (v: number) => formatNumber(v, frac, dec, thou);
+                    let dateStr: string;
+                    try {
+                        dateStr = formatDate(new Date(hoveredCandle.t * 1000), dateFmt);
+                    } catch {
+                        dateStr = new Date(hoveredCandle.t * 1000).toLocaleDateString();
+                    }
+                    return (
+                        <>
+                            {dateStr} &nbsp;|&nbsp;
+                            O: {fmt(hoveredCandle.o)}&nbsp;
+                            H: {fmt(hoveredCandle.h)}&nbsp;
+                            L: {fmt(hoveredCandle.l)}&nbsp;
+                            C: {fmt(hoveredCandle.c)}
+                            {hoveredCandle.v !== undefined && ` | V: ${fmt(hoveredCandle.v)}`}
+                        </>
+                    );
+                })()}
+            </HoverTooltip>
             )}
         </InnerCanvasContainer>
     );

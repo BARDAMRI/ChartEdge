@@ -104,6 +104,12 @@ export const BackArrowIcon = styled.div`
     flex-shrink: 0;
     box-sizing: content-box; 
     margin-left: clamp(2px, 0.5vmin, 4px);
+
+    [dir='rtl'] & {
+        transform: rotate(-135deg);
+        margin-left: 0;
+        margin-right: clamp(2px, 0.5vmin, 4px);
+    }
 `;
 
 /* ─── Body (scrollable) ──────────────────────────────────────────────────── */

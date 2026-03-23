@@ -13,6 +13,7 @@ import {
 } from '../types/chartOptions';
 import {ModeProvider} from '../contexts/ModeContext';
 import {deepMerge} from "../utils/deepMerge";
+import {deepEqual} from "../utils/deepEqual";
 import {
     GlobalStyle,
     MainAppWindow,
@@ -75,7 +76,10 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
     });
 
     useEffect(() => {
-        setStyleOptions(prev => deepMerge(prev, chartOptions));
+        const merged = deepMerge(finalStyleOptions, chartOptions);
+        if (!deepEqual(merged, finalStyleOptions)) {
+            setStyleOptions(merged);
+        }
     }, [chartOptions]);
 
     useEffect(() => {
@@ -171,6 +175,11 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         // Chart data options: use a deep clone to avoid mutating previous state references
         setStyleOptions(prev => ({
             ...prev,
+            axes: {
+                ...prev.axes,
+                yAxisPosition: newSettings.yAxisPosition,
+                numberOfYTicks: newSettings.numberOfYTicks,
+            },
             base: {
                 ...prev.base,
                 showHistogram: newSettings.showHistogram,
@@ -181,6 +190,12 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                     axes: {
                         ...prev.base.style.axes,
                         textColor: newSettings.textColor,
+                        numberFractionDigits: newSettings.fractionDigits,
+                        decimalSeparator: newSettings.decimalSeparator,
+                        thousandsSeparator: newSettings.thousandsSeparator,
+                        dateFormat: newSettings.dateFormat,
+                        locale: newSettings.locale,
+                        language: newSettings.language,
                     },
                     candles: {
                         ...prev.base.style.candles,
@@ -202,13 +217,8 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                     line: {
                         ...prev.base.style.line,
                         color: newSettings.lineColor,
-                    }
+                    },
                 },
-            },
-            axes: {
-                ...prev.axes,
-                yAxisPosition: newSettings.yAxisPosition,
-                numberOfYTicks: newSettings.numberOfYTicks,
             },
         }));
     };
@@ -229,6 +239,12 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         bullColor: finalStyleOptions.base.style.candles.bullColor,
         bearColor: finalStyleOptions.base.style.candles.bearColor,
         lineColor: finalStyleOptions.base.style.line.color,
+        fractionDigits: finalStyleOptions.base.style.axes.numberFractionDigits ?? 2,
+        decimalSeparator: finalStyleOptions.base.style.axes.decimalSeparator ?? '.',
+        thousandsSeparator: finalStyleOptions.base.style.axes.thousandsSeparator ?? ',',
+        dateFormat: finalStyleOptions.base.style.axes.dateFormat ?? 'MMM d',
+        locale: finalStyleOptions.base.style.axes.locale ?? 'en-US',
+        language: finalStyleOptions.base.style.axes.language ?? 'en',
     }), [
         layoutOptions.showSidebar,
         layoutOptions.showTopBar,
@@ -242,6 +258,12 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         finalStyleOptions.base.style.candles.bullColor,
         finalStyleOptions.base.style.candles.bearColor,
         finalStyleOptions.base.style.line.color,
+        finalStyleOptions.base.style.axes.numberFractionDigits,
+        finalStyleOptions.base.style.axes.decimalSeparator,
+        finalStyleOptions.base.style.axes.thousandsSeparator,
+        finalStyleOptions.base.style.axes.dateFormat,
+        finalStyleOptions.base.style.axes.locale,
+        finalStyleOptions.base.style.axes.language,
     ]) as SettingsState;
 
     return (

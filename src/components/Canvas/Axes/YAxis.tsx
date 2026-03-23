@@ -9,6 +9,10 @@ interface YAxisProps {
     minPrice: number;
     maxPrice: number;
     numberOfYTicks: number;
+    fractionDigits: number;
+    decimalSeparator: string;
+    thousandsSeparator: string;
+    locale: string;
 }
 
 export default function YAxis({
@@ -16,6 +20,10 @@ export default function YAxis({
                                   minPrice,
                                   maxPrice,
                                   numberOfYTicks,
+                                  fractionDigits,
+                                  decimalSeparator,
+                                  thousandsSeparator,
+                                  locale
                               }: YAxisProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -52,7 +60,11 @@ export default function YAxis({
             'black',
             '12px Arial',
             5,
-            5
+            5,
+            fractionDigits,
+            decimalSeparator,
+            thousandsSeparator,
+            locale
         );
     };
 

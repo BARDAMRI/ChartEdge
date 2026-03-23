@@ -16,6 +16,7 @@ import {
 import {DrawTicksOptions, Tick, TimeRange} from "../../../types/Graph";
 import {TimeDetailLevel} from "../../../types/chartOptions";
 import {AlignOptions, AxesPosition} from "../../../types/types";
+import {formatNumber} from "./formatters";
 
 const TICK_FONT_SIZE_PX = 12;
 
@@ -159,7 +160,8 @@ export function generateAndDrawTimeTicks(
     xAxisHeight: number,
     strokeStyle: string,
     timeDetailLevel: TimeDetailLevel,
-    options: DrawTicksOptions
+    options: DrawTicksOptions,
+    locale: string = 'en-US'
 ): Tick[] {
     const {start, end} = timeRange;
     const canvasWidth = canvas.clientWidth;
@@ -199,7 +201,11 @@ export function generateAndDrawYTicks(
     labelColor: string = 'black',
     labelFont: string = '12px Arial',
     tickLength: number = 5,
-    labelOffset: number = 5
+    labelOffset: number = 5,
+    fractionDigits: number = 2,
+    decimalSeparator: string = '.',
+    thousandsSeparator: string = ',',
+    locale: string = 'en-US'
 ): void {
     const ctx = canvas.getContext('2d');
     if (!ctx) {
@@ -221,7 +227,7 @@ export function generateAndDrawYTicks(
         const value = maxValue - ratio * range;
         return {
             y,
-            label: value.toFixed(2)
+            label: formatNumber(value, fractionDigits, decimalSeparator, thousandsSeparator, locale)
         };
     });
 

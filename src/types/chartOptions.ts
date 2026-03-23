@@ -80,9 +80,12 @@ export interface AxesStyleOptions {
     font: string;
     lineColor: string;
     lineWidth: number;
-    numberLocale: string;
-    dateLocale: string;
+    locale: string;
+    language: string;
     numberFractionDigits: number; // Number of decimal places to format axis values
+    decimalSeparator: string;
+    thousandsSeparator: string;
+    dateFormat: string;
 }
 
 export type StyleOptions = {

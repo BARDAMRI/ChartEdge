@@ -57,9 +57,12 @@ const AXES_DEFAULT_STYLE: DeepRequired<AxesStyleOptions> = {
     font: "12px Arial",
     lineColor: "#9e9e9e",
     lineWidth: 1,
-    numberLocale: "en-US",
-    dateLocale: "en-US",
+    locale: "en-US",
+    language: "en",
     numberFractionDigits: 2,
+    decimalSeparator: ".",
+    thousandsSeparator: ",",
+    dateFormat: "MMM d",
 }
 const DRAWINGS_DEFAULT_STYLE: DeepRequired<DrawingStyleOptions> = {
     lineColor: "#2196f3", // A nice blue

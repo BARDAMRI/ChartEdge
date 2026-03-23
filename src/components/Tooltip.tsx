@@ -31,6 +31,7 @@ type TooltipProps = {
     delayHideMs?: number;
     children: React.ReactElement<any>;
     className?: string;
+    dir?: 'ltr' | 'rtl';
 };
 
 export const Tooltip: React.FC<TooltipProps> = ({
@@ -44,6 +45,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
                                                     delayHideMs = 120,
                                                     children,
                                                     className,
+                                                    dir,
                                                 }) => {
     const [open, setOpen] = useState(false);
     const timer = useRef<number | undefined>(undefined);
@@ -265,6 +267,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
                                 $shadow={t.shadow}
                                 $placement={effectivePlacement}
                                 $arrowSize={arrowSize}
+                                dir={dir}
                             >
                                 <TooltipArrow
                                     $placement={effectivePlacement}

@@ -278,13 +278,18 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
                         selectedChartType={chartOptions.base.chartType as ChartType}
                         openSettingsMenu={openSettingsMenu}
                         showSettingsBar={showSettingsBar}
+                        language={chartOptions.base.style.axes.language}
+                        locale={chartOptions.base.style.axes.locale}
                     />
                 </TopBar>
             )}
 
             {showLeftBar && (
                 <LeftBar className="side-toolbar-cell">
-                    <Toolbar />
+                    <Toolbar 
+                        language={chartOptions.base.style.axes.language}
+                        locale={chartOptions.base.style.axes.locale}
+                    />
                 </LeftBar>
             )}
 
@@ -305,6 +310,10 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
                         minPrice={visiblePriceRange.min}
                         maxPrice={visiblePriceRange.max}
                         numberOfYTicks={numberOfYTicks}
+                        fractionDigits={chartOptions.base.style.axes.numberFractionDigits ?? 2}
+                        decimalSeparator={chartOptions.base.style.axes.decimalSeparator || '.'}
+                        thousandsSeparator={chartOptions.base.style.axes.thousandsSeparator || ','}
+                        locale={chartOptions.base.style.axes.locale || 'en-US'}
                     />
                 </YAxisContainer>
 
@@ -347,6 +356,8 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
                             timeFormat12h={timeFormat12h}
                             visibleRange={visibleRange}
                             xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
+                            dateFormat={chartOptions.base.style.axes.dateFormat || 'MMM d'}
+                            locale={chartOptions.base.style.axes.locale || 'en-US'}
                         />
                     </XAxisContainer>
                 </CanvasAxisContainer>
