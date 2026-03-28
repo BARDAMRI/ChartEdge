@@ -3,7 +3,7 @@ import styled, { createGlobalStyle } from 'styled-components';
 /**
  * Global styles applied to html, body and root element
  */
-export const GlobalStyle = createGlobalStyle`
+export const GlobalStyle = createGlobalStyle<{ $pageBackground?: string }>`
     html, body, #root {
         height: 100%;
         width: 100%;
@@ -12,7 +12,7 @@ export const GlobalStyle = createGlobalStyle`
         min-height: 0;
         min-width: 0;
         box-sizing: border-box;
-        background-color: white;
+        background-color: ${(p) => p.$pageBackground ?? '#ffffff'};
         overflow: hidden;
     }
 `;

@@ -21,7 +21,9 @@ export const TopBar = styled.div`
     padding-bottom: 5px;
     min-height: 0;
     min-width: 0;
-    overflow: hidden;
+    /* Let toolbar popovers (chart type) extend below the bar instead of being clipped */
+    overflow: visible;
+    z-index: 2;
 `;
 export const LeftBar = styled.div`
     grid-row: 2;

@@ -1,10 +1,31 @@
 // Props and Types
-export type {SimpleChartEdgeProps} from './components/SimpleChartEdge';
+export type {SimpleChartEdgeProps, SimpleChartEdgeHandle} from './components/SimpleChartEdge';
 export type {Interval} from './types/Interval';
+export type {LiveDataPlacement, LiveDataApplyResult} from './types/liveData';
+export {applyLiveDataMerge, normalizeInterval, normalizeIntervals, dedupeByTimePreferLast} from './utils/liveDataMerge';
+export type {ChartSnapshotMeta} from './utils/captureChartRegion';
+export {
+    buildChartSnapshotFileName,
+    sanitizeChartSnapshotToken,
+    contrastingFooterTextColor,
+    captureChartRegionToPngDataUrl,
+} from './utils/captureChartRegion';
 export type {TimeRange} from './types/Graph';
 export type {ChartDimensionsData} from './types/Graph';
 export type {OverlayWithCalc, OverlaySeries, OverlayOptions} from './types/overlay';
-export type {ShapeBaseArgs, Drawing, ShapeType} from './components/Drawing/types';
+export type {ShapeBaseArgs, Drawing} from './components/Drawing/types';
+export {ShapeType} from './components/Drawing/types';
+export type {DrawingSpec, DrawingPatch, DrawingInput} from './components/Drawing/drawHelper';
+export {drawingFromSpec, applyDrawingPatch, isDrawingPatch} from './components/Drawing/drawHelper';
+export type {DrawingSnapshot, DrawingQuery, DrawingWithZIndex} from './components/Drawing/drawingQuery';
+export {
+    shapeToSnapshot,
+    filterDrawingsWithMeta,
+    queryDrawingsToSnapshots,
+    filterDrawingInstances,
+} from './components/Drawing/drawingQuery';
+export type {ChartContextInfo} from './types/chartContext';
+export type {ChartStageHandle} from './components/Canvas/ChartStage';
 export type {DrawingStyleOptions, DrawingPoint, CanvasPoint} from './types/Drawings';
 export type {IDrawingShape} from './components/Drawing/IDrawingShape';
 
@@ -26,6 +47,9 @@ export {OverlayPriceKey, OverlayKind} from './types/overlay';
 
 // Components
 export {SimpleChartEdge} from './components/SimpleChartEdge';
+export {ShapePropertiesModal} from './components/ShapePropertiesModal/ShapePropertiesModal';
+export type {ShapePropertiesFormState} from './components/ShapePropertiesModal/applyShapeProperties';
+export type {ModalThemeVariant} from './components/SettingsModal/SettingsModal.styles';
 export {ModeProvider, useMode} from './contexts/ModeContext';
 export {withOverlayStyle, OverlaySpecs, overlay} from './components/Canvas/utils/drawOverlay';
 export {GlobalStyle} from './styles/App.styles';

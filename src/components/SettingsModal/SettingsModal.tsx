@@ -11,6 +11,7 @@ import {
     ModalFooter,
     ModalHeader,
     ModalOverlay,
+    ModalTextInput,
     NumberInput,
     ColorInput,
     SectionTitle,
@@ -18,6 +19,7 @@ import {
     SubMenuPane,
     SwitchToggle,
     BackArrowIcon,
+    type ModalThemeVariant,
 } from './SettingsModal.styles';
 import { IconClose, IconSave } from '../Toolbar/icons';
 import { AxesPosition } from '../../types/types';
@@ -57,15 +59,24 @@ export interface SettingsState {
     autoPrecision: boolean;
     unit: string;
     unitPlacement: 'prefix' | 'suffix';
+    drawingLineColor: string;
+    drawingLineWidth: number;
+    drawingLineStyle: 'solid' | 'dashed' | 'dotted';
+    drawingFillColor: string;
+    drawingSelectedLineColor: string;
+    drawingSelectedLineStyle: 'solid' | 'dashed' | 'dotted';
+    drawingSelectedLineWidthAdd: number;
 }
 
-type Category = 'chart' | 'axes' | 'time' | 'layout' | 'colors' | 'globalization' | 'financial';
+type Category = 'chart' | 'axes' | 'time' | 'layout' | 'colors' | 'drawings' | 'globalization' | 'financial';
 
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (newSettings: SettingsState) => void;
     initialSettings: SettingsState;
+    /** Matches chart app light/dark toggle */
+    themeVariant?: ModalThemeVariant;
 }
 
 /* ─── BackArrow logic is now handled via CSS in SettingsModal.styles.ts ─── */
@@ -79,6 +90,7 @@ const CATEGORIES: { id: Category; icon: string; label: string }[] = [
     { id: 'time',          icon: '⏱',  label: 'Time'          },
     { id: 'layout',        icon: '🖥',  label: 'Layout'        },
     { id: 'colors',        icon: '🎨', label: 'Colors'        },
+    { id: 'drawings',      icon: '✏️', label: 'Drawing shapes' },
     { id: 'globalization', icon: '🌐', label: 'Regional'      },
     { id: 'financial',     icon: '💰', label: 'Financials'    },
 ];
@@ -89,6 +101,7 @@ const CATEGORY_TITLE: Record<Category, string> = {
     time:           'Time',
     layout:         'Layout',
     colors:         'Colors',
+    drawings:       'Drawing shapes',
     globalization:  'Regional & Format',
     financial:      'Currency & Price',
 };
@@ -98,8 +111,9 @@ const CATEGORY_TITLE: Record<Category, string> = {
  *  Component
  * ────────────────────────────────────────────────── */
 export const SettingsModal: React.FC<SettingsModalProps> = ({
-    isOpen, onClose, onSave, initialSettings,
+    isOpen, onClose, onSave, initialSettings, themeVariant = 'dark',
 }) => {
+    const tv = themeVariant;
     const [settings, setSettings] = useState<SettingsState>(initialSettings);
     const [active, setActive] = useState<Category | null>(null);
     const [goingBack, setGoingBack] = useState(false);
@@ -176,15 +190,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             case 'chart':
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
-                        <SectionTitle className="settings-section-title" dir={direction}>Display</SectionTitle>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Show Volume Histogram</FormLabel>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Display</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Show Volume Histogram</FormLabel>
                             <SwitchToggle $checked={settings.showHistogram}
                                           className="settings-switch-toggle"
                                           onClick={() => toggle('showHistogram')} />
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Show Background Grid</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Show Background Grid</FormLabel>
                             <SwitchToggle $checked={settings.showGrid}
                                           className="settings-switch-toggle"
                                           onClick={() => toggle('showGrid')} />
@@ -194,10 +208,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             case 'axes':
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
-                        <SectionTitle className="settings-section-title" dir={direction}>Y-Axis</SectionTitle>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Y-Axis Position</FormLabel>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Y-Axis</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Y-Axis Position</FormLabel>
                             <SelectDropdown
+                                $variant={tv}
                                 className="settings-select-dropdown"
                                 value={settings.yAxisPosition}
                                 onChange={(e: any) => change('yAxisPosition', parseInt(e.target.value))}
@@ -206,9 +221,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <option value={AxesPosition.left}>Left</option>
                             </SelectDropdown>
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Number of Y-Ticks</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Number of Y-Ticks</FormLabel>
                             <NumberInput
+                                $variant={tv}
                                 className="settings-number-input"
                                 type="number" min="2" max="30"
                                 value={settings.numberOfYTicks}
@@ -220,9 +236,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             case 'time':
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
-                        <SectionTitle className="settings-section-title" dir={direction}>Format</SectionTitle>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>12-Hour Time Format</FormLabel>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Format</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>12-Hour Time Format</FormLabel>
                             <SwitchToggle $checked={settings.timeFormat12h}
                                           className="settings-switch-toggle"
                                           onClick={() => toggle('timeFormat12h')} />
@@ -232,15 +248,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             case 'layout':
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
-                        <SectionTitle className="settings-section-title" dir={direction}>Toolbars</SectionTitle>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Show Side Toolbar</FormLabel>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Toolbars</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Show Side Toolbar</FormLabel>
                             <SwitchToggle $checked={settings.showSidebar}
                                           className="settings-switch-toggle"
                                           onClick={() => toggle('showSidebar')} />
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Show Top Toolbar</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Show Top Toolbar</FormLabel>
                             <SwitchToggle $checked={settings.showTopBar}
                                           className="settings-switch-toggle"
                                           onClick={() => toggle('showTopBar')} />
@@ -250,42 +266,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             case 'colors':
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
-                        <SectionTitle className="settings-section-title" dir={direction}>Theme Colors</SectionTitle>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Background Color</FormLabel>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Theme Colors</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Background Color</FormLabel>
                             <ColorInput
                                 type="color"
                                 value={settings.backgroundColor}
                                 onChange={(e: any) => change('backgroundColor', e.target.value)}
                             />
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Text & Axis Color</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Text & Axis Color</FormLabel>
                             <ColorInput
                                 type="color"
                                 value={settings.textColor}
                                 onChange={(e: any) => change('textColor', e.target.value)}
                             />
                         </FormRow>
-                        <SectionTitle className="settings-section-title" dir={direction}>Chart Elements</SectionTitle>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Bull (Up) Color</FormLabel>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Chart Elements</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Bull (Up) Color</FormLabel>
                             <ColorInput
                                 type="color"
                                 value={settings.bullColor}
                                 onChange={(e: any) => change('bullColor', e.target.value)}
                             />
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Bear (Down) Color</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Bear (Down) Color</FormLabel>
                             <ColorInput
                                 type="color"
                                 value={settings.bearColor}
                                 onChange={(e: any) => change('bearColor', e.target.value)}
                             />
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Line Color</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Line Color</FormLabel>
                             <ColorInput
                                 type="color"
                                 value={settings.lineColor}
@@ -294,13 +310,101 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </FormRow>
                     </SubMenuPane>
                 );
+            case 'drawings':
+                return (
+                    <SubMenuPane $back={goingBack} className="settings-submenu-pane">
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>New shapes</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Stroke color</FormLabel>
+                            <ColorInput
+                                type="color"
+                                value={settings.drawingLineColor}
+                                onChange={(e: any) => change('drawingLineColor', e.target.value)}
+                            />
+                        </FormRow>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Line width</FormLabel>
+                            <NumberInput
+                                $variant={tv}
+                                className="settings-number-input"
+                                type="number"
+                                min={1}
+                                max={16}
+                                value={settings.drawingLineWidth}
+                                onChange={(e: any) => change('drawingLineWidth', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                            />
+                        </FormRow>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Line style</FormLabel>
+                            <SelectDropdown
+                                $variant={tv}
+                                className="settings-select-dropdown"
+                                value={settings.drawingLineStyle}
+                                onChange={(e: any) => change('drawingLineStyle', e.target.value)}
+                            >
+                                <option value="solid">Solid</option>
+                                <option value="dashed">Dashed</option>
+                                <option value="dotted">Dotted</option>
+                            </SelectDropdown>
+                        </FormRow>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Fill color</FormLabel>
+                            <ModalTextInput
+                                $variant={tv}
+                                className="settings-input"
+                                type="text"
+                                value={settings.drawingFillColor}
+                                onChange={(e: any) => change('drawingFillColor', e.target.value)}
+                                placeholder="rgba(33,150,243,0.2) or #hex"
+                                dir="ltr"
+                            />
+                        </FormRow>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Selected shape</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Highlight stroke</FormLabel>
+                            <ColorInput
+                                type="color"
+                                value={settings.drawingSelectedLineColor}
+                                onChange={(e: any) => change('drawingSelectedLineColor', e.target.value)}
+                            />
+                        </FormRow>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Extra width when selected</FormLabel>
+                            <NumberInput
+                                $variant={tv}
+                                className="settings-number-input"
+                                type="number"
+                                min={0}
+                                max={8}
+                                value={settings.drawingSelectedLineWidthAdd}
+                                onChange={(e: any) =>
+                                    change('drawingSelectedLineWidthAdd', Math.max(0, parseInt(e.target.value, 10) || 0))
+                                }
+                            />
+                        </FormRow>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Highlight line style</FormLabel>
+                            <SelectDropdown
+                                $variant={tv}
+                                className="settings-select-dropdown"
+                                value={settings.drawingSelectedLineStyle}
+                                onChange={(e: any) => change('drawingSelectedLineStyle', e.target.value)}
+                            >
+                                <option value="solid">Solid</option>
+                                <option value="dashed">Dashed</option>
+                                <option value="dotted">Dotted</option>
+                            </SelectDropdown>
+                        </FormRow>
+                    </SubMenuPane>
+                );
             case 'globalization':
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
-                        <SectionTitle className="settings-section-title" dir={direction}>Language & Locale</SectionTitle>
-                         <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Language</FormLabel>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Language & Locale</SectionTitle>
+                         <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Language</FormLabel>
                             <SelectDropdown
+                                $variant={tv}
                                 className="settings-select-dropdown"
                                 value={settings.language}
                                 onChange={(e: any) => handleLanguageChange(e.target.value)}
@@ -310,9 +414,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 ))}
                             </SelectDropdown>
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Locale (l10n)</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Locale (l10n)</FormLabel>
                             <SelectDropdown
+                                $variant={tv}
                                 className="settings-select-dropdown"
                                 value={settings.locale}
                                 onChange={(e: any) => handleLocaleChange(e.target.value)}
@@ -323,10 +428,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             </SelectDropdown>
                         </FormRow>
 
-                        <SectionTitle className="settings-section-title" dir={direction}>Date Format</SectionTitle>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Date Pattern</FormLabel>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Date Format</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Date Pattern</FormLabel>
                             <SelectDropdown
+                                $variant={tv}
                                 className="settings-select-dropdown"
                                 value={settings.dateFormat}
                                 onChange={(e: any) => change('dateFormat', e.target.value)}
@@ -346,17 +452,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             case 'financial':
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
-                        <SectionTitle className="settings-section-title" dir={direction}>Currency</SectionTitle>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Enable Currency</FormLabel>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Currency</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Enable Currency</FormLabel>
                             <SwitchToggle $checked={settings.useCurrency}
                                           onClick={() => toggle('useCurrency')} />
                         </FormRow>
                         {settings.useCurrency && (
                             <>
-                                <FormRow className="settings-form-row">
-                                    <FormLabel className="settings-form-label" dir={direction}>Select Currency</FormLabel>
+                                <FormRow $variant={tv} className="settings-form-row">
+                                    <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Select Currency</FormLabel>
                                     <SelectDropdown
+                                        $variant={tv}
                                         value={settings.currency}
                                         onChange={(e: any) => change('currency', e.target.value)}
                                     >
@@ -365,9 +472,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         ))}
                                     </SelectDropdown>
                                 </FormRow>
-                                <FormRow className="settings-form-row">
-                                    <FormLabel className="settings-form-label" dir={direction}>Symbol Placement</FormLabel>
+                                <FormRow $variant={tv} className="settings-form-row">
+                                    <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Symbol Placement</FormLabel>
                                     <SelectDropdown
+                                        $variant={tv}
                                         value={settings.currencyDisplay}
                                         onChange={(e: any) => change('currencyDisplay', e.target.value)}
                                     >
@@ -380,10 +488,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             </>
                         )}
 
-                        <SectionTitle className="settings-section-title" dir={direction}>Number & Price</SectionTitle>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Notation</FormLabel>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Number & Price</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Notation</FormLabel>
                             <SelectDropdown
+                                $variant={tv}
                                 value={settings.numberNotation}
                                 onChange={(e: any) => change('numberNotation', e.target.value)}
                             >
@@ -392,16 +501,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <option value="compact">Compact</option>
                             </SelectDropdown>
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Auto Precision</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Auto Precision</FormLabel>
                             <SwitchToggle
                                 $checked={settings.autoPrecision}
                                 onClick={() => change('autoPrecision', !settings.autoPrecision)}
                             />
                         </FormRow>
-                        <FormRow className="settings-form-row" style={{ opacity: settings.autoPrecision ? 0.5 : 1 }}>
-                            <FormLabel className="settings-form-label" dir={direction}>Decimal Places</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row" style={{ opacity: settings.autoPrecision ? 0.5 : 1 }}>
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Decimal Places</FormLabel>
                             <NumberInput
+                                $variant={tv}
                                 type="number" min="0" max="15"
                                 value={settings.fractionDigits}
                                 onChange={(e: any) => {
@@ -416,8 +526,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 disabled={settings.autoPrecision}
                             />
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Custom Unit</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Custom Unit</FormLabel>
                             <input
                                 className="settings-input"
                                 type="text"
@@ -434,9 +544,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 }}
                             />
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Unit Placement</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Unit Placement</FormLabel>
                             <SelectDropdown
+                                $variant={tv}
                                 value={settings.unitPlacement}
                                 onChange={(e: any) => change('unitPlacement', e.target.value)}
                             >
@@ -444,17 +555,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <option value="prefix">Prefix (BTC 100)</option>
                             </SelectDropdown>
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Significant Digits</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Significant Digits</FormLabel>
                             <NumberInput
+                                $variant={tv}
                                 type="number" min="1" max="21"
                                 value={settings.maximumSignificantDigits}
                                 onChange={(e: any) => change('maximumSignificantDigits', parseInt(e.target.value) || 21)}
                             />
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Decimal Mark</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Decimal Mark</FormLabel>
                             <SelectDropdown
+                                $variant={tv}
                                 value={settings.decimalSeparator}
                                 onChange={(e: any) => change('decimalSeparator', e.target.value)}
                             >
@@ -462,9 +575,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <option value=",">Comma ( , )</option>
                             </SelectDropdown>
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Digit Grouping</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Digit Grouping</FormLabel>
                             <SelectDropdown
+                                $variant={tv}
                                 value={settings.thousandsSeparator}
                                 onChange={(e: any) => change('thousandsSeparator', e.target.value)}
                             >
@@ -474,9 +588,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <option value="">None</option>
                             </SelectDropdown>
                         </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Tick Size</FormLabel>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Tick Size</FormLabel>
                             <NumberInput
+                                $variant={tv}
                                 type="number" step="0.0001" min="0"
                                 value={settings.tickSize}
                                 onChange={(e: any) => change('tickSize', parseFloat(e.target.value) || 0)}
@@ -490,23 +605,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     };
 
     return (
-        <ModalOverlay onClick={onClose} className="settings-modal-overlay">
-            <ModalContainer 
-                onClick={(e: any) => e.stopPropagation()} 
+        <ModalOverlay $variant={tv} onClick={onClose} className="settings-modal-overlay">
+            <ModalContainer
+                $variant={tv}
+                onClick={(e: any) => e.stopPropagation()}
                 className="settings-modal-container"
             >
 
                 {/* ── Header ── */}
-                <ModalHeader className="settings-header">
+                <ModalHeader $variant={tv} className="settings-header">
                     <HeaderLeft className="settings-header-left">
                         {active && (
-                            <IconButton $variant="back" className="settings-back-button" onClick={goBack} aria-label="Back">
+                            <IconButton $theme={tv} $variant="back" className="settings-back-button" onClick={goBack} aria-label="Back">
                                 <BackArrowIcon />
                             </IconButton>
                         )}
                         <h2 className="settings-header-title" dir={direction}>{headerTitle}</h2>
                     </HeaderLeft>
-                    <IconButton $variant="close" className="settings-close-button" onClick={onClose} aria-label="Close settings">
+                    <IconButton $theme={tv} $variant="close" className="settings-close-button" onClick={onClose} aria-label="Close settings">
                         <IconClose />
                     </IconButton>
                 </ModalHeader>
@@ -517,7 +633,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         /* Root: category tiles */
                         <div className="settings-category-list">
                             {CATEGORIES.map(cat => (
-                                <CategoryTile key={cat.id} className={`settings-category-tile settings-category-${cat.id}`} onClick={() => drillIn(cat.id)}>
+                                <CategoryTile $variant={tv} key={cat.id} className={`settings-category-tile settings-category-${cat.id}`} onClick={() => drillIn(cat.id)}>
                                     <span className="tile-icon">{cat.icon}</span>
                                     <span className="tile-label" dir={direction}>{cat.label}</span>
                                     <span className="tile-arrow">›</span>
@@ -530,9 +646,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </ModalBody>
 
                 {/* ── Footer ── */}
-                <ModalFooter className="settings-modal-footer">
-                    <ModalButton className="settings-cancel-button" onClick={onClose} dir={direction}>Cancel</ModalButton>
-                    <ModalButton $primary className="settings-save-button" onClick={handleSave} dir={direction}>
+                <ModalFooter $variant={tv} className="settings-modal-footer">
+                    <ModalButton $variant={tv} className="settings-cancel-button" onClick={onClose} dir={direction}>Cancel</ModalButton>
+                    <ModalButton $variant={tv} $primary className="settings-save-button" onClick={handleSave} dir={direction}>
                         <IconSave />
                         Save Changes
                     </ModalButton>

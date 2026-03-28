@@ -1,9 +1,11 @@
 import {ChartRenderContext} from "../../types/chartOptions";
 import {PriceRange} from "../../types/Graph";
 import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
+import {ShapeType} from "./types";
 
 export interface IDrawingShape {
     id: string ;
+    type: ShapeType;
     style: DrawingStyleOptions;
     points: DrawingPoint[];
 

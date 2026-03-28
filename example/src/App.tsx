@@ -1,8 +1,15 @@
-import React, {useRef} from 'react';
-import type {DrawingPoint, DrawingStyleOptions, Interval, RectangleShapeArgs} from 'chartedge';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import type {
+    DrawingPoint,
+    DrawingStyleOptions,
+    Interval,
+    RectangleShapeArgs,
+    SimpleChartEdgeHandle,
+} from 'chartedge';
 import {
     ChartType,
     OverlayKind,
+    ShapeType,
     SimpleChartEdge,
     TimeDetailLevel,
     OverlaySpecs,
@@ -10,7 +17,8 @@ import {
     withOverlayStyle,
     OverlayPriceKey,
     RectangleShape,
-    LineShape, AxesPosition
+    LineShape,
+    AxesPosition,
 } from 'chartedge';
 import './App.css';
 
@@ -91,9 +99,10 @@ function makeSimpleIntervals(params: {
     return out;
 }
 
-// ---- Example: 200 bars of 5m starting at 1688000000 around price 100 ----
+// ---- Seed series: 200 bars of 5m starting at 1688000000 around price 100 ----
 const INTERVAL_SEC = 300; // 5 minutes
-const intervalsArray: Interval[] = makeSimpleIntervals({
+
+const INITIAL_INTERVALS: Interval[] = makeSimpleIntervals({
     startTime: 1688000000,
     startPrice: 100,
     intervalSec: INTERVAL_SEC,
@@ -101,15 +110,42 @@ const intervalsArray: Interval[] = makeSimpleIntervals({
     seed: 4242,
     driftPerBar: 0.03,
     vol: 0.7,
-    // addGapsEvery: 40, // uncomment to add a small gap every 40 bars
 });
-const minPrice = Math.min(...intervalsArray.map(candle => [candle.l, candle.h, candle.c, candle.o]).flat());
-const maxPrice = Math.max(...intervalsArray.map(candle => [candle.l, candle.h, candle.c, candle.o]).flat());
-const lastCandleTime = intervalsArray[intervalsArray.length - 1].t;
-const exampleVisibleRange = {
-    start: intervalsArray[0].t,
-    end: lastCandleTime + INTERVAL_SEC // Use the intervalSec value
-};
+
+function cloneIntervals(rows: Interval[]): Interval[] {
+    return rows.map((b) => ({...b}));
+}
+
+/** Next synthetic bar after `last` (used for append live demo). */
+function makeNextBar(last: Interval, intervalSec: number): Interval {
+    const o = last.c;
+    const noise = (Math.random() - 0.5) * 1.2;
+    const drift = 0.02 + (Math.random() - 0.5) * 0.02;
+    const c = o + drift + noise;
+    const wickUp = Math.random() * 0.45;
+    const wickDn = Math.random() * 0.45;
+    const h = Math.max(o, c) + wickUp;
+    const l = Math.min(o, c) - wickDn;
+    const v = Math.max(1, Math.round(1000 + Math.random() * 500));
+    return {
+        t: last.t + intervalSec,
+        o: +o.toFixed(2),
+        h: +h.toFixed(2),
+        l: +l.toFixed(2),
+        c: +c.toFixed(2),
+        v,
+    };
+}
+
+/** Mutate the forming candle (same `t`) for mergeByTime demo. */
+function jitterLastBar(last: Interval): Interval {
+    const delta = (Math.random() - 0.5) * 0.35;
+    const c = +(last.c + delta).toFixed(2);
+    const h = +Math.max(last.h, last.o, c, last.l + 0.01).toFixed(2);
+    const l = +Math.min(last.l, last.o, c, last.h - 0.01).toFixed(2);
+    const v = Math.max(1, Math.round((last.v ?? 1200) + (Math.random() - 0.5) * 80));
+    return {...last, o: last.o, c, h, l, v};
+}
 
 // --- Demo overlays ---
 const withBlue = withOverlayStyle({lineColor: '#2962ff', lineWidth: 2, lineStyle: 'solid'});
@@ -121,8 +157,155 @@ const vwapOv = overlay(OverlayKind.vwap, {lineColor: '#7e57c2', lineWidth: 1.5, 
 
 const demoOverlays = [sma20, emaDefault, vwapOv];
 
+const LIVE_TICK_MS = 900;
+
 export default function App() {
-    const chartRef = useRef<any>(null);
+    const chartRef = useRef<SimpleChartEdgeHandle | null>(null);
+    const [series, setSeries] = useState<Interval[]>(() => cloneIntervals(INITIAL_INTERVALS));
+    const [livePaused, setLivePaused] = useState(false);
+    const tickCountRef = useRef(0);
+    /** Ensures the three demo drawings are only added once (survives Strict Mode remount). */
+    const programmaticShapesSeededRef = useRef(false);
+
+    const exampleVisibleRange = useMemo(() => {
+        if (!series.length) {
+            return {start: 0, end: 1};
+        }
+        const lastT = series[series.length - 1].t;
+        return {start: series[0].t, end: lastT + INTERVAL_SEC};
+    }, [series]);
+
+    const {minPrice, maxPrice} = useMemo(() => {
+        if (!series.length) {
+            return {minPrice: 0, maxPrice: 100};
+        }
+        const flat = series.flatMap((c) => [c.l, c.h, c.c, c.o]);
+        return {minPrice: Math.min(...flat), maxPrice: Math.max(...flat)};
+    }, [series]);
+
+    const pushLiveTick = useCallback(() => {
+        const api = chartRef.current;
+        if (!api?.applyLiveData || !api.getViewInfo) {
+            return;
+        }
+        const {intervals} = api.getViewInfo();
+        if (!intervals?.length) {
+            return;
+        }
+        const last = intervals[intervals.length - 1];
+        tickCountRef.current += 1;
+        const n = tickCountRef.current;
+        // Mostly update the current candle; every 5th tick append a new bar (shows mergeByTime + append).
+        const result =
+            n % 5 !== 0
+                ? api.applyLiveData(jitterLastBar(last), 'mergeByTime')
+                : api.applyLiveData(makeNextBar(last, INTERVAL_SEC), 'append');
+        if (result.intervals.length) {
+            setSeries(result.intervals);
+        }
+        if (!result.ok && result.errors.length) {
+            console.warn('[example] live data:', result.errors, result.warnings);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (livePaused) {
+            return;
+        }
+        const id = window.setInterval(pushLiveTick, LIVE_TICK_MS);
+        return () => window.clearInterval(id);
+    }, [livePaused, pushLiveTick]);
+
+    /**
+     * Seed three drawings entirely from code (`addShape` + plain specs: type, points, style).
+     * Geometry is derived from the loaded interval series so shapes stay on-chart.
+     */
+    useEffect(() => {
+        if (!series.length || programmaticShapesSeededRef.current) {
+            return;
+        }
+        const timer = window.setTimeout(() => {
+            const api = chartRef.current;
+            if (!api?.addShape || programmaticShapesSeededRef.current) {
+                return;
+            }
+            programmaticShapesSeededRef.current = true;
+
+            const t0 = series[0].t;
+            const tLast = series[series.length - 1].t;
+            const span = Math.max(INTERVAL_SEC, tLast - t0);
+            const prices = series.flatMap((b) => [b.l, b.h]);
+            const pMin = Math.min(...prices);
+            const pMax = Math.max(...prices);
+            const pMid = (pMin + pMax) / 2;
+
+            // 1) Trend line — dashed magenta
+            api.addShape({
+                type: ShapeType.Line,
+                points: [
+                    {time: t0 + span * 0.12, price: pMid - (pMax - pMin) * 0.08},
+                    {time: t0 + span * 0.58, price: pMid + (pMax - pMin) * 0.12},
+                ],
+                style: {
+                    lineColor: '#e040fb',
+                    lineWidth: 2,
+                    lineStyle: 'dashed',
+                },
+            });
+
+            // 2) Highlight rectangle — semi-transparent cyan fill
+            api.addShape({
+                type: ShapeType.Rectangle,
+                points: [
+                    {time: t0 + span * 0.32, price: pMid - 1.2},
+                    {time: t0 + span * 0.48, price: pMid + 2.4},
+                ],
+                style: {
+                    lineColor: '#26c6da',
+                    lineWidth: 1,
+                    lineStyle: 'solid',
+                    fillColor: 'rgba(38, 198, 218, 0.18)',
+                },
+            });
+
+            // 3) Circle (two corners of bounding box) — amber stroke + light fill
+            api.addShape({
+                type: ShapeType.Circle,
+                points: [
+                    {time: t0 + span * 0.62, price: pMid - 0.5},
+                    {time: t0 + span * 0.74, price: pMid + 2},
+                ],
+                style: {
+                    lineColor: '#ffca28',
+                    lineWidth: 2,
+                    lineStyle: 'solid',
+                    fillColor: 'rgba(255, 202, 40, 0.14)',
+                },
+            });
+
+            api.redrawCanvas?.();
+        }, 200);
+
+        return () => window.clearTimeout(timer);
+    }, [series]);
+
+    const handleRefreshSeries = useCallback(async () => {
+        tickCountRef.current = 0;
+        programmaticShapesSeededRef.current = false;
+        chartRef.current?.clearCanvas?.();
+        const reset = cloneIntervals(INITIAL_INTERVALS);
+        setSeries(reset);
+        // Let React commit props before fitting the view (next frame).
+        window.requestAnimationFrame(() => {
+            chartRef.current?.fitVisibleRangeToData?.();
+            chartRef.current?.redrawCanvas?.();
+        });
+    }, []);
+
+    const handleSymbolSearch = useCallback((sym: string) => {
+        const label = sym || '(empty)';
+        window.alert(`Symbol search (demo): ${label}\nWire onSymbolSearch to load data for this symbol.`);
+    }, []);
 
     // Example: add a random shape (rect or line) via API, within visible ranges
     function handleAddShape() {
@@ -224,17 +407,27 @@ export default function App() {
 
     return (
         <div className={'app-root'}>
-            {/*<div style={{marginBottom: 16}}>*/}
-            {/*    <button onClick={handleAddShape}>Add Shape</button>*/}
-            {/*    <button onClick={handleGetInfo}>Get View Info</button>*/}
-            {/*    <button onClick={handleClear}>Clear Canvas</button>*/}
-            {/*    <button onClick={handleRedraw}>Redraw Canvas</button>*/}
-            {/*    <button onClick={reloadCanvas}>Reload Canvas</button>*/}
-            {/*</div>*/}
+            <div className="live-demo-bar">
+                <span className="live-demo-label">
+                    Live data demo
+                    <span className={`live-demo-status ${livePaused ? 'paused' : 'on'}`}>
+                        {livePaused ? 'paused' : 'running'}
+                    </span>
+                </span>
+                <span className="live-demo-hint">
+                    Uses <code>applyLiveData</code> with <code>mergeByTime</code> (tick) and <code>append</code> (new bars).
+                </span>
+                <button type="button" className="live-demo-btn" onClick={() => setLivePaused((p) => !p)}>
+                    {livePaused ? 'Resume' : 'Pause'}
+                </button>
+            </div>
             <SimpleChartEdge
                 ref={chartRef}
                 className="simple-chart-edge"
-                intervalsArray={intervalsArray}
+                intervalsArray={series}
+                onRefreshRequest={handleRefreshSeries}
+                defaultSymbol="DEMO"
+                onSymbolSearch={handleSymbolSearch}
                 initialNumberOfYTicks={5}
                 initialXAxisHeight={40}
                 initialYAxisWidth={50}

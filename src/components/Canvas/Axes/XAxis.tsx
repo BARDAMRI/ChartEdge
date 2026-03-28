@@ -1,6 +1,6 @@
 import React, {useEffect, useRef} from 'react';
 import {DrawTicksOptions, TimeRange} from "../../../types/Graph";
-import {TimeDetailLevel} from "../../../types/chartOptions";
+import {AxesStyleOptions, TimeDetailLevel} from "../../../types/chartOptions";
 import {StyledXAxisCanvas} from "../../../styles/XAxis.styles";
 import {generateAndDrawTimeTicks} from '../utils/generateTicks';
 import {CanvasSizes} from "../../../types/types";
@@ -12,6 +12,7 @@ interface XAxisProps {
     visibleRange: TimeRange;
     timeDetailLevel: TimeDetailLevel;
     timeFormat12h: boolean;
+    formatting: AxesStyleOptions;
     dateFormat?: string;
     locale: string;
     timezone?: string;
@@ -23,6 +24,7 @@ export default function XAxis({
                                   visibleRange,
                                   timeDetailLevel,
                                   timeFormat12h,
+                                  formatting,
                                   dateFormat = 'MMM d',
                                   locale = 'en-US',
                                   timezone
@@ -51,18 +53,20 @@ export default function XAxis({
             dateFormat,
             timeFormat12h,
             xAxisHeight,
-            'black',
+            formatting.lineColor,
             timeDetailLevel,
             {
                 tickHeight: 8,
                 labelOffset: 4,
-                labelFont: '10px Arial',
+                labelFont: formatting.font,
+                tickColor: formatting.lineColor,
+                labelColor: formatting.textColor,
                 axisY: 0
             } as DrawTicksOptions,
             locale,
             timezone
         );
-    }, [xAxisHeight, visibleRange, timeDetailLevel, timeFormat12h, canvasSizes, dpr, dateFormat, locale]);
+    }, [xAxisHeight, visibleRange, timeDetailLevel, timeFormat12h, canvasSizes, dpr, dateFormat, locale, formatting]);
 
     return <StyledXAxisCanvas className={'startTime-Axis-Canvas'} ref={canvasRef} $height={xAxisHeight}/>;
 }

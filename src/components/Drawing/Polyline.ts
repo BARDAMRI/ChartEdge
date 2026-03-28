@@ -13,11 +13,14 @@ export class Polyline implements IDrawingShape {
     public type = ShapeType.Polyline;
     public style: DrawingStyleOptions;
     public points: DrawingPoint[] = [];
+    public args: PolylineShapeArgs;
 
-    constructor(public args: PolylineShapeArgs, public styleOverride: DrawingStyleOptions, id?: string | undefined) {
+    constructor(argsIn: PolylineShapeArgs, public styleOverride: DrawingStyleOptions, id?: string | undefined) {
         this.id = id ?? generateDrawingShapeId();
         this.style = styleOverride;
-
+        const initial = argsIn?.points ? [...argsIn.points] : [];
+        this.points = initial;
+        this.args = {points: this.points};
     }
 
     public addPoint(point: DrawingPoint): void {
@@ -37,8 +40,8 @@ export class Polyline implements IDrawingShape {
         visiblePriceRange: PriceRange,
         style: FinalDrawingStyle
     ): void {
-        const {points} = this.args;
-        if (points.length < 2) return;
+        const points = this.args?.points;
+        if (!points || points.length < 2) return;
 
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
@@ -77,8 +80,8 @@ export class Polyline implements IDrawingShape {
         renderContext: ChartRenderContext,
         visiblePriceRange: PriceRange
     ): boolean {
-        const {points} = this.args;
-        if (points.length < 2) return false;
+        const points = this.args?.points;
+        if (!points || points.length < 2) return false;
 
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
         const tolerance = 6;

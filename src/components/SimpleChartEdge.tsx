@@ -4,7 +4,7 @@ import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {SettingsModal, SettingsState} from './SettingsModal/SettingsModal';
 import {Interval} from '../types/Interval';
-import {TimeRange} from '../types/Graph';
+import {PriceRange, TimeRange} from '../types/Graph';
 import {AxesPosition, DeepPartial, DeepRequired} from '../types/types';
 import {
     ChartOptions,
@@ -24,18 +24,39 @@ import {
 } from '../styles/App.styles';
 import {DEFAULT_GRAPH_OPTIONS} from "./DefaultData";
 import {FormattingService} from '../services/FormattingService';
+import type {LiveDataApplyResult, LiveDataPlacement} from '../types/liveData';
+import type {DrawingInput, DrawingPatch, DrawingSpec} from './Drawing/drawHelper';
+import type {DrawingQuery, DrawingSnapshot} from './Drawing/drawingQuery';
+import type {ChartContextInfo} from '../types/chartContext';
+import type {IDrawingShape} from './Drawing/IDrawingShape';
 
 export interface SimpleChartEdgeHandle {
-    addShape: (shape: any) => void;
-    updateShape: (shapeId: string, newShape: any) => void;
+    addShape: (shape: DrawingInput) => void;
+    updateShape: (shapeId: string, newShape: DrawingInput | DrawingPatch) => void;
+    patchShape: (shapeId: string, patch: DrawingPatch) => void;
+    setDrawingsFromSpecs: (specs: DrawingSpec[]) => void;
     deleteShape: (shapeId: string) => void;
     addInterval: (interval: Interval) => void;
     updateInterval: (intervalId: string, newInterval: Interval) => void;
     deleteInterval: (intervalId: string) => void;
-    getViewInfo: () => any;
-    getCanvasSize: () => { width: number; height: number } | null;
+    applyLiveData: (updates: Interval | Interval[], placement: LiveDataPlacement) => LiveDataApplyResult;
+    fitVisibleRangeToData: () => void;
+    getMainCanvasElement: () => HTMLCanvasElement | null;
+    getViewInfo: () => {
+        intervals: Interval[];
+        drawings: IDrawingShape[];
+        visibleRange: TimeRange & { startIndex: number; endIndex: number };
+        visiblePriceRange: PriceRange;
+        canvasSize: { width: number; height: number; dpr: number };
+    } | null;
+    getDrawings: (query?: DrawingQuery) => DrawingSnapshot[];
+    getDrawingById: (id: string) => DrawingSnapshot | null;
+    getDrawingInstances: (query?: DrawingQuery) => IDrawingShape[];
+    getChartContext: () => ChartContextInfo | null;
+    getCanvasSize: () => { width: number; height: number; dpr: number } | null;
     clearCanvas: () => void;
     redrawCanvas: () => void;
+    reloadCanvas: () => void;
 }
 
 export type SimpleChartEdgeProps = {
@@ -51,6 +72,15 @@ export type SimpleChartEdgeProps = {
     showTopBar?: boolean;
     /** When false hides the settings gear icon even if the top toolbar is visible */
     showSettingsBar?: boolean;
+    /** Invoked when the user activates Refresh in the settings toolbar (e.g. reload quotes). */
+    onRefreshRequest?: () => void | Promise<void>;
+    /** Controlled toolbar symbol (optional). */
+    symbol?: string;
+    /** Initial toolbar symbol when uncontrolled. */
+    defaultSymbol?: string;
+    onSymbolChange?: (symbol: string) => void;
+    /** Invoked when the user submits symbol search (search button or Enter). */
+    onSymbolSearch?: (symbol: string) => void;
 };
 
 export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdgeProps>(({
@@ -62,9 +92,15 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                                                                                             showSidebar = true,
                                                                                             showTopBar = true,
                                                                                             showSettingsBar = true,
+                                                                                            onRefreshRequest,
+                                                                                            symbol,
+                                                                                            defaultSymbol,
+                                                                                            onSymbolChange,
+                                                                                            onSymbolSearch,
                                                                                         }, ref) => {
 
     const [finalStyleOptions, setStyleOptions] = useState<DeepRequired<ChartOptions>>(deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions));
+    const [themeVariant, setThemeVariant] = useState<'light' | 'dark'>('light');
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
     const stageRef = useRef<any>(null);
 
@@ -116,14 +152,24 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
 
 
     useImperativeHandle(ref, () => ({
-        addShape: (shape: any) => {
+        addShape: (shape: DrawingInput) => {
             if (stageRef.current && stageRef.current.addShape) {
                 stageRef.current.addShape(shape);
             }
         },
-        updateShape: (shapeId: string, newShape: any) => {
+        updateShape: (shapeId: string, newShape: DrawingInput | DrawingPatch) => {
             if (stageRef.current && stageRef.current.updateShape) {
                 stageRef.current.updateShape(shapeId, newShape);
+            }
+        },
+        patchShape: (shapeId: string, patch: DrawingPatch) => {
+            if (stageRef.current?.patchShape) {
+                stageRef.current.patchShape(shapeId, patch);
+            }
+        },
+        setDrawingsFromSpecs: (specs: DrawingSpec[]) => {
+            if (stageRef.current?.setDrawingsFromSpecs) {
+                stageRef.current.setDrawingsFromSpecs(specs);
             }
         },
         deleteShape: (shapeId: string) => {
@@ -152,6 +198,30 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
             }
             return null;
         },
+        getDrawings: (query?: DrawingQuery) => {
+            if (stageRef.current?.getDrawings) {
+                return stageRef.current.getDrawings(query);
+            }
+            return [];
+        },
+        getDrawingById: (id: string) => {
+            if (stageRef.current?.getDrawingById) {
+                return stageRef.current.getDrawingById(id);
+            }
+            return null;
+        },
+        getDrawingInstances: (query?: DrawingQuery) => {
+            if (stageRef.current?.getDrawingInstances) {
+                return stageRef.current.getDrawingInstances(query);
+            }
+            return [];
+        },
+        getChartContext: () => {
+            if (stageRef.current?.getChartContext) {
+                return stageRef.current.getChartContext();
+            }
+            return null;
+        },
         getCanvasSize: () => {
             if (stageRef.current && stageRef.current.getCanvasSize) {
                 return stageRef.current.getCanvasSize();
@@ -172,7 +242,22 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
             if (stageRef.current && stageRef.current.reloadCanvas) {
                 stageRef.current.reloadCanvas();
             }
-        }
+        },
+        applyLiveData: (updates: Interval | Interval[], placement: LiveDataPlacement) => {
+            if (stageRef.current?.applyLiveData) {
+                return stageRef.current.applyLiveData(updates, placement);
+            }
+            return {
+                ok: false,
+                intervals: [],
+                errors: ['Chart stage is not ready'],
+                warnings: [],
+            };
+        },
+        fitVisibleRangeToData: () => {
+            stageRef.current?.fitVisibleRangeToData?.();
+        },
+        getMainCanvasElement: () => stageRef.current?.getMainCanvasElement?.() ?? null,
     }));
 
     const handleChartTypeChange = (newType: ChartType) => {
@@ -251,6 +336,19 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                         ...prev.base.style.line,
                         color: newSettings.lineColor,
                     },
+                    drawings: {
+                        ...prev.base.style.drawings,
+                        lineColor: newSettings.drawingLineColor,
+                        lineWidth: newSettings.drawingLineWidth,
+                        lineStyle: newSettings.drawingLineStyle,
+                        fillColor: newSettings.drawingFillColor,
+                        selected: {
+                            ...prev.base.style.drawings.selected,
+                            lineColor: newSettings.drawingSelectedLineColor,
+                            lineStyle: newSettings.drawingSelectedLineStyle,
+                            lineWidthAdd: newSettings.drawingSelectedLineWidthAdd,
+                        },
+                    },
                 },
             },
         }));
@@ -289,6 +387,13 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         autoPrecision: finalStyleOptions.base.style.axes.autoPrecision ?? false,
         unit: finalStyleOptions.base.style.axes.unit ?? '',
         unitPlacement: finalStyleOptions.base.style.axes.unitPlacement ?? 'suffix',
+        drawingLineColor: finalStyleOptions.base.style.drawings.lineColor,
+        drawingLineWidth: finalStyleOptions.base.style.drawings.lineWidth,
+        drawingLineStyle: finalStyleOptions.base.style.drawings.lineStyle,
+        drawingFillColor: finalStyleOptions.base.style.drawings.fillColor,
+        drawingSelectedLineColor: finalStyleOptions.base.style.drawings.selected.lineColor,
+        drawingSelectedLineStyle: finalStyleOptions.base.style.drawings.selected.lineStyle ?? 'dashed',
+        drawingSelectedLineWidthAdd: finalStyleOptions.base.style.drawings.selected.lineWidthAdd ?? 1,
     }), [
         layoutOptions.showSidebar,
         layoutOptions.showTopBar,
@@ -302,25 +407,60 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         finalStyleOptions.base.style.line.color,
         finalStyleOptions.base.style.candles.bullColor,
         finalStyleOptions.base.style.candles.bearColor,
+        finalStyleOptions.base.style.drawings,
     ]) as SettingsState;
+
+    const chartOptionsForStage = useMemo((): DeepRequired<ChartOptions> => {
+        if (themeVariant === 'light') return finalStyleOptions;
+        return deepMerge(finalStyleOptions, {
+            base: {
+                theme: 'dark',
+                style: {
+                    backgroundColor: '#121212',
+                    axes: {
+                        textColor: '#e6edf3',
+                        lineColor: '#6e7681',
+                    },
+                    grid: {
+                        color: '#30363d',
+                        lineColor: '#30363d',
+                    },
+                    candles: {
+                        borderColor: '#757575',
+                    },
+                },
+            },
+        } as DeepPartial<ChartOptions>);
+    }, [finalStyleOptions, themeVariant]);
 
     return (
         <ModeProvider>
-            <GlobalStyle/>
-            <MainAppWindow className={'chart-edge-root'}>
+            <GlobalStyle $pageBackground={themeVariant === 'dark' ? '#121212' : '#ffffff'}/>
+            <MainAppWindow
+                className={'chart-edge-root'}
+                style={{backgroundColor: chartOptionsForStage.base.style.backgroundColor}}
+            >
                 <ChartStage
                     ref={stageRef}
                     intervalsArray={intervalsArray}
-                    numberOfYTicks={finalStyleOptions.axes.numberOfYTicks}
+                    numberOfYTicks={chartOptionsForStage.axes.numberOfYTicks}
                     timeDetailLevel={initialTimeDetailLevel}
                     timeFormat12h={layoutOptions.timeFormat12h}
                     selectedIndex={selectedIndex}
-                    chartOptions={finalStyleOptions}
+                    setSelectedIndex={setSelectedIndex}
+                    chartOptions={chartOptionsForStage}
                     showTopBar={layoutOptions.showTopBar}
                     showLeftBar={layoutOptions.showSidebar}
                     handleChartTypeChange={handleChartTypeChange}
                     openSettingsMenu={() => setIsSettingsOpen(true)}
                     showSettingsBar={layoutOptions.showSettingsBar}
+                    onRefreshRequest={onRefreshRequest}
+                    onToggleTheme={() => setThemeVariant((v) => (v === 'light' ? 'dark' : 'light'))}
+                    symbol={symbol}
+                    defaultSymbol={defaultSymbol}
+                    onSymbolChange={onSymbolChange}
+                    onSymbolSearch={onSymbolSearch}
+                    themeVariant={themeVariant}
                 />
 
                 <SettingsModal
@@ -328,6 +468,7 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                     onClose={() => setIsSettingsOpen(false)}
                     onSave={handleSaveSettings}
                     initialSettings={currentSettingsData}
+                    themeVariant={themeVariant}
                 />
             </MainAppWindow>
         </ModeProvider>

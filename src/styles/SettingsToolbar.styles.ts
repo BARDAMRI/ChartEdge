@@ -69,8 +69,20 @@ export const SettingToolbarContent = styled.div.attrs({className: 'setting-toolb
     }
 `;
 
+/** Symbol field + search control stay adjacent (not separated by chart type). */
+export const SymbolToolbarCluster = styled.div`
+    display: inline-flex;
+    flex-direction: row;
+    align-items: stretch;
+    height: 100%;
+    gap: 2px;
+    flex-shrink: 0;
+    min-width: 0;
+`;
+
 export const SymbolInput = styled(Control).attrs({as: 'input', type: 'text'})`
-    width: clamp(40px, 10vmin, 70px);
+    width: clamp(72px, 14vmin, 140px);
+    min-width: 56px;
     color: rgba(0, 0, 0, 0.85);
     font-weight: 600;
     background-color: white;
@@ -78,7 +90,7 @@ export const SymbolInput = styled(Control).attrs({as: 'input', type: 'text'})`
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 16px 0 16px;
+    padding: 0 10px 0 10px;
 
     &::placeholder {
         color: rgba(50, 60, 90, 0.70);

@@ -25,6 +25,85 @@
     width: 100%;
     flex-grow: 1;
     background-color: white;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.live-demo-bar {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 16px;
+    padding: 10px 14px;
+    margin: 0;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #1a1a2e;
+    background: linear-gradient(180deg, #f0f4ff 0%, #e8eeff 100%);
+    border-bottom: 1px solid rgba(90, 72, 222, 0.2);
+    box-sizing: border-box;
+}
+
+.live-demo-label {
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.live-demo-status {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.live-demo-status.on {
+    color: #0d5c2e;
+    background: rgba(38, 166, 154, 0.25);
+}
+
+.live-demo-status.paused {
+    color: #6d4c41;
+    background: rgba(120, 120, 120, 0.2);
+}
+
+.live-demo-hint {
+    color: #424242;
+    max-width: 42em;
+}
+
+.live-demo-hint code {
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.live-demo-btn {
+    cursor: pointer;
+    border: 1px solid rgba(90, 72, 222, 0.45);
+    background: white;
+    color: #3d2da8;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 8px;
+}
+
+.live-demo-btn:hover {
+    background: rgba(90, 72, 222, 0.08);
+}
+
+.app-root > :last-child {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 @keyframes logo-spin {

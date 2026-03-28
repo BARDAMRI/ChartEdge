@@ -14,13 +14,17 @@ export class TriangleShape implements IDrawingShape {
     public type = ShapeType.Triangle;
     public style: DrawingStyleOptions;
     public points: DrawingPoint[] = [];
+    public args: TriangleShapeArgs;
 
-    constructor(public args: TriangleShapeArgs, public styleOverride: DrawingStyleOptions, id?: string | undefined) {
+    constructor(argsIn: TriangleShapeArgs, public styleOverride: DrawingStyleOptions, id?: string | undefined) {
         this.id = id ?? generateDrawingShapeId();
         this.style = styleOverride;
-        this.points = args?.points ?? [];
-        this.recalculateThirdVertex();
-
+        this.args = {points: []};
+        this.points = argsIn?.points ? [...argsIn.points] : [];
+        if (this.points.length < 3) {
+            this.recalculateThirdVertex();
+        }
+        this.args.points = [...this.points];
     }
 
     /**
@@ -89,6 +93,9 @@ export class TriangleShape implements IDrawingShape {
         renderContext: ChartRenderContext,
         visiblePriceRange: PriceRange
     ): boolean {
+        if (this.points.length < 3) {
+            return false;
+        }
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
         const a = {
@@ -115,38 +122,57 @@ export class TriangleShape implements IDrawingShape {
         return pointInTriangle(px, py, a, b, c);
     }
 
+    /** Visible time span (sec) and price range — set from chart before dragging so the third vertex is not collinear with the base. */
+    private normTimeSpan = 3600;
+    private normPriceSpan = 1;
+
+    setNormalizationSpans(visibleTimeSec: number, priceRange: number): void {
+        this.normTimeSpan = Math.max(Math.abs(visibleTimeSec) || 3600, 1e-9);
+        this.normPriceSpan = Math.max(Math.abs(priceRange) || 1, 1e-9);
+    }
+
     recalculateThirdVertex(): void {
         if (this.points.length < 2) return;
 
-        const xmin = Math.min(this.points[0].time, this.points[1].time);
-        const xmax = Math.max(this.points[0].time, this.points[1].time);
-        const ymin = Math.min(this.points[0].price, this.points[1].price);
-        const ymax = Math.max(this.points[0].price, this.points[1].price);
+        const t0 = this.points[0].time;
+        const t1 = this.points[1].time;
+        const p0 = this.points[0].price;
+        const p1 = this.points[1].price;
+        const dt = t1 - t0;
+        const dp = p1 - p0;
 
-        const dx = this.points[1].time - this.points[0].time;
-        const dy = this.points[1].price - this.points[0].price;
-        const isLeftToRight = dx >= 0;
-        const isUp = dy > 0;
-        let rx: number, ry: number;
+        const vt = dt / this.normTimeSpan;
+        const vp = dp / this.normPriceSpan;
+        const vlen = Math.hypot(vt, vp);
 
-        if (isLeftToRight) {
-            rx = xmax;
-            ry = isUp ? ymax : ymin;
+        let thirdT: number;
+        let thirdP: number;
+
+        if (vlen < 1e-12) {
+            thirdT = t0 + this.normTimeSpan * 0.04;
+            thirdP = p0 + this.normPriceSpan * 0.04;
         } else {
-            rx = xmin;
-            ry = isUp ? ymax : ymin;
+            const pxt = -vp / vlen;
+            const pyp = vt / vlen;
+            const h = Math.max(0.1, Math.min(0.55, vlen * 0.5));
+            const midT = (t0 + t1) / 2;
+            const midP = (p0 + p1) / 2;
+            thirdT = midT + pxt * h * this.normTimeSpan;
+            thirdP = midP + pyp * h * this.normPriceSpan;
         }
 
         if (this.points.length === 2) {
-            this.points.push({time: rx, price: ry});
+            this.points.push({time: thirdT, price: thirdP});
         } else {
-            this.points[2] = {time: rx, price: ry};
+            this.points[2] = {time: thirdT, price: thirdP};
         }
+        this.args.points = [...this.points];
     }
 
     addPoint(point: DrawingPoint): void {
         if (this.points.length < 2) {
             this.points.push(point);
+            this.args.points = [...this.points];
         } else {
             this.points[1] = point;
             this.recalculateThirdVertex();
@@ -173,6 +199,7 @@ export class TriangleShape implements IDrawingShape {
 
         if (this.points.length === 0) {
             this.points.push(point);
+            this.args.points = [...this.points];
         } else {
             this.points[0] = point;
             this.recalculateThirdVertex();
@@ -182,8 +209,10 @@ export class TriangleShape implements IDrawingShape {
     updateLastPoint(point: DrawingPoint): void {
         if (this.points.length === 0) {
             this.points.push(point);
+            this.args.points = [...this.points];
         } else if (this.points.length === 1) {
             this.points.push(point);
+            this.args.points = [...this.points];
         } else {
             this.points[1] = point;
             this.recalculateThirdVertex();

@@ -49,9 +49,9 @@ export default function YAxis({
             maxPrice,
             numberOfYTicks,
             yAxisPosition,
-            'black',
-            'black',
-            '12px Arial',
+            formatting.lineColor,
+            formatting.textColor,
+            formatting.font,
             5,
             5,
             formatting

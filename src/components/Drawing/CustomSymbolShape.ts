@@ -18,8 +18,8 @@ export class CustomSymbolShape implements IDrawingShape {
         this.id = id ?? generateDrawingShapeId();
         this.style = styleOverride;
         this.points = args?.points ?? [];
-        this.symbol = args.symbol;
-        this.size = args.size;
+        this.symbol = args?.symbol ?? '?';
+        this.size = args?.size ?? 20;
     }
 
     /**
@@ -35,15 +35,23 @@ export class CustomSymbolShape implements IDrawingShape {
         visiblePriceRange: PriceRange,
         style: FinalDrawingStyle
     ): void {
-        const {points, symbol, size} = this.args;
+        const points = this.args?.points ?? this.points;
+        if (!points?.length) {
+            return;
+        }
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
         const x = timeToX(points[0].time, canvasWidth, visibleRange);
         const y = priceToY(points[0].price, canvasHeight, visiblePriceRange);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            return;
+        }
 
+        const symbol = this.args?.symbol ?? this.symbol ?? '?';
+        const size = this.args?.size ?? this.size ?? 20;
 
         ctx.fillStyle = style.fillColor !== 'transparent' ? style.fillColor : style.lineColor;
-        ctx.font = `${size || 20}px sans-serif`;
+        ctx.font = `${size}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
@@ -56,12 +64,15 @@ export class CustomSymbolShape implements IDrawingShape {
         renderContext: ChartRenderContext,
         visiblePriceRange: PriceRange
     ): boolean {
-        const {points, size} = this.args;
+        const points = this.args?.points ?? this.points;
+        if (!points?.length) {
+            return false;
+        }
         const {canvasWidth, canvasHeight, visibleRange} = renderContext;
 
         const x = timeToX(points[0].time, canvasWidth, visibleRange);
         const y = priceToY(points[0].price, canvasHeight, visiblePriceRange);
-        const s = size || 20;
+        const s = this.args?.size ?? this.size ?? 20;
 
         // Bounding box hit test
         return px >= x - s / 2 &&

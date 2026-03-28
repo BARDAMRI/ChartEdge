@@ -24,7 +24,7 @@ import {
     StyledCanvasNonResponsive,
     StyledCanvasResponsive
 } from '../../styles/ChartCanvas.styles';
-import {ChartOptions, ChartType} from "../../types/chartOptions";
+import {ChartOptions, ChartRenderContext, ChartType} from "../../types/chartOptions";
 import {
     drawAreaChart,
     drawBarChart,
@@ -44,16 +44,41 @@ import {xToTime, yToPrice} from "./utils/GraphHelpers";
 import {Drawing} from "../Drawing/types";
 import {IDrawingShape} from "../Drawing/IDrawingShape";
 import {createShape} from "../Drawing/drawHelper";
+import {AngleShape} from '../Drawing/AngleShape';
+import {TriangleShape} from '../Drawing/TriangleShape';
 import {formatNumber, FormatNumberOptions} from './utils/formatters';
 import {FormattingService} from '../../services/FormattingService';
 import {getDateFnsLocale, getLocaleDefaults, translate} from '../../utils/i18n';
 import {isWithinTradingSession} from '../../utils/timeUtils';
+
+function syncTriangleNormalization(shape: IDrawingShape | null, rc: ChartRenderContext | null, pr: PriceRange) {
+    if (!shape || !rc) return;
+    if (shape instanceof TriangleShape) {
+        const timeSpan = rc.visibleRange.end - rc.visibleRange.start;
+        shape.setNormalizationSpans(timeSpan, pr.range);
+    }
+}
+
+function minPointsToCommit(mode: Mode): number {
+    switch (mode) {
+        case Mode.drawCustomSymbol:
+            return 1;
+        case Mode.drawTriangle:
+            return 2;
+        default:
+            return 2;
+    }
+}
 
 interface ChartCanvasProps {
     intervalsArray: Interval[];
     drawings: IDrawingShape[];
     setDrawings: (drawings: IDrawingShape[] | ((prev: IDrawingShape[]) => IDrawingShape[])) => void;
     selectedIndex: number | null;
+    /** Hit-tested on mousedown in Select / Edit shape modes (top-most drawing wins). */
+    setSelectedIndex?: (index: number | null) => void;
+    /** Double-click shape, or context-menu on selected shape — opens properties UI. */
+    onRequestShapeProperties?: (drawingIndex: number) => void;
     visibleRange: TimeRange;
     setVisibleRange: (range: TimeRange) => void;
     visiblePriceRange: PriceRange;
@@ -65,6 +90,9 @@ interface ChartCanvasProps {
 
 export interface ChartCanvasHandle {
     getCanvasSize(): { width: number; height: number; dpr: number };
+
+    /** Main OHLC canvas (for snapshots); does not include histogram or drawings layers. */
+    getMainCanvasElement(): HTMLCanvasElement | null;
 
     clearCanvas(): void;
 
@@ -80,6 +108,8 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         drawings,
         setDrawings,
         selectedIndex,
+        setSelectedIndex,
+        onRequestShapeProperties,
         chartOptions,
         canvasSizes,
         parentContainerRef,
@@ -107,24 +137,42 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
     const [hoverPoint, setHoverPoint] = useState<CanvasPoint | null>(null);
     const [hoveredCandle, setHoveredCandle] = useState<Interval | null>(null);
     const createdShape = useRef<IDrawingShape | null>(null);
+    /** Angle tool: 1 = placing first ray from vertex; 2 = placing second ray. */
+    const angleDrawPhaseRef = useRef<1 | 2>(1);
     const [_, setChartDimensions] = React.useState<ChartDimensionsData | null>(null);
     const chartDimensionsRef = React.useRef<ChartDimensionsData | null>(null);
-    const isInteractionMode = mode === Mode.none || mode === Mode.select;
+    const isInteractionMode =
+        mode === Mode.none || mode === Mode.select || mode === Mode.editShape;
+    /** Pan/zoom only in default mode so Select/Edit can click shapes without starting a drag. */
+    const isPanZoomMode = mode === Mode.none;
     const {renderContext, intervalSeconds} = useChartData(
         intervalsArray, visibleRange, hoverPoint, canvasSizes.width, canvasSizes.height
     );
 
-    useEffect(() => {
-        if (mode != Mode.none && mode != Mode.select) {
-            createdShape.current = createShape({
-                mode,
-                args: undefined,
-                style: chartOptions.base.style.drawings as DrawingStyleOptions,
-            } as Drawing);
-        } else {
+    const reseedDraftShape = useCallback(() => {
+        if (mode === Mode.none || mode === Mode.select || mode === Mode.editShape) {
             createdShape.current = null;
+            return;
+        }
+        createdShape.current = createShape({
+            mode,
+            args: undefined,
+            style: chartOptions.base.style.drawings as DrawingStyleOptions,
+        } as Drawing);
+        if (mode === Mode.drawAngle) {
+            angleDrawPhaseRef.current = 1;
+        }
+    }, [mode, chartOptions.base.style.drawings]);
+
+    useEffect(() => {
+        if (mode !== Mode.drawAngle) {
+            angleDrawPhaseRef.current = 1;
         }
     }, [mode]);
+
+    useEffect(() => {
+        reseedDraftShape();
+    }, [reseedDraftShape]);
 
     useEffect(() => {
         const dpr = window.devicePixelRatio || 1;
@@ -145,15 +193,25 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && mode === Mode.drawPolyline) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+            if (mode === Mode.drawPolyline) {
                 createdShape.current?.setPoints([]);
+            }
+            const inDrawTool =
+                mode !== Mode.none &&
+                mode !== Mode.select &&
+                mode !== Mode.editShape;
+            if (inDrawTool) {
+                setMode(Mode.none);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, []);
+    }, [mode, setMode]);
 
 
     const drawBackBuffer = (backBufferCtx: any, dims: any, renderContext: any) => {
@@ -511,7 +569,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
 
     usePanAndZoom(
         hoverCanvasRef,
-        isInteractionMode,
+        isPanZoomMode,
         intervalsArray,
         visibleRange,
         setVisibleRange,
@@ -527,7 +585,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         scheduleDraw();
     };
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (isInteractionMode || !renderContext) return;
+        if (!renderContext) return;
 
         const dims = chartDimensionsRef.current;
         if (!dims) return;
@@ -536,12 +594,30 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
+        if ((mode === Mode.select || mode === Mode.editShape) && setSelectedIndex) {
+            for (let i = drawings.length - 1; i >= 0; i--) {
+                const s = drawings[i];
+                if (s?.isHit(x, y, renderContext, visiblePriceRange)) {
+                    setSelectedIndex(i);
+                    return;
+                }
+            }
+            setSelectedIndex(null);
+            return;
+        }
+
+        if (isInteractionMode) return;
+
         const time = xToTime(x, renderContext!.canvasWidth, renderContext!.visibleRange);
         const price = yToPrice(y, renderContext!.canvasHeight, visiblePriceRange);
         const pt = {time, price};
 
+        if (mode === Mode.drawAngle && angleDrawPhaseRef.current === 2) {
+            return;
+        }
         if (mode !== Mode.drawPolyline || createdShape.current?.points.length! >= 1) {
             createdShape.current?.setFirstPoint(pt);
+            syncTriangleNormalization(createdShape.current, renderContext, visiblePriceRange);
         } else if (mode === Mode.drawPolyline && createdShape.current?.points.length === 1) {
             createdShape.current?.addPoint(pt);
         }
@@ -551,12 +627,19 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         const point = {x: e.clientX - rect.left, y: e.clientY - rect.top};
         currentPointRef.current = point;
 
-        const isDrawingMode = !(mode === Mode.none || mode === Mode.select) && mode !== Mode.drawPolyline;
+        const isDrawingMode =
+            !(mode === Mode.none || mode === Mode.select || mode === Mode.editShape) &&
+            mode !== Mode.drawPolyline;
         if (isDrawingMode && createdShape.current && renderContext && (createdShape.current?.points.length ?? 0) > 0) {
             const endTime = xToTime(point.x, renderContext.canvasWidth, renderContext.visibleRange);
             const endPrice = yToPrice(point.y, renderContext.canvasHeight, visiblePriceRange);
             const pt = {time: endTime, price: endPrice};
-            createdShape.current?.updateLastPoint(pt);
+            syncTriangleNormalization(createdShape.current, renderContext, visiblePriceRange);
+            if (mode === Mode.drawAngle && createdShape.current instanceof AngleShape && angleDrawPhaseRef.current === 2) {
+                createdShape.current.updateSecondRayEnd(pt);
+            } else {
+                createdShape.current?.updateLastPoint(pt);
+            }
         }
 
         if (renderContext) {
@@ -576,25 +659,88 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         const endTime = xToTime(currentPointRef.current!.x, renderContext.canvasWidth, renderContext.visibleRange);
         const endPrice = yToPrice(currentPointRef.current!.y, renderContext.canvasHeight, visiblePriceRange);
         const endPoint: DrawingPoint = {time: endTime, price: endPrice};
-        createdShape.current?.updateLastPoint(endPoint);
-        let newDraw = createdShape.current!;
-        // add the original args to the shape before inserting it into the array
-        setDrawings(prev => [...prev, newDraw]);
-        createdShape.current = null;
-        setMode(Mode.none);
+        syncTriangleNormalization(createdShape.current, renderContext, visiblePriceRange);
 
-    };
-    const handleDoubleClick = () => {
-        if (mode !== Mode.drawPolyline || !createdShape.current || !currentPointRef.current || !renderContext) {
+        if (mode === Mode.drawAngle && createdShape.current instanceof AngleShape) {
+            const angleShape = createdShape.current;
+            if (angleDrawPhaseRef.current === 1) {
+                angleShape.updateLastPoint(endPoint);
+                if (angleShape.getPoints().length < 2) {
+                    return;
+                }
+                angleDrawPhaseRef.current = 2;
+                scheduleDraw();
+                return;
+            }
+            angleShape.updateSecondRayEnd(endPoint);
+            if (angleShape.getPoints().length < 3) {
+                return;
+            }
+            setDrawings(prev => [...prev, angleShape]);
+            reseedDraftShape();
             return;
         }
-        const newDraw = createdShape.current!;
-        setDrawings(prev => [...prev, newDraw]);
-        createdShape.current = null;
-        setMode(Mode.none);
+
+        createdShape.current?.updateLastPoint(endPoint);
+        const draft = createdShape.current!;
+        const n = draft.getPoints().length;
+        if (n < minPointsToCommit(mode)) {
+            return;
+        }
+        setDrawings(prev => [...prev, draft]);
+        reseedDraftShape();
+
+    };
+    const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (!renderContext) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (mode === Mode.drawPolyline && createdShape.current && currentPointRef.current) {
+            const newDraw = createdShape.current!;
+            setDrawings(prev => [...prev, newDraw]);
+            reseedDraftShape();
+            return;
+        }
+
+        if (
+            (mode === Mode.none || mode === Mode.select || mode === Mode.editShape) &&
+            onRequestShapeProperties
+        ) {
+            for (let i = drawings.length - 1; i >= 0; i--) {
+                const s = drawings[i];
+                if (s?.isHit(x, y, renderContext, visiblePriceRange)) {
+                    setSelectedIndex?.(i);
+                    onRequestShapeProperties(i);
+                    e.preventDefault();
+                    return;
+                }
+            }
+        }
+    };
+
+    const handleContextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (
+            selectedIndex == null ||
+            !onRequestShapeProperties ||
+            !renderContext ||
+            selectedIndex < 0 ||
+            selectedIndex >= drawings.length
+        ) {
+            return;
+        }
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const s = drawings[selectedIndex];
+        if (s?.isHit(x, y, renderContext, visiblePriceRange)) {
+            e.preventDefault();
+            onRequestShapeProperties(selectedIndex);
+        }
     };
     const handleWheelBlock: React.WheelEventHandler<HTMLCanvasElement> = (e) => {
-        if (!isInteractionMode) {
+        if (!isPanZoomMode) {
             e.preventDefault();
             e.stopPropagation();
         }
@@ -609,6 +755,9 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                 height: dims?.height ?? 0,
                 dpr: dims?.dpr ?? (window.devicePixelRatio || 1),
             };
+        },
+        getMainCanvasElement() {
+            return mainCanvasRef.current;
         },
         clearCanvas() {
             // Clear all back buffers (main, hist, drawings)
@@ -678,10 +827,15 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                     onMouseUp={handleMouseUp}
                     onWheel={handleWheelBlock}
                     onDoubleClick={handleDoubleClick}
+                    onContextMenu={handleContextMenu}
                     $heightPrecent={100}
                     $zIndex={4}
                     style={{
-                        cursor: isInteractionMode ? (isPanning ? 'grabbing' : 'grab') : 'crosshair',
+                        cursor: isPanZoomMode
+                            ? (isPanning ? 'grabbing' : 'grab')
+                            : mode === Mode.select || mode === Mode.editShape
+                                ? 'default'
+                                : 'crosshair',
                         backgroundColor: 'transparent',
                     }}
                 />
@@ -692,19 +846,24 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                     className={'intervals-data-tooltip'} 
                     $isPositive={hoveredCandle.c > hoveredCandle.o}
                     $isRTL={getLocaleDefaults(chartOptions.base.style.axes.locale).direction === 'rtl'}
+                    $variant={chartOptions.base.theme === 'dark' || chartOptions.base.theme === 'grey' ? 'dark' : 'light'}
                 >
                     {(() => {
                         const axes = chartOptions.base.style.axes;
                         const lang = axes.language || 'en';
-                        
-                        const dateStr = FormattingService.formatDate(new Date(hoveredCandle.t * 1000), axes);
+                        const isDarkPanel = chartOptions.base.theme === 'dark' || chartOptions.base.theme === 'grey';
                         const change = hoveredCandle.c - hoveredCandle.o;
                         const changePercent = (change / hoveredCandle.o);
+                        const changeColor = isDarkPanel
+                            ? (change >= 0 ? '#7ee2b8' : '#ff9e9e')
+                            : (change >= 0 ? 'green' : 'red');
+                        const dateStr = FormattingService.formatDate(new Date(hoveredCandle.t * 1000), axes);
                         const isVerySmall = canvasSizes.width < 350 || canvasSizes.height < 250;
+                        const divider = isDarkPanel ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(0,0,0,0.1)';
 
                         return (
                             <>
-                                <div style={{fontWeight: 'bold', borderBottom: '1px solid rgba(0,0,0,0.1)', marginBottom: '4px', paddingBottom: '2px'}}>
+                                <div style={{fontWeight: 'bold', borderBottom: divider, marginBottom: '4px', paddingBottom: '2px'}}>
                                     {dateStr}
                                 </div>
                                 {!isVerySmall ? (
@@ -717,13 +876,13 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                                         </div>
                                         <div style={{marginTop: '4px'}}>
                                             {translate('change', lang)}: 
-                                            <span style={{color: change >= 0 ? 'green' : 'red', fontWeight: 'bold', marginLeft: '4px'}}>
+                                            <span style={{color: changeColor, fontWeight: 'bold', marginLeft: '4px'}}>
                                                 {FormattingService.formatPrice(change, { ...axes, metricType: 'pnl', showSign: true } as any)} 
                                                 ({FormattingService.formatPrice(changePercent, { ...axes, useCurrency: false, unit: '%', maximumFractionDigits: 2, showSign: true } as any)})
                                             </span>
                                         </div>
                                         {hoveredCandle.v !== undefined && (
-                                            <div style={{fontSize: '11px', opacity: 0.8, marginTop: '2px'}}>
+                                            <div style={{fontSize: '11px', opacity: isDarkPanel ? 0.88 : 0.8, marginTop: '2px'}}>
                                                 {translate('volume', lang)}: {FormattingService.formatPrice(hoveredCandle.v, { ...axes, numberNotation: 'compact' } as any)}
                                             </div>
                                         )}
@@ -733,7 +892,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                                         <div>
                                             {translate('close', lang)}: {FormattingService.formatPrice(hoveredCandle.c, axes)}
                                         </div>
-                                        <div style={{color: change >= 0 ? 'green' : 'red', fontWeight: 'bold'}}>
+                                        <div style={{color: changeColor, fontWeight: 'bold'}}>
                                             {FormattingService.formatPrice(changePercent, { ...axes, useCurrency: false, unit: '%', maximumFractionDigits: 1, showSign: true } as any)}
                                         </div>
                                     </div>
