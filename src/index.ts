@@ -1,5 +1,8 @@
 // Props and Types
 export type {SimpleChartEdgeProps, SimpleChartEdgeHandle} from './components/SimpleChartEdge';
+export type {ChartEdgeHostProps, ChartEdgeHostHandle} from './components/SimpleChartEdge';
+export {ChartEdgeHost} from './components/SimpleChartEdge';
+export type {ChartEdgeProductId} from './types/chartProducts';
 export type {Interval} from './types/Interval';
 export type {LiveDataPlacement, LiveDataApplyResult} from './types/liveData';
 export {applyLiveDataMerge, normalizeInterval, normalizeIntervals, dedupeByTimePreferLast} from './utils/liveDataMerge';
@@ -25,7 +28,12 @@ export {
     filterDrawingInstances,
 } from './components/Drawing/drawingQuery';
 export type {ChartContextInfo} from './types/chartContext';
-export type {ChartStageHandle} from './components/Canvas/ChartStage';
+export type {ChartEdgeStageHandle, ChartEdgeStageProps} from './components/Canvas/ChartEdgeStage';
+export {ChartEdgeStage} from './components/Canvas/ChartEdgeStage';
+/** @deprecated Use {@link ChartEdgeStageHandle} */
+export type {ChartStageHandle, ChartStageProps} from './components/Canvas/ChartStage';
+/** @deprecated Use {@link ChartEdgeStage} */
+export {ChartStage} from './components/Canvas/ChartStage';
 export type {DrawingStyleOptions, DrawingPoint, CanvasPoint} from './types/Drawings';
 export type {IDrawingShape} from './components/Drawing/IDrawingShape';
 
@@ -45,8 +53,27 @@ export {AxesPosition} from './types/types';
 export {TimeDetailLevel, ChartType} from './types/chartOptions';
 export {OverlayPriceKey, OverlayKind} from './types/overlay';
 
-// Components
+// Components — product lines (ChartEdge-branded tiers)
+export {
+    ChartEdgePulse,
+    ChartEdgeFlow,
+    ChartEdgeCommand,
+    ChartEdgeDesk,
+    ChartEdgeApex,
+} from './components/ChartEdgeProducts';
+export type {
+    ChartEdgePulseProps,
+    ChartEdgeFlowProps,
+    ChartEdgeCommandProps,
+    ChartEdgeDeskProps,
+    ChartEdgeApexProps,
+} from './components/ChartEdgeProducts';
+
 export {SimpleChartEdge} from './components/SimpleChartEdge';
+export {ChartEdgeMark} from './branding/ChartEdgeMark';
+export type {ChartEdgeThemeVariant} from './branding/ChartEdgeMark';
+export {ChartEdgeAttribution} from './branding/ChartEdgeAttribution';
+export type {ChartEdgeAttributionProps} from './branding/ChartEdgeAttribution';
 export {ShapePropertiesModal} from './components/ShapePropertiesModal/ShapePropertiesModal';
 export type {ShapePropertiesFormState} from './components/ShapePropertiesModal/applyShapeProperties';
 export type {ModalThemeVariant} from './components/SettingsModal/SettingsModal.styles';

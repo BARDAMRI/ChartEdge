@@ -273,7 +273,7 @@ export const ModalButton = styled.button<{ $primary?: boolean; $variant?: ModalT
 `;
 
 /* ─── Toggle switch ──────────────────────────────────────────────────────── */
-export const SwitchToggle = styled.div<{ $checked: boolean }>`
+export const SwitchToggle = styled.div<{ $checked: boolean; $disabled?: boolean }>`
     position: relative;
     flex-shrink: 0;
     width: clamp(32px, 5.5vmin, 44px);
@@ -282,7 +282,9 @@ export const SwitchToggle = styled.div<{ $checked: boolean }>`
         ? 'linear-gradient(180deg, #3EC5FF, #5A48DE)'
         : 'rgba(255,255,255,0.14)'};
     border-radius: 100px;
-    cursor: pointer;
+    cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
+    opacity: ${({ $disabled }) => ($disabled ? 0.42 : 1)};
+    pointer-events: ${({ $disabled }) => ($disabled ? 'none' : 'auto')};
     transition: background 200ms ease;
     box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
 

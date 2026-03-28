@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState, forwardRef, useImperativeHandle, useRef} from 'react';
-import {ChartStage} from './Canvas/ChartStage';
+import {ChartEdgeStage} from './Canvas/ChartEdgeStage';
 import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {SettingsModal, SettingsState} from './SettingsModal/SettingsModal';
@@ -29,6 +29,10 @@ import type {DrawingInput, DrawingPatch, DrawingSpec} from './Drawing/drawHelper
 import type {DrawingQuery, DrawingSnapshot} from './Drawing/drawingQuery';
 import type {ChartContextInfo} from '../types/chartContext';
 import type {IDrawingShape} from './Drawing/IDrawingShape';
+import type {ChartEdgeProductId} from '../types/chartProducts';
+
+/** Stable reference when `chartOptions` prop is omitted so sync effect is not fooled by a fresh `{}` each render. */
+const EMPTY_CHART_OPTIONS: DeepPartial<ChartOptions> = {};
 
 export interface SimpleChartEdgeHandle {
     addShape: (shape: DrawingInput) => void;
@@ -68,6 +72,10 @@ export type SimpleChartEdgeProps = {
     initialTimeFormat12h?: boolean;
     initialVisibleTimeRange?: TimeRange;
     chartOptions?: DeepPartial<ChartOptions>;
+    /**
+     * Toolbar chrome — only honored when `productId` is omitted (legacy / unbundled host).
+     * When `productId` is set (ChartEdge Pulse, Flow, …), layout is fixed by product and these props are ignored.
+     */
     showSidebar?: boolean;
     showTopBar?: boolean;
     /** When false hides the settings gear icon even if the top toolbar is visible */
@@ -81,25 +89,68 @@ export type SimpleChartEdgeProps = {
     onSymbolChange?: (symbol: string) => void;
     /** Invoked when the user submits symbol search (search button or Enter). */
     onSymbolSearch?: (symbol: string) => void;
+    /**
+     * Locks toolbar chrome to the product line: side drawing bar, top bar, and settings entry cannot be
+     * changed via props or settings for this instance. Omit for a host-controlled layout (see `showSidebar` / `showTopBar` / `showSettingsBar`).
+     */
+    productId?: ChartEdgeProductId;
+    /**
+     * In-chart logo watermark (bundled SVG marks, low opacity, no extra layout row).
+     * Forced on for `productId="desk"`. Default true. Set false to disable branding.
+     */
+    showAttribution?: boolean;
+    /** Reserved for ChartEdge Apex; when missing under `productId="apex"`, shows an evaluation notice. */
+    licenseKey?: string | null;
 };
 
-export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdgeProps>(({
-                                                                                            intervalsArray = [],
-                                                                                            initialNumberOfYTicks = 5,
-                                                                                            initialTimeDetailLevel = TimeDetailLevel.Auto,
-                                                                                            initialTimeFormat12h = false,
-                                                                                            chartOptions = {} as DeepPartial<ChartOptions>,
-                                                                                            showSidebar = true,
-                                                                                            showTopBar = true,
-                                                                                            showSettingsBar = true,
-                                                                                            onRefreshRequest,
-                                                                                            symbol,
-                                                                                            defaultSymbol,
-                                                                                            onSymbolChange,
-                                                                                            onSymbolSearch,
-                                                                                        }, ref) => {
+function chartEdgeProductLayoutDefaults(id: ChartEdgeProductId | undefined): {
+    showSidebar: boolean;
+    showTopBar: boolean;
+    showSettingsBar: boolean;
+} {
+    switch (id ?? 'command') {
+        case 'pulse':
+            return {showSidebar: false, showTopBar: false, showSettingsBar: false};
+        case 'flow':
+            return {showSidebar: false, showTopBar: true, showSettingsBar: true};
+        case 'command':
+        case 'desk':
+        case 'apex':
+        default:
+            return {showSidebar: true, showTopBar: true, showSettingsBar: true};
+    }
+}
 
-    const [finalStyleOptions, setStyleOptions] = useState<DeepRequired<ChartOptions>>(deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions));
+export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdgeProps>((props, ref) => {
+    const {
+        intervalsArray = [],
+        initialNumberOfYTicks = 5,
+        initialTimeDetailLevel = TimeDetailLevel.Auto,
+        initialTimeFormat12h = false,
+        chartOptions = EMPTY_CHART_OPTIONS,
+        showSidebar: showSidebarProp,
+        showTopBar: showTopBarProp,
+        showSettingsBar: showSettingsBarProp,
+        onRefreshRequest,
+        symbol,
+        defaultSymbol,
+        onSymbolChange,
+        onSymbolSearch,
+        productId,
+        licenseKey,
+        showAttribution = true,
+    } = props;
+
+    const hasLockedChrome = productId != null;
+    const tierLayout = chartEdgeProductLayoutDefaults(productId);
+    const showSidebar = hasLockedChrome ? tierLayout.showSidebar : (showSidebarProp ?? tierLayout.showSidebar);
+    const showTopBar = hasLockedChrome ? tierLayout.showTopBar : (showTopBarProp ?? tierLayout.showTopBar);
+    const showSettingsBar = hasLockedChrome ? tierLayout.showSettingsBar : (showSettingsBarProp ?? tierLayout.showSettingsBar);
+    const attributionOn = productId === 'desk' ? true : showAttribution;
+
+    const [finalStyleOptions, setStyleOptions] = useState<DeepRequired<ChartOptions>>(() =>
+        deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions)
+    );
     const [themeVariant, setThemeVariant] = useState<'light' | 'dark'>('light');
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
     const stageRef = useRef<any>(null);
@@ -112,21 +163,38 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         timeFormat12h: initialTimeFormat12h,
     });
 
+    const prevExternalChartOptionsRef = useRef(chartOptions);
+
     useEffect(() => {
-        const merged = deepMerge(finalStyleOptions, chartOptions);
-        if (!deepEqual(merged, finalStyleOptions)) {
-            setStyleOptions(merged);
+        if (deepEqual(chartOptions, prevExternalChartOptionsRef.current)) {
+            return;
         }
+        prevExternalChartOptionsRef.current = chartOptions;
+        setStyleOptions((prev) => {
+            const merged = deepMerge(prev, chartOptions);
+            return deepEqual(merged, prev) ? prev : merged;
+        });
     }, [chartOptions]);
 
     useEffect(() => {
+        if (hasLockedChrome) {
+            const d = chartEdgeProductLayoutDefaults(productId);
+            setLayoutOptions(prev => ({
+                ...prev,
+                showSidebar: d.showSidebar,
+                showTopBar: d.showTopBar,
+                showSettingsBar: d.showSettingsBar,
+            }));
+            return;
+        }
+        const d = chartEdgeProductLayoutDefaults(undefined);
         setLayoutOptions(prev => ({
             ...prev,
-            showSidebar: showSidebar ?? prev.showSidebar,
-            showTopBar: showTopBar ?? prev.showTopBar,
-            showSettingsBar: showSettingsBar ?? prev.showSettingsBar,
+            showSidebar: showSidebarProp !== undefined ? showSidebarProp : d.showSidebar,
+            showTopBar: showTopBarProp !== undefined ? showTopBarProp : d.showTopBar,
+            showSettingsBar: showSettingsBarProp !== undefined ? showSettingsBarProp : d.showSettingsBar,
         }));
-    }, [showSidebar, showTopBar, showSettingsBar]);
+    }, [hasLockedChrome, productId, showSidebarProp, showTopBarProp, showSettingsBarProp]);
 
     useEffect(() => {
         const handleCopy = (e: ClipboardEvent) => {
@@ -262,20 +330,24 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
 
     const handleChartTypeChange = (newType: ChartType) => {
         setSelectedIndex(null);
-        setStyleOptions(prev => {
-            const updated = prev;
-            updated.base.chartType = newType;
-            return {...updated};
-        });
-        console.log(`Chart type changed to: ${newType}`);
-    }
+        setStyleOptions((prev) => ({
+            ...prev,
+            base: {
+                ...prev.base,
+                chartType: newType,
+            },
+        }));
+    };
 
     const handleSaveSettings = (newSettings: SettingsState) => {
-        // Layout-only flags live in layoutOptions
         setLayoutOptions(prev => ({
             ...prev,
-            showSidebar: newSettings.showSidebar,
-            showTopBar: newSettings.showTopBar,
+            ...(hasLockedChrome
+                ? {}
+                : {
+                      showSidebar: newSettings.showSidebar,
+                      showTopBar: newSettings.showTopBar,
+                  }),
             timeFormat12h: newSettings.timeFormat12h,
         }));
 
@@ -290,6 +362,9 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
             base: {
                 ...prev.base,
                 showHistogram: newSettings.showHistogram,
+                showCandleTooltip: newSettings.showCandleTooltip,
+                showCrosshair: newSettings.showCrosshair,
+                showCrosshairValues: newSettings.showCrosshairValues,
                 style: {
                     ...prev.base.style,
                     showGrid: newSettings.showGrid,
@@ -361,6 +436,9 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         showSidebar: layoutOptions.showSidebar,
         showTopBar: layoutOptions.showTopBar,
         showHistogram: finalStyleOptions.base.showHistogram,
+        showCandleTooltip: finalStyleOptions.base.showCandleTooltip,
+        showCrosshair: finalStyleOptions.base.showCrosshair,
+        showCrosshairValues: finalStyleOptions.base.showCrosshairValues,
         showGrid: finalStyleOptions.base.style.showGrid,
         timeFormat12h: layoutOptions.timeFormat12h,
         yAxisPosition: finalStyleOptions.axes.yAxisPosition,
@@ -399,6 +477,9 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         layoutOptions.showTopBar,
         layoutOptions.timeFormat12h,
         finalStyleOptions.base.showHistogram,
+        finalStyleOptions.base.showCandleTooltip,
+        finalStyleOptions.base.showCrosshair,
+        finalStyleOptions.base.showCrosshairValues,
         finalStyleOptions.base.style.showGrid,
         finalStyleOptions.axes.yAxisPosition,
         finalStyleOptions.axes.numberOfYTicks,
@@ -433,35 +514,61 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         } as DeepPartial<ChartOptions>);
     }, [finalStyleOptions, themeVariant]);
 
+    const apexEval = productId === 'apex' && !licenseKey;
+
     return (
         <ModeProvider>
             <GlobalStyle $pageBackground={themeVariant === 'dark' ? '#121212' : '#ffffff'}/>
             <MainAppWindow
                 className={'chart-edge-root'}
-                style={{backgroundColor: chartOptionsForStage.base.style.backgroundColor}}
+                style={{
+                    backgroundColor: chartOptionsForStage.base.style.backgroundColor,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 0,
+                }}
             >
-                <ChartStage
-                    ref={stageRef}
-                    intervalsArray={intervalsArray}
-                    numberOfYTicks={chartOptionsForStage.axes.numberOfYTicks}
-                    timeDetailLevel={initialTimeDetailLevel}
-                    timeFormat12h={layoutOptions.timeFormat12h}
-                    selectedIndex={selectedIndex}
-                    setSelectedIndex={setSelectedIndex}
-                    chartOptions={chartOptionsForStage}
-                    showTopBar={layoutOptions.showTopBar}
-                    showLeftBar={layoutOptions.showSidebar}
-                    handleChartTypeChange={handleChartTypeChange}
-                    openSettingsMenu={() => setIsSettingsOpen(true)}
-                    showSettingsBar={layoutOptions.showSettingsBar}
-                    onRefreshRequest={onRefreshRequest}
-                    onToggleTheme={() => setThemeVariant((v) => (v === 'light' ? 'dark' : 'light'))}
-                    symbol={symbol}
-                    defaultSymbol={defaultSymbol}
-                    onSymbolChange={onSymbolChange}
-                    onSymbolSearch={onSymbolSearch}
-                    themeVariant={themeVariant}
-                />
+                {apexEval ? (
+                    <div
+                        style={{
+                            flexShrink: 0,
+                            padding: '6px 10px',
+                            fontSize: 11,
+                            textAlign: 'center',
+                            fontFamily: 'system-ui, sans-serif',
+                            backgroundColor: themeVariant === 'dark' ? '#2d333b' : '#fff8e1',
+                            color: themeVariant === 'dark' ? '#d4d4d8' : '#5c4a00',
+                            borderBottom: `1px solid ${themeVariant === 'dark' ? '#444c56' : '#f0d060'}`,
+                        }}
+                    >
+                        ChartEdge Apex — evaluation mode. Provide <code>licenseKey</code> when your license is active.
+                    </div>
+                ) : null}
+                <div style={{flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column'}}>
+                    <ChartEdgeStage
+                        ref={stageRef}
+                        intervalsArray={intervalsArray}
+                        numberOfYTicks={chartOptionsForStage.axes.numberOfYTicks}
+                        timeDetailLevel={initialTimeDetailLevel}
+                        timeFormat12h={layoutOptions.timeFormat12h}
+                        selectedIndex={selectedIndex}
+                        setSelectedIndex={setSelectedIndex}
+                        chartOptions={chartOptionsForStage}
+                        showTopBar={layoutOptions.showTopBar}
+                        showLeftBar={layoutOptions.showSidebar}
+                        handleChartTypeChange={handleChartTypeChange}
+                        openSettingsMenu={() => setIsSettingsOpen(true)}
+                        showSettingsBar={layoutOptions.showSettingsBar}
+                        onRefreshRequest={onRefreshRequest}
+                        onToggleTheme={() => setThemeVariant((v) => (v === 'light' ? 'dark' : 'light'))}
+                        symbol={symbol}
+                        defaultSymbol={defaultSymbol}
+                        onSymbolChange={onSymbolChange}
+                        onSymbolSearch={onSymbolSearch}
+                        themeVariant={themeVariant}
+                        showBrandWatermark={attributionOn}
+                    />
+                </div>
 
                 <SettingsModal
                     isOpen={isSettingsOpen}
@@ -469,8 +576,14 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                     onSave={handleSaveSettings}
                     initialSettings={currentSettingsData}
                     themeVariant={themeVariant}
+                    lockToolbarLayout={hasLockedChrome}
                 />
             </MainAppWindow>
         </ModeProvider>
     );
 });
+
+/** Primary shell implementation; same ref API as {@link SimpleChartEdge}. */
+export const ChartEdgeHost = SimpleChartEdge;
+export type ChartEdgeHostHandle = SimpleChartEdgeHandle;
+export type ChartEdgeHostProps = SimpleChartEdgeProps;

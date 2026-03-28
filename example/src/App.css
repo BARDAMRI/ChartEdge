@@ -1,8 +1,10 @@
 #root {
-    max-width: 1280px;
-    margin: 0 auto;
+    max-width: none;
+    width: 100%;
+    margin: 0;
     padding: 0;
-    text-align: center;
+    text-align: left;
+    min-height: 100vh;
 }
 
 .logo {
@@ -103,6 +105,88 @@
 
 .app-root > :last-child {
     flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* --- Multi-tier comparison layout --- */
+.app-compare {
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+.compare-header {
+    flex: 0 0 auto;
+    padding: 16px 20px 8px;
+    background: #fafbff;
+    border-bottom: 1px solid rgba(90, 72, 222, 0.12);
+}
+
+.compare-title {
+    margin: 0 0 6px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.compare-lead {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #424242;
+    max-width: 56rem;
+}
+
+.compare-lead code {
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.chart-compare-list {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+}
+
+.chart-compare-panel {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+}
+
+.chart-compare-panel-head {
+    flex: 0 0 auto;
+    padding: 10px 16px 6px;
+    background: linear-gradient(180deg, #f8f9fc 0%, #fff 100%);
+}
+
+.chart-compare-panel-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.chart-compare-panel-blurb {
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #5c6370;
+}
+
+.chart-compare-chart-wrap {
+    height: min(420px, 52vh);
+    min-height: 280px;
+    padding: 0 8px 8px;
+    box-sizing: border-box;
+}
+
+.chart-compare-chart-wrap > * {
+    height: 100%;
     min-height: 0;
 }
 

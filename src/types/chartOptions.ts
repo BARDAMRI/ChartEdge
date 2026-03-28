@@ -133,6 +133,12 @@ interface BaseChartOptions {
     theme: ChartTheme;
     showOverlayLine: boolean;
     showHistogram: boolean;
+    /** Hover crosshair lines (vertical + horizontal) in navigation modes */
+    showCrosshair?: boolean;
+    /** Formatted time (along X) and price (along Y) drawn on the crosshair */
+    showCrosshairValues?: boolean;
+    /** OHLC / change panel while hovering a candle */
+    showCandleTooltip?: boolean;
     style: StyleOptions;
     overlays?: OverlayWithCalc[];
     overlayKinds?: (OverlayKind | OverlayCalcSpec)[];

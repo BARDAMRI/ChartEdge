@@ -1,8 +1,7 @@
 import styled from 'styled-components';
-import {AxesPosition, windowSpread} from "../types/types";
-import XAxis from "../components/Canvas/Axes/XAxis";
+import {AxesPosition} from "../types/types";
 
-export const ChartStageContainer = styled.div<{ $showTopBar: boolean; $showLeftBar: boolean }>`
+export const ChartEdgeStageContainer = styled.div<{ $showTopBar: boolean; $showLeftBar: boolean }>`
     display: grid;
     flex: 1 1 auto;
     height: 100%;
@@ -21,7 +20,6 @@ export const TopBar = styled.div`
     padding-bottom: 5px;
     min-height: 0;
     min-width: 0;
-    /* Let toolbar popovers (chart type) extend below the bar instead of being clipped */
     overflow: visible;
     z-index: 2;
 `;

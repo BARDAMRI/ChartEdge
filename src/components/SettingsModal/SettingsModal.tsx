@@ -66,6 +66,9 @@ export interface SettingsState {
     drawingSelectedLineColor: string;
     drawingSelectedLineStyle: 'solid' | 'dashed' | 'dotted';
     drawingSelectedLineWidthAdd: number;
+    showCandleTooltip: boolean;
+    showCrosshair: boolean;
+    showCrosshairValues: boolean;
 }
 
 type Category = 'chart' | 'axes' | 'time' | 'layout' | 'colors' | 'drawings' | 'globalization' | 'financial';
@@ -77,6 +80,8 @@ interface SettingsModalProps {
     initialSettings: SettingsState;
     /** Matches chart app light/dark toggle */
     themeVariant?: ModalThemeVariant;
+    /** When true, the Layout category (toolbar toggles) is hidden; toolbar chrome is product-controlled. */
+    lockToolbarLayout?: boolean;
 }
 
 /* ─── BackArrow logic is now handled via CSS in SettingsModal.styles.ts ─── */
@@ -111,7 +116,7 @@ const CATEGORY_TITLE: Record<Category, string> = {
  *  Component
  * ────────────────────────────────────────────────── */
 export const SettingsModal: React.FC<SettingsModalProps> = ({
-    isOpen, onClose, onSave, initialSettings, themeVariant = 'dark',
+    isOpen, onClose, onSave, initialSettings, themeVariant = 'dark', lockToolbarLayout = false,
 }) => {
     const tv = themeVariant;
     const [settings, setSettings] = useState<SettingsState>(initialSettings);
@@ -127,6 +132,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             setActive(null);
         }
     }, [isOpen]);
+
+    const visibleCategories = lockToolbarLayout ? CATEGORIES.filter((c) => c.id !== 'layout') : CATEGORIES;
 
     const handleLanguageChange = (newLang: string) => {
         let newLocale = settings.locale;
@@ -203,6 +210,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                           className="settings-switch-toggle"
                                           onClick={() => toggle('showGrid')} />
                         </FormRow>
+                        <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Hover</SectionTitle>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Show candle tooltip</FormLabel>
+                            <SwitchToggle $checked={settings.showCandleTooltip}
+                                          className="settings-switch-toggle"
+                                          onClick={() => toggle('showCandleTooltip')} />
+                        </FormRow>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Show crosshair lines</FormLabel>
+                            <SwitchToggle
+                                $checked={settings.showCrosshair}
+                                className="settings-switch-toggle"
+                                onClick={() =>
+                                    setSettings((prev) => {
+                                        const next = !prev.showCrosshair;
+                                        return {
+                                            ...prev,
+                                            showCrosshair: next,
+                                            showCrosshairValues: next ? prev.showCrosshairValues : false,
+                                        };
+                                    })
+                                }
+                            />
+                        </FormRow>
+                        <FormRow $variant={tv} className="settings-form-row">
+                            <FormLabel $variant={tv} className="settings-form-label" dir={direction}>Show time &amp; price on crosshair</FormLabel>
+                            <SwitchToggle
+                                $checked={settings.showCrosshairValues}
+                                $disabled={!settings.showCrosshair}
+                                className="settings-switch-toggle"
+                                onClick={() => toggle('showCrosshairValues')}
+                            />
+                        </FormRow>
                     </SubMenuPane>
                 );
             case 'axes':
@@ -246,6 +286,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </SubMenuPane>
                 );
             case 'layout':
+                if (lockToolbarLayout) {
+                    return (
+                        <SubMenuPane $back={goingBack} className="settings-submenu-pane">
+                            <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Toolbars</SectionTitle>
+                            <p style={{margin: '8px 0 0', fontSize: 13, opacity: 0.85}} dir={direction}>
+                                Toolbar layout is fixed for this ChartEdge product and cannot be changed here.
+                            </p>
+                        </SubMenuPane>
+                    );
+                }
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
                         <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Toolbars</SectionTitle>
@@ -632,7 +682,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {active === null ? (
                         /* Root: category tiles */
                         <div className="settings-category-list">
-                            {CATEGORIES.map(cat => (
+                            {visibleCategories.map(cat => (
                                 <CategoryTile $variant={tv} key={cat.id} className={`settings-category-tile settings-category-${cat.id}`} onClick={() => drillIn(cat.id)}>
                                     <span className="tile-icon">{cat.icon}</span>
                                     <span className="tile-label" dir={direction}>{cat.label}</span>

@@ -1,14 +1,17 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import {SimpleChartEdge} from './components/SimpleChartEdge';
-import {ModeProvider} from './contexts/ModeContext';
+import {ChartEdgeCommand} from './components/ChartEdgeProducts';
+
+if (typeof document !== 'undefined') {
+    document.title = 'ChartEdge — Interactive charts';
+}
 
 const root = document.getElementById('root') as HTMLElement;
 
 ReactDOM.createRoot(root).render(
     <React.StrictMode>
-        <ModeProvider>
-            <SimpleChartEdge/>
-        </ModeProvider>
+        <div style={{height: '100vh', width: '100vw'}}>
+            <ChartEdgeCommand />
+        </div>
     </React.StrictMode>
 );

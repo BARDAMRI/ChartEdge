@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {createPortal} from 'react-dom';
 import {
     ChartTypeDropdown,
     ChartTypeOption,
@@ -91,28 +92,31 @@ export const ChartTypeSelectDropdown: React.FC<Props> = ({value, onChange, class
                 {icons[value]}
                 <IconArrowDown />
             </ChartTypeTrigger>
-            {open && (
-                <ChartTypeDropdown
-                    ref={menuRef}
-                    role="listbox"
-                    $top={menuBox.top}
-                    $left={menuBox.left}
-                    $minWidth={menuBox.minWidth}
-                >
-                    {(Object.keys(icons) as ChartType[]).map((type) => (
-                        <ChartTypeOption
-                            key={type}
-                            type="button"
-                            role="option"
-                            aria-selected={value === type}
-                            onClick={() => handleSelect(type)}
-                            $active={value === type}
-                        >
-                            {icons[type]}
-                        </ChartTypeOption>
-                    ))}
-                </ChartTypeDropdown>
-            )}
+            {open &&
+                typeof document !== 'undefined' &&
+                createPortal(
+                    <ChartTypeDropdown
+                        ref={menuRef}
+                        role="listbox"
+                        $top={menuBox.top}
+                        $left={menuBox.left}
+                        $minWidth={menuBox.minWidth}
+                    >
+                        {(Object.keys(icons) as ChartType[]).map((type) => (
+                            <ChartTypeOption
+                                key={type}
+                                type="button"
+                                role="option"
+                                aria-selected={value === type}
+                                onClick={() => handleSelect(type)}
+                                $active={value === type}
+                            >
+                                {icons[type]}
+                            </ChartTypeOption>
+                        ))}
+                    </ChartTypeDropdown>,
+                    document.body
+                )}
         </ChartTypeSelectContainer>
     );
 };

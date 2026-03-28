@@ -39,7 +39,7 @@ import {usePanAndZoom} from '../../hooks/usePanAndZoom';
 import {Interval} from "../../types/Interval";
 import {CanvasPoint, DrawingPoint, DrawingStyleOptions} from "../../types/Drawings";
 import {ChartDimensionsData, PriceRange, TimeRange} from "../../types/Graph";
-import {CanvasSizes, DeepRequired, WindowSpreadOptions} from "../../types/types";
+import {AxesPosition, CanvasSizes, DeepRequired, WindowSpreadOptions} from "../../types/types";
 import {xToTime, yToPrice} from "./utils/GraphHelpers";
 import {Drawing} from "../Drawing/types";
 import {IDrawingShape} from "../Drawing/IDrawingShape";
@@ -50,6 +50,11 @@ import {formatNumber, FormatNumberOptions} from './utils/formatters';
 import {FormattingService} from '../../services/FormattingService';
 import {getDateFnsLocale, getLocaleDefaults, translate} from '../../utils/i18n';
 import {isWithinTradingSession} from '../../utils/timeUtils';
+import {
+    drawChartEdgeWatermark,
+    loadChartEdgeWatermarkImages,
+    type ChartEdgeWatermarkImages,
+} from '../../branding/chartEdgeWatermark';
 
 function syncTriangleNormalization(shape: IDrawingShape | null, rc: ChartRenderContext | null, pr: PriceRange) {
     if (!shape || !rc) return;
@@ -86,6 +91,10 @@ interface ChartCanvasProps {
     canvasSizes: CanvasSizes;
     parentContainerRef?: React.RefObject<HTMLDivElement>;
     windowSpread: WindowSpreadOptions;
+    /** Draw bundled ChartEdge marks inside plot / histogram (no DOM footer). */
+    showBrandWatermark?: boolean;
+    /** Matches chart shell theme for choosing light vs dark mark artwork. */
+    brandTheme?: 'light' | 'dark';
 }
 
 export interface ChartCanvasHandle {
@@ -114,6 +123,8 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         canvasSizes,
         parentContainerRef,
         windowSpread,
+        showBrandWatermark = true,
+        brandTheme = 'light',
     },
     ref
 ) => {
@@ -141,6 +152,8 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
     const angleDrawPhaseRef = useRef<1 | 2>(1);
     const [_, setChartDimensions] = React.useState<ChartDimensionsData | null>(null);
     const chartDimensionsRef = React.useRef<ChartDimensionsData | null>(null);
+    const watermarkImagesRef = useRef<ChartEdgeWatermarkImages | null>(null);
+    const [watermarkImagesReady, setWatermarkImagesReady] = useState(0);
     const isInteractionMode =
         mode === Mode.none || mode === Mode.select || mode === Mode.editShape;
     /** Pan/zoom only in default mode so Select/Edit can click shapes without starting a drag. */
@@ -214,7 +227,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
     }, [mode, setMode]);
 
 
-    const drawBackBuffer = (backBufferCtx: any, dims: any, renderContext: any) => {
+    const drawBackBuffer = useCallback((backBufferCtx: any, dims: any, renderContext: any) => {
         const {cssWidth, cssHeight, dpr, width, height} = dims;
         if (backBufferRef.current!.width !== width || backBufferRef.current!.height !== height) {
             backBufferRef.current!.width = width;
@@ -225,6 +238,17 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
 
         // Draw grid behind everything else
         drawGrid(backBufferCtx, cssWidth, cssHeight, chartOptions);
+
+        if (showBrandWatermark && watermarkImagesRef.current) {
+            drawChartEdgeWatermark(
+                backBufferCtx,
+                cssWidth,
+                cssHeight,
+                brandTheme,
+                watermarkImagesRef.current,
+                {opacity: 0.12, maxWidthFrac: 0.34, placement: 'bottom-right', padding: 8}
+            );
+        }
 
         // Highlight trading sessions if provided
         const axesStyle = chartOptions.base.style.axes;
@@ -266,7 +290,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                 drawCandlestickChart(backBufferCtx, renderContext, chartOptions, visiblePriceRange);
                 break;
         }
-    }
+    }, [chartOptions, visiblePriceRange, showBrandWatermark, brandTheme]);
 
     const drawGraphImage = useCallback((dims: any, panOffset: number) => {
         const {cssWidth, cssHeight, dpr, width, height} = dims;
@@ -294,7 +318,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
      * @param {any} dims - Dimensions object containing cssWidth, cssHeight, and device pixel ratio (dpr).
      * @param {any} renderContext - The main rendering context containing visible intervals and drawing utilities.
      */
-    const drawHistogramBuffer = (histBackBufferRef: any, dims: any, renderContext: any) => {
+    const drawHistogramBuffer = useCallback((histBackBufferRef: any, dims: any, renderContext: any) => {
         const {dpr, cssWidth, cssHeight} = dims;
         const histCanvas = histCanvasRef.current;
 
@@ -324,9 +348,20 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                 };
 
                 drawHistogramChart(histBackBufferCtx, histogramRenderContext, chartOptions);
+
+                if (showBrandWatermark && watermarkImagesRef.current) {
+                    drawChartEdgeWatermark(
+                        histBackBufferCtx,
+                        targetWidth,
+                        targetHeight,
+                        brandTheme,
+                        watermarkImagesRef.current,
+                        {opacity: 0.09, maxWidthFrac: 0.48, placement: 'bottom-left', padding: 5}
+                    );
+                }
             }
         }
-    };
+    }, [chartOptions, showBrandWatermark, brandTheme]);
     const drawHistogramImage = useCallback((dims: any, panOffset: number) => {
         const {dpr, cssWidth, cssHeight} = dims;
         const histCanvas = histCanvasRef.current;
@@ -408,7 +443,10 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
             hoverCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
             hoverCtx.clearRect(0, 0, cssWidth, cssHeight);
 
-            if (isInteractionMode && point && !isPanning && !isWheeling) {
+            const showCross = chartOptions.base.showCrosshair;
+            const showCrossVals = showCross && chartOptions.base.showCrosshairValues;
+
+            if (showCross && isInteractionMode && point && !isPanning && !isWheeling) {
                 hoverCtx.strokeStyle = 'rgba(100, 100, 100, 0.7)';
                 hoverCtx.lineWidth = 1;
                 hoverCtx.beginPath();
@@ -417,6 +455,52 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                 hoverCtx.moveTo(0, point.y);
                 hoverCtx.lineTo(cssWidth, point.y);
                 hoverCtx.stroke();
+
+                if (showCrossVals && renderContext) {
+                    const axes = chartOptions.base.style.axes;
+                    const mouseTime = xToTime(point.x, renderContext.canvasWidth, renderContext.visibleRange);
+                    const mousePrice = yToPrice(point.y, renderContext.canvasHeight, visiblePriceRange);
+                    const timeStr = FormattingService.formatDate(new Date(mouseTime * 1000), axes);
+                    const priceStr = FormattingService.formatPrice(mousePrice, axes);
+                    const font = axes.font || '12px system-ui, sans-serif';
+                    hoverCtx.font = font;
+                    const isDarkPanel =
+                        chartOptions.base.theme === 'dark' || chartOptions.base.theme === 'grey';
+                    const bgFill = isDarkPanel ? 'rgba(28, 30, 38, 0.9)' : 'rgba(255, 255, 255, 0.92)';
+                    const fg = axes.textColor || (isDarkPanel ? '#e8eaef' : '#1f2328');
+                    const pad = 4;
+                    const axisOnLeft = chartOptions.axes.yAxisPosition === AxesPosition.left;
+
+                    const tw = hoverCtx.measureText(timeStr).width;
+                    const th = 12;
+                    let tx = point.x;
+                    const half = tw / 2 + pad;
+                    if (tx + half > cssWidth - 2) tx = cssWidth - 2 - half;
+                    if (tx - half < 2) tx = 2 + half;
+                    const timeBoxW = tw + pad * 2;
+                    const timeBoxH = th + pad * 2;
+                    const timeBoxX = tx - timeBoxW / 2;
+                    const timeBoxY = cssHeight - timeBoxH - 3;
+                    hoverCtx.fillStyle = bgFill;
+                    hoverCtx.fillRect(timeBoxX, timeBoxY, timeBoxW, timeBoxH);
+                    hoverCtx.fillStyle = fg;
+                    hoverCtx.textAlign = 'center';
+                    hoverCtx.textBaseline = 'middle';
+                    hoverCtx.fillText(timeStr, tx, timeBoxY + timeBoxH / 2);
+
+                    hoverCtx.textAlign = axisOnLeft ? 'left' : 'right';
+                    hoverCtx.textBaseline = 'middle';
+                    const pw = hoverCtx.measureText(priceStr).width;
+                    const priceBoxW = pw + pad * 2;
+                    const priceBoxH = th + pad * 2;
+                    const priceBoxX = axisOnLeft ? 3 : cssWidth - priceBoxW - 3;
+                    const priceBoxY = point.y - priceBoxH / 2;
+                    hoverCtx.fillStyle = bgFill;
+                    hoverCtx.fillRect(priceBoxX, priceBoxY, priceBoxW, priceBoxH);
+                    hoverCtx.fillStyle = fg;
+                    hoverCtx.textAlign = 'center';
+                    hoverCtx.fillText(priceStr, priceBoxX + priceBoxW / 2, point.y);
+                }
             } else if (createdShape.current && renderContext) {
                 drawDrawings(hoverCtx, [createdShape.current!], selectedIndex, renderContext, visiblePriceRange);
             }
@@ -431,7 +515,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         drawDrawings,
         renderContext,
         visiblePriceRange,
-        chartOptions
+        chartOptions,
     ]);
     const drawSceneToBuffer = useCallback(() => {
         if (!renderContext) return;
@@ -455,8 +539,25 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         chartOptions,
         drawings,
         selectedIndex,
-        visiblePriceRange
+        visiblePriceRange,
+        drawBackBuffer,
+        drawHistogramBuffer,
+        watermarkImagesReady,
     ]);
+
+    useEffect(() => {
+        let cancelled = false;
+        loadChartEdgeWatermarkImages().then((imgs) => {
+            if (cancelled) {
+                return;
+            }
+            watermarkImagesRef.current = imgs;
+            setWatermarkImagesReady((v) => v + 1);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
 
     const drawFrame = useCallback(() => {
@@ -841,60 +942,115 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                 />
             </ChartingContainer>
 
-            {hoveredCandle && !isPanning && !mode && !isWheeling && (
-                <HoverTooltip 
-                    className={'intervals-data-tooltip'} 
+            {chartOptions.base.showCandleTooltip &&
+                hoveredCandle &&
+                !isPanning &&
+                !mode &&
+                !isWheeling && (
+                <HoverTooltip
+                    className={'intervals-data-tooltip'}
                     $isPositive={hoveredCandle.c > hoveredCandle.o}
                     $isRTL={getLocaleDefaults(chartOptions.base.style.axes.locale).direction === 'rtl'}
                     $variant={chartOptions.base.theme === 'dark' || chartOptions.base.theme === 'grey' ? 'dark' : 'light'}
+                    $compact={canvasSizes.width < 440 || canvasSizes.height < 280}
+                    title={(() => {
+                        const axes = chartOptions.base.style.axes;
+                        const lang = axes.language || 'en';
+                        const c = hoveredCandle;
+                        const parts = [
+                            FormattingService.formatDate(new Date(c.t * 1000), axes),
+                            `${translate('open', lang)} ${FormattingService.formatPrice(c.o, axes)}`,
+                            `${translate('high', lang)} ${FormattingService.formatPrice(c.h, axes)}`,
+                            `${translate('low', lang)} ${FormattingService.formatPrice(c.l, axes)}`,
+                            `${translate('close', lang)} ${FormattingService.formatPrice(c.c, axes)}`,
+                        ];
+                        if (c.v !== undefined) {
+                            parts.push(
+                                `${translate('volume', lang)} ${FormattingService.formatPrice(c.v, { ...axes, numberNotation: 'compact' } as any)}`
+                            );
+                        }
+                        return parts.join(' · ');
+                    })()}
                 >
                     {(() => {
                         const axes = chartOptions.base.style.axes;
                         const lang = axes.language || 'en';
                         const isDarkPanel = chartOptions.base.theme === 'dark' || chartOptions.base.theme === 'grey';
                         const change = hoveredCandle.c - hoveredCandle.o;
-                        const changePercent = (change / hoveredCandle.o);
+                        const changePercent = change / hoveredCandle.o;
                         const changeColor = isDarkPanel
                             ? (change >= 0 ? '#7ee2b8' : '#ff9e9e')
                             : (change >= 0 ? 'green' : 'red');
                         const dateStr = FormattingService.formatDate(new Date(hoveredCandle.t * 1000), axes);
-                        const isVerySmall = canvasSizes.width < 350 || canvasSizes.height < 250;
+                        const compact = canvasSizes.width < 440 || canvasSizes.height < 280;
                         const divider = isDarkPanel ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(0,0,0,0.1)';
+                        const gridStyle: React.CSSProperties = compact
+                            ? {
+                                  display: 'grid',
+                                  gridTemplateColumns: '1fr 1fr',
+                                  gap: '2px 8px',
+                                  alignItems: 'baseline',
+                                  width: '100%',
+                              }
+                            : {
+                                  display: 'grid',
+                                  gridTemplateColumns: '1fr 1fr',
+                                  gap: '4px 12px',
+                                  alignItems: 'baseline',
+                                  width: '100%',
+                              };
 
                         return (
                             <>
-                                <div style={{fontWeight: 'bold', borderBottom: divider, marginBottom: '4px', paddingBottom: '2px'}}>
+                                <div
+                                    style={{
+                                        fontWeight: 'bold',
+                                        borderBottom: divider,
+                                        marginBottom: compact ? 2 : 4,
+                                        paddingBottom: 2,
+                                    }}
+                                >
                                     {dateStr}
                                 </div>
-                                {!isVerySmall ? (
-                                    <>
-                                        <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
-                                            <span>{translate('open', lang)}: {FormattingService.formatPrice(hoveredCandle.o, axes)}</span>
-                                            <span>{translate('high', lang)}: {FormattingService.formatPrice(hoveredCandle.h, axes)}</span>
-                                            <span>{translate('low', lang)}: {FormattingService.formatPrice(hoveredCandle.l, axes)}</span>
-                                            <span>{translate('close', lang)}: {FormattingService.formatPrice(hoveredCandle.c, axes)}</span>
-                                        </div>
-                                        <div style={{marginTop: '4px'}}>
-                                            {translate('change', lang)}: 
-                                            <span style={{color: changeColor, fontWeight: 'bold', marginLeft: '4px'}}>
-                                                {FormattingService.formatPrice(change, { ...axes, metricType: 'pnl', showSign: true } as any)} 
-                                                ({FormattingService.formatPrice(changePercent, { ...axes, useCurrency: false, unit: '%', maximumFractionDigits: 2, showSign: true } as any)})
-                                            </span>
-                                        </div>
-                                        {hoveredCandle.v !== undefined && (
-                                            <div style={{fontSize: '11px', opacity: isDarkPanel ? 0.88 : 0.8, marginTop: '2px'}}>
-                                                {translate('volume', lang)}: {FormattingService.formatPrice(hoveredCandle.v, { ...axes, numberNotation: 'compact' } as any)}
-                                            </div>
-                                        )}
-                                    </>
-                                ) : (
-                                    <div style={{display: 'flex', flexDirection: 'column', gap: '2px'}}>
-                                        <div>
-                                            {translate('close', lang)}: {FormattingService.formatPrice(hoveredCandle.c, axes)}
-                                        </div>
-                                        <div style={{color: changeColor, fontWeight: 'bold'}}>
-                                            {FormattingService.formatPrice(changePercent, { ...axes, useCurrency: false, unit: '%', maximumFractionDigits: 1, showSign: true } as any)}
-                                        </div>
+                                <div style={gridStyle}>
+                                    <span>
+                                        {translate('open', lang)}: {FormattingService.formatPrice(hoveredCandle.o, axes)}
+                                    </span>
+                                    <span>
+                                        {translate('high', lang)}: {FormattingService.formatPrice(hoveredCandle.h, axes)}
+                                    </span>
+                                    <span>
+                                        {translate('low', lang)}: {FormattingService.formatPrice(hoveredCandle.l, axes)}
+                                    </span>
+                                    <span>
+                                        {translate('close', lang)}: {FormattingService.formatPrice(hoveredCandle.c, axes)}
+                                    </span>
+                                </div>
+                                <div style={{marginTop: compact ? 2 : 4}}>
+                                    {translate('change', lang)}:{' '}
+                                    <span style={{color: changeColor, fontWeight: 'bold'}}>
+                                        {FormattingService.formatPrice(change, { ...axes, metricType: 'pnl', showSign: true } as any)}{' '}
+                                        (
+                                        {FormattingService.formatPrice(changePercent, {
+                                            ...axes,
+                                            useCurrency: false,
+                                            unit: '%',
+                                            maximumFractionDigits: 2,
+                                            showSign: true,
+                                        } as any)}
+                                        )
+                                    </span>
+                                </div>
+                                {hoveredCandle.v !== undefined && (
+                                    <div
+                                        style={{
+                                            fontSize: compact ? 10 : 11,
+                                            opacity: isDarkPanel ? 0.88 : 0.8,
+                                            marginTop: compact ? 2 : 4,
+                                        }}
+                                    >
+                                        {translate('volume', lang)}:{' '}
+                                        {FormattingService.formatPrice(hoveredCandle.v, { ...axes, numberNotation: 'compact' } as any)}
                                     </div>
                                 )}
                             </>

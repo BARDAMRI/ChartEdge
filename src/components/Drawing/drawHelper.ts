@@ -121,7 +121,7 @@ function minPointsRequired(type: ShapeType): number {
 
 /**
  * Builds a drawing class instance from a plain spec (type + points + optional style).
- * Use with {@link ChartStageHandle.addShape} / {@link SimpleChartEdgeHandle.addShape} or {@link setDrawingsFromSpecs}.
+ * Use with {@link ChartEdgeStageHandle.addShape} / {@link SimpleChartEdgeHandle.addShape} or {@link setDrawingsFromSpecs}.
  */
 export function drawingFromSpec(
     spec: DrawingSpec,

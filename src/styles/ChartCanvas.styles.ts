@@ -75,6 +75,8 @@ interface HoverTooltipProps {
     $isRTL?: boolean;
     /** Candle tooltip panel: use dark panel + light text when chart theme is dark */
     $variant?: 'light' | 'dark';
+    /** Tighter grid + wrap so OHLC fits on small chart areas */
+    $compact?: boolean;
 }
 
 export const HoverTooltip = styled.div<HoverTooltipProps>`
@@ -101,10 +103,11 @@ export const HoverTooltip = styled.div<HoverTooltipProps>`
     border-radius: 4px;
     font-size: 12px;
     display: flex;
-    flex-direction: column; /* Changed to column to support multiple rows of data */
+    flex-direction: column;
     gap: 4px;
     z-index: 50;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
     box-shadow: ${({$variant}) =>
         $variant === 'dark'
             ? '0 6px 20px rgba(0, 0, 0, 0.45)'
@@ -112,15 +115,24 @@ export const HoverTooltip = styled.div<HoverTooltipProps>`
     pointer-events: none;
     direction: ${props => props.$isRTL ? 'rtl' : 'ltr'};
     backdrop-filter: blur(4px);
-    
+
     max-width: calc(100% - 20px);
-    max-height: calc(100% - 10px);
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-height: min(42vh, 220px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 
     /* Responsive font size */
     font-size: clamp(8px, 2vmin, 12px);
     padding: clamp(2px, 1vmin, 6px) clamp(4px, 1.5vmin, 10px);
+
+    ${({$compact}) =>
+        $compact &&
+        css`
+            gap: 2px;
+            font-size: clamp(7px, 1.85vmin, 11px);
+            padding: 4px 6px;
+        `}
     
     @media (max-width: 400px), (max-height: 300px) {
         opacity: 0.95;

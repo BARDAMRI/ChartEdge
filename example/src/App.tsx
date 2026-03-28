@@ -1,47 +1,32 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import type {
-    DrawingPoint,
-    DrawingStyleOptions,
-    Interval,
-    RectangleShapeArgs,
-    SimpleChartEdgeHandle,
-} from 'chartedge';
+import type {Interval, SimpleChartEdgeHandle} from 'chartedge';
 import {
-    ChartType,
-    OverlayKind,
-    ShapeType,
-    SimpleChartEdge,
-    TimeDetailLevel,
-    OverlaySpecs,
-    overlay,
-    withOverlayStyle,
-    OverlayPriceKey,
-    RectangleShape,
-    LineShape,
     AxesPosition,
+    ChartEdgeApex,
+    ChartEdgeCommand,
+    ChartEdgeDesk,
+    ChartEdgeFlow,
+    ChartEdgePulse,
+    ShapeType,
+    TimeDetailLevel,
 } from 'chartedge';
 import './App.css';
 
 function simplePRNG(seed = 12345) {
-    // Tiny LCG (deterministic)
     let s = seed >>> 0;
     const rand = () => (s = (1664525 * s + 1013904223) >>> 0) / 0xffffffff;
     return {rand};
 }
 
-/**
- * Generate simple OHLC bars with mild trend + volatility.
- * No regimes, no spikes/gaps (optional toggle below).
- */
 function makeSimpleIntervals(params: {
-    startTime: number;      // epoch seconds
-    startPrice: number;     // e.g. 100
-    intervalSec: number;    // e.g. 300 = 5m
-    count: number;          // number of bars
-    seed?: number;          // deterministic if provided
-    driftPerBar?: number;   // small trend component, default 0.04
-    vol?: number;           // noise amplitude, default 0.6
-    addGapsEvery?: number;  // optional: add small gap every N bars (e.g., 40). Omit for none.
+    startTime: number;
+    startPrice: number;
+    intervalSec: number;
+    count: number;
+    seed?: number;
+    driftPerBar?: number;
+    vol?: number;
+    addGapsEvery?: number;
 }): Interval[] {
     const {
         startTime,
@@ -51,7 +36,7 @@ function makeSimpleIntervals(params: {
         seed = 12345,
         driftPerBar = 0.04,
         vol = 0.6,
-        addGapsEvery
+        addGapsEvery,
     } = params;
 
     const rng = simplePRNG(seed);
@@ -60,27 +45,20 @@ function makeSimpleIntervals(params: {
     let lastClose = startPrice;
 
     for (let i = 0; i < count; i++) {
-        // Optional tiny gap every N bars (disabled if addGapsEvery is undefined)
         if (addGapsEvery && i > 0 && i % addGapsEvery === 0) {
-            const gapPct = (rng.rand() - 0.5) * 0.01; // ~±1%
+            const gapPct = (rng.rand() - 0.5) * 0.01;
             lastClose = +(lastClose * (1 + gapPct)).toFixed(2);
         }
 
         const o = lastClose;
-
-        // Simple random-walk close: drift + symmetric noise
         const noise = (rng.rand() - 0.5) * 2 * vol;
         const c = o + driftPerBar + noise;
-
-        // High/Low add small intra-bar wiggle
         const wigUp = Math.abs((rng.rand() - 0.5) * 2) * (vol * 0.8 + 0.1);
         const wigDn = Math.abs((rng.rand() - 0.5) * 2) * (vol * 0.8 + 0.1);
         const h = Math.max(o, c) + wigUp;
         const l = Math.min(o, c) - wigDn;
-
-        // Synthetic volume so VWAP overlays have data
-        const baseVol = 1200; // arbitrary baseline
-        const volJitter = (rng.rand() - 0.5) * 2 * 300; // ±300 variation
+        const baseVol = 1200;
+        const volJitter = (rng.rand() - 0.5) * 2 * 300;
         const v = Math.max(1, Math.round(baseVol + volJitter));
 
         out.push({
@@ -99,8 +77,7 @@ function makeSimpleIntervals(params: {
     return out;
 }
 
-// ---- Seed series: 200 bars of 5m starting at 1688000000 around price 100 ----
-const INTERVAL_SEC = 300; // 5 minutes
+const INTERVAL_SEC = 300;
 
 const INITIAL_INTERVALS: Interval[] = makeSimpleIntervals({
     startTime: 1688000000,
@@ -116,7 +93,6 @@ function cloneIntervals(rows: Interval[]): Interval[] {
     return rows.map((b) => ({...b}));
 }
 
-/** Next synthetic bar after `last` (used for append live demo). */
 function makeNextBar(last: Interval, intervalSec: number): Interval {
     const o = last.c;
     const noise = (Math.random() - 0.5) * 1.2;
@@ -137,7 +113,6 @@ function makeNextBar(last: Interval, intervalSec: number): Interval {
     };
 }
 
-/** Mutate the forming candle (same `t`) for mergeByTime demo. */
 function jitterLastBar(last: Interval): Interval {
     const delta = (Math.random() - 0.5) * 0.35;
     const c = +(last.c + delta).toFixed(2);
@@ -147,24 +122,132 @@ function jitterLastBar(last: Interval): Interval {
     return {...last, o: last.o, c, h, l, v};
 }
 
-// --- Demo overlays ---
-const withBlue = withOverlayStyle({lineColor: '#2962ff', lineWidth: 2, lineStyle: 'solid'});
-const sma20 = withBlue(OverlaySpecs.sma(20, OverlayPriceKey.close));
-
-// Using the simple "kind" helper with explicit full style (DeepRequired<OverlayOptions>)
-const emaDefault = overlay(OverlayKind.ema, {lineColor: '#26a69a', lineWidth: 2, lineStyle: 'solid'});
-const vwapOv = overlay(OverlayKind.vwap, {lineColor: '#7e57c2', lineWidth: 1.5, lineStyle: 'solid'});
-
-const demoOverlays = [sma20, emaDefault, vwapOv];
-
 const LIVE_TICK_MS = 900;
 
+type TierKey = 'pulse' | 'flow' | 'command' | 'desk' | 'apex';
+
+/** Programmatic demo shapes (line, rectangle, circle) are seeded only on these tiers. */
+const TIERS_WITH_DEMO_SHAPES: TierKey[] = ['pulse', 'flow'];
+
+const TIER_ROWS: {
+    key: TierKey;
+    title: string;
+    blurb: string;
+    Cmp: typeof ChartEdgeCommand;
+}[] = [
+    {
+        key: 'pulse',
+        title: 'ChartEdge Pulse',
+        blurb: 'Minimal embed — price plot and axes only (no toolbars).',
+        Cmp: ChartEdgePulse,
+    },
+    {
+        key: 'flow',
+        title: 'ChartEdge Flow',
+        blurb: 'Analysis — top bar & settings; no drawing tools sidebar.',
+        Cmp: ChartEdgeFlow,
+    },
+    {
+        key: 'command',
+        title: 'ChartEdge Command',
+        blurb: 'Full trader UI — drawings, modals, programmatic API.',
+        Cmp: ChartEdgeCommand,
+    },
+    {
+        key: 'desk',
+        title: 'ChartEdge Desk',
+        blurb: 'Broker-style — same as Command; attribution always on.',
+        Cmp: ChartEdgeDesk,
+    },
+    {
+        key: 'apex',
+        title: 'ChartEdge Apex',
+        blurb: 'Premium tier (preview) — evaluation banner until licenseKey is set.',
+        Cmp: ChartEdgeApex,
+    },
+];
+
+function seedDemoShapes(api: SimpleChartEdgeHandle | null, series: Interval[]) {
+    if (!api?.addShape || !series.length) {
+        return;
+    }
+    const t0 = series[0].t;
+    const tLast = series[series.length - 1].t;
+    const span = Math.max(INTERVAL_SEC, tLast - t0);
+    const prices = series.flatMap((b) => [b.l, b.h]);
+    const pMin = Math.min(...prices);
+    const pMax = Math.max(...prices);
+    const pMid = (pMin + pMax) / 2;
+
+    api.addShape({
+        type: ShapeType.Line,
+        points: [
+            {time: t0 + span * 0.12, price: pMid - (pMax - pMin) * 0.08},
+            {time: t0 + span * 0.58, price: pMid + (pMax - pMin) * 0.12},
+        ],
+        style: {
+            lineColor: '#e040fb',
+            lineWidth: 2,
+            lineStyle: 'dashed',
+        },
+    });
+    api.addShape({
+        type: ShapeType.Rectangle,
+        points: [
+            {time: t0 + span * 0.32, price: pMid - 1.2},
+            {time: t0 + span * 0.48, price: pMid + 2.4},
+        ],
+        style: {
+            lineColor: '#26c6da',
+            lineWidth: 1,
+            lineStyle: 'solid',
+            fillColor: 'rgba(38, 198, 218, 0.18)',
+        },
+    });
+    api.addShape({
+        type: ShapeType.Circle,
+        points: [
+            {time: t0 + span * 0.62, price: pMid - 0.5},
+            {time: t0 + span * 0.74, price: pMid + 2},
+        ],
+        style: {
+            lineColor: '#ffca28',
+            lineWidth: 2,
+            lineStyle: 'solid',
+            fillColor: 'rgba(255, 202, 40, 0.14)',
+        },
+    });
+    api.redrawCanvas?.();
+}
+
 export default function App() {
-    const chartRef = useRef<SimpleChartEdgeHandle | null>(null);
+    const refs = useRef<Record<TierKey, SimpleChartEdgeHandle | null>>({
+        pulse: null,
+        flow: null,
+        command: null,
+        desk: null,
+        apex: null,
+    });
+
+    const commandRef = useRef<SimpleChartEdgeHandle | null>(null);
+
+    const tierRefCallbacks = useMemo(() => {
+        const keys: TierKey[] = ['pulse', 'flow', 'command', 'desk', 'apex'];
+        const out = {} as Record<TierKey, (h: SimpleChartEdgeHandle | null) => void>;
+        keys.forEach((key) => {
+            out[key] = (h: SimpleChartEdgeHandle | null) => {
+                refs.current[key] = h;
+                if (key === 'command') {
+                    commandRef.current = h;
+                }
+            };
+        });
+        return out;
+    }, []);
+
     const [series, setSeries] = useState<Interval[]>(() => cloneIntervals(INITIAL_INTERVALS));
     const [livePaused, setLivePaused] = useState(false);
     const tickCountRef = useRef(0);
-    /** Ensures the three demo drawings are only added once (survives Strict Mode remount). */
     const programmaticShapesSeededRef = useRef(false);
 
     const exampleVisibleRange = useMemo(() => {
@@ -183,8 +266,21 @@ export default function App() {
         return {minPrice: Math.min(...flat), maxPrice: Math.max(...flat)};
     }, [series]);
 
+    const chartOptions = useMemo(
+        () => ({
+            base: {
+                showOverlayLine: true,
+                showHistogram: true,
+            },
+            axes: {
+                yAxisPosition: AxesPosition.left,
+            },
+        }),
+        []
+    );
+
     const pushLiveTick = useCallback(() => {
-        const api = chartRef.current;
+        const api = commandRef.current;
         if (!api?.applyLiveData || !api.getViewInfo) {
             return;
         }
@@ -195,7 +291,6 @@ export default function App() {
         const last = intervals[intervals.length - 1];
         tickCountRef.current += 1;
         const n = tickCountRef.current;
-        // Mostly update the current candle; every 5th tick append a new bar (shows mergeByTime + append).
         const result =
             n % 5 !== 0
                 ? api.applyLiveData(jitterLastBar(last), 'mergeByTime')
@@ -216,89 +311,54 @@ export default function App() {
         return () => window.clearInterval(id);
     }, [livePaused, pushLiveTick]);
 
-    /**
-     * Seed three drawings entirely from code (`addShape` + plain specs: type, points, style).
-     * Geometry is derived from the loaded interval series so shapes stay on-chart.
-     */
     useEffect(() => {
         if (!series.length || programmaticShapesSeededRef.current) {
             return;
         }
-        const timer = window.setTimeout(() => {
-            const api = chartRef.current;
-            if (!api?.addShape || programmaticShapesSeededRef.current) {
+        let cancelled = false;
+        let attempts = 0;
+        const maxAttempts = 24;
+
+        const trySeed = () => {
+            if (cancelled || programmaticShapesSeededRef.current) {
+                return;
+            }
+            const demoReady = TIERS_WITH_DEMO_SHAPES.every((k) => refs.current[k] != null);
+            attempts += 1;
+            if (!demoReady && attempts < maxAttempts) {
+                requestAnimationFrame(trySeed);
                 return;
             }
             programmaticShapesSeededRef.current = true;
-
-            const t0 = series[0].t;
-            const tLast = series[series.length - 1].t;
-            const span = Math.max(INTERVAL_SEC, tLast - t0);
-            const prices = series.flatMap((b) => [b.l, b.h]);
-            const pMin = Math.min(...prices);
-            const pMax = Math.max(...prices);
-            const pMid = (pMin + pMax) / 2;
-
-            // 1) Trend line — dashed magenta
-            api.addShape({
-                type: ShapeType.Line,
-                points: [
-                    {time: t0 + span * 0.12, price: pMid - (pMax - pMin) * 0.08},
-                    {time: t0 + span * 0.58, price: pMid + (pMax - pMin) * 0.12},
-                ],
-                style: {
-                    lineColor: '#e040fb',
-                    lineWidth: 2,
-                    lineStyle: 'dashed',
-                },
+            TIERS_WITH_DEMO_SHAPES.forEach((k) => {
+                const api = refs.current[k];
+                if (api) {
+                    seedDemoShapes(api, series);
+                }
             });
+        };
 
-            // 2) Highlight rectangle — semi-transparent cyan fill
-            api.addShape({
-                type: ShapeType.Rectangle,
-                points: [
-                    {time: t0 + span * 0.32, price: pMid - 1.2},
-                    {time: t0 + span * 0.48, price: pMid + 2.4},
-                ],
-                style: {
-                    lineColor: '#26c6da',
-                    lineWidth: 1,
-                    lineStyle: 'solid',
-                    fillColor: 'rgba(38, 198, 218, 0.18)',
-                },
-            });
-
-            // 3) Circle (two corners of bounding box) — amber stroke + light fill
-            api.addShape({
-                type: ShapeType.Circle,
-                points: [
-                    {time: t0 + span * 0.62, price: pMid - 0.5},
-                    {time: t0 + span * 0.74, price: pMid + 2},
-                ],
-                style: {
-                    lineColor: '#ffca28',
-                    lineWidth: 2,
-                    lineStyle: 'solid',
-                    fillColor: 'rgba(255, 202, 40, 0.14)',
-                },
-            });
-
-            api.redrawCanvas?.();
-        }, 200);
-
-        return () => window.clearTimeout(timer);
+        const timer = window.setTimeout(() => requestAnimationFrame(trySeed), 200);
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
     }, [series]);
 
     const handleRefreshSeries = useCallback(async () => {
         tickCountRef.current = 0;
         programmaticShapesSeededRef.current = false;
-        chartRef.current?.clearCanvas?.();
+        (Object.keys(refs.current) as TierKey[]).forEach((key) => {
+            refs.current[key]?.clearCanvas?.();
+        });
         const reset = cloneIntervals(INITIAL_INTERVALS);
         setSeries(reset);
-        // Let React commit props before fitting the view (next frame).
         window.requestAnimationFrame(() => {
-            chartRef.current?.fitVisibleRangeToData?.();
-            chartRef.current?.redrawCanvas?.();
+            (Object.keys(refs.current) as TierKey[]).forEach((key) => {
+                const api = refs.current[key];
+                api?.fitVisibleRangeToData?.();
+                api?.redrawCanvas?.();
+            });
         });
     }, []);
 
@@ -307,106 +367,30 @@ export default function App() {
         window.alert(`Symbol search (demo): ${label}\nWire onSymbolSearch to load data for this symbol.`);
     }, []);
 
-    // Example: add a random shape (rect or line) via API, within visible ranges
-    function handleAddShape() {
-        const view = chartRef.current?.getViewInfo();
-        if (!view) {
-            return;
-        }
-
-        function createRandomShape(view: any) {
-            const {visibleRange, visiblePriceRange} = view;
-            const {start, end} = visibleRange;
-            const {min, max} = visiblePriceRange;
-
-            const randTime = start + Math.random() * (end - start);
-            const randPrice = min + Math.random() * (max - min);
-
-            // Randomly choose shape type
-            if (Math.random() < 0.5) {
-                // RectangleShape
-                const width = (end - start) * 0.05; // 5% of visible time range
-                const height = (max - min) * 0.1;   // 10% of visible price range
-                return new RectangleShape({
-                    points: [
-                        {time: randTime, price: randPrice},
-                        {time: randTime + width, price: randPrice + height}
-                    ]
-                } as RectangleShapeArgs, {color: '#e53935'} as DrawingStyleOptions);
-            } else {
-                // LineShape with two points
-                // Generate two points within visible ranges
-                const time1 = start + Math.random() * (end - start);
-                const price1 = min + Math.random() * (max - min);
-                const time2 = start + Math.random() * (end - start);
-                const price2 = min + Math.random() * (max - min);
-
-                // Ensure LineShape constructor usage
-                return new LineShape(
-                    {points: [{time: time1, price: price1}, {time: time2, price: price2}]},
-                    {color: '#2962ff', lineWidth: 2} as DrawingStyleOptions
-                );
-            }
-        }
-
-        const shape = createRandomShape(view);
-
-        // Validate shape points are within visible ranges
-        function isShapeInRange(shape: any, view: any) {
-            const {visibleRange, visiblePriceRange} = view;
-            const {start, end} = visibleRange;
-            const {min, max} = visiblePriceRange;
-
-            let points: DrawingPoint[] = [];
-
-            if (shape instanceof RectangleShape) {
-                points = shape.getPoints();
-            } else if (shape instanceof LineShape) {
-                points = shape.getPoints();
-            } else {
-                // Unknown shape type, assume out of range
-                return false;
-            }
-
-            // Check all points within time and price ranges
-            return points.every(p => p.time >= start && p.time <= end && p.price >= min && p.price <= max);
-        }
-
-        if (isShapeInRange(shape, view)) {
-            chartRef.current?.addShape(shape);
-        }
-    }
-
-    // Example: get info about the current view
-    function handleGetInfo() {
-        if (chartRef.current && chartRef.current.getViewInfo) {
-            const info = chartRef.current.getViewInfo();
-            alert(JSON.stringify(info, null, 2));
-        }
-    }
-
-    // Example: clear all shapes/canvas
-    function handleClear() {
-        if (chartRef.current && chartRef.current.clearCanvas) {
-            chartRef.current.clearCanvas();
-        }
-    }
-
-    // Example: force redraw
-    function handleRedraw() {
-        if (chartRef.current && chartRef.current.redrawCanvas) {
-            chartRef.current.redrawCanvas();
-        }
-    }
-
-    function reloadCanvas() {
-        if (chartRef.current && chartRef.current.reloadCanvas) {
-            chartRef.current.reloadCanvas();
-        }
-    }
+    const sharedProps = {
+        intervalsArray: series,
+        onRefreshRequest: handleRefreshSeries,
+        defaultSymbol: 'DEMO',
+        onSymbolSearch: handleSymbolSearch,
+        initialNumberOfYTicks: 5,
+        initialXAxisHeight: 40,
+        initialYAxisWidth: 50,
+        initialTimeDetailLevel: TimeDetailLevel.Auto,
+        initialTimeFormat12h: false,
+        initialVisibleTimeRange: exampleVisibleRange,
+        chartOptions,
+    };
 
     return (
-        <div className={'app-root'}>
+        <div className="app-root app-compare">
+            <header className="compare-header">
+                <h1 className="compare-title">ChartEdge product comparison</h1>
+                <p className="compare-lead">
+                    Same synthetic series and chart options on every tier. Live updates run through{' '}
+                    <strong>Command</strong>’s API; all panels follow <code>intervalsArray</code>.
+                </p>
+            </header>
+
             <div className="live-demo-bar">
                 <span className="live-demo-label">
                     Live data demo
@@ -415,43 +399,26 @@ export default function App() {
                     </span>
                 </span>
                 <span className="live-demo-hint">
-                    Uses <code>applyLiveData</code> with <code>mergeByTime</code> (tick) and <code>append</code> (new bars).
+                    Uses <code>applyLiveData</code> on Command (<code>mergeByTime</code> / <code>append</code>).
                 </span>
                 <button type="button" className="live-demo-btn" onClick={() => setLivePaused((p) => !p)}>
                     {livePaused ? 'Resume' : 'Pause'}
                 </button>
             </div>
-            <SimpleChartEdge
-                ref={chartRef}
-                className="simple-chart-edge"
-                intervalsArray={series}
-                onRefreshRequest={handleRefreshSeries}
-                defaultSymbol="DEMO"
-                onSymbolSearch={handleSymbolSearch}
-                initialNumberOfYTicks={5}
-                initialXAxisHeight={40}
-                initialYAxisWidth={50}
-                initialTimeDetailLevel={TimeDetailLevel.Auto}
-                initialTimeFormat12h={false}
-                initialVisibleTimeRange={exampleVisibleRange}
-                initialVisiblePriceRange={{min: minPrice, max: maxPrice}}
-                chartOptions={{
-                    base: {
-                        chartType: ChartType.Candlestick,
-                        showOverlayLine: true,
-                        // overlays: demoOverlays,
-                        // style: {
-                        //     overlay: {lineWidth: 1.5, lineStyle: 'solid', lineColor: '#22ff34'},
-                        // },
-                        // overlayKinds: [OverlayKind.sma, OverlayKind.bbands_lower],
-                        showHistogram: true,
 
-                    },
-                    axes: {
-                        yAxisPosition: AxesPosition.left
-                    }
-                }}
-            />
+            <div className="chart-compare-list">
+                {TIER_ROWS.map(({key, title, blurb, Cmp}) => (
+                    <section key={key} className="chart-compare-panel" data-tier={key}>
+                        <div className="chart-compare-panel-head">
+                            <h2 className="chart-compare-panel-title">{title}</h2>
+                            <p className="chart-compare-panel-blurb">{blurb}</p>
+                        </div>
+                        <div className="chart-compare-chart-wrap">
+                            <Cmp ref={tierRefCallbacks[key]} {...sharedProps} />
+                        </div>
+                    </section>
+                ))}
+            </div>
         </div>
     );
 }

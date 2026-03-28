@@ -4,7 +4,7 @@ import type {AxesPosition} from './types';
 /**
  * Serializable snapshot of chart layout, data window, and interaction state for host-side analysis
  * (sizing, visible ranges, symbol, selection). Obtain via {@link SimpleChartEdgeHandle.getChartContext}
- * or {@link ChartStageHandle.getChartContext}.
+ * or {@link ChartEdgeStageHandle.getChartContext}.
  */
 export type ChartContextInfo = {
     /** Toolbar symbol if controlled/initial value is known */
