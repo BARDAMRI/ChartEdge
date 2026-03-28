@@ -1,78 +1,76 @@
 # ChartEdge
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-A high-performance, lightweight, and flexible charting library for the modern web. 🚀
+High-performance **React** financial charts: Canvas 2D OHLCV, pan/zoom, drawings, live data merge, and tiered product layouts.
 
 ## Features
-- Ultra-fast Canvas 2D rendering.
-- Supports line and candlestick charts.
-- Real-time data updates and streaming support.
-- Pan, zoom, and tooltip/fixed box interactions.
-- Customizable themes (light, dark, grey, custom).
-- Static and (future) interactive drawings: lines, rectangles, circles, angles, text.
+
+- **Chart types:** candlestick, line, area, bar  
+- **Canvas 2D** rendering (no WebGL requirement)  
+- **Live data:** `applyLiveData` with replace / append / prepend / merge-by-time  
+- **Drawings:** lines, rectangles, circles, triangles, angles, arrows, polylines, custom symbols — toolbar + full imperative API  
+- **Settings modal:** axes, colors, grid, histogram, regional formats, hover/crosshair/tooltip toggles  
+- **Products:** Pulse (minimal), Flow (top bar), Command / Desk / Apex (full trader UI)  
+- **Snapshots & export:** PNG capture helpers, CSV export from toolbar  
+- **Theming:** light/dark shell toggle, chart themes, in-chart watermark (Desk)
 
 ## Who is ChartEdge for?
 
-ChartEdge is built for:
+Developers building trading terminals, analytics dashboards, and embeddable market widgets who want a **React + styled-components** chart with a real drawing and streaming story.
 
-- Developers building modern trading and finance applications.
-- Teams looking for high-performance, lightweight charting solutions.
-- Projects that require customizable and visually appealing data visualizations.
-- Anyone needing real-time, flexible, and extensible charts for the modern web.
+## Quick setup
 
-## Why ChartEdge?
+### 1. Install
 
-- 🚀 Optimized for real-time, high-frequency data streams.
-- 🎨 Fully customizable chart elements, from grid lines to candle styles.
-- ⚡ Blazing-fast rendering using pure Canvas 2D — no WebGL dependency.
-- 🧩 Modular design: use only the components you need.
-- 🔮 Ready for advanced features like drawing tools and technical analysis.
-- 🌎 Built to serve both financial professionals and general data visualization needs.
-
-## Quick Start
-
-> ⚡ **Tip:** ChartEdge is extremely lightweight — your first chart can be up and running in less than a minute!
-
-### Installation
 ```bash
-npm install chartedge
+npm install chartedge react react-dom styled-components
 ```
 
-### Basic Usage
-```javascript
-import { createChart } from 'chartedge';
+React 18+, React DOM, and styled-components 6.x are **peer dependencies**.
 
-const chart = createChart(document.getElementById('container'), {
-  type: 'candlestick',
-  theme: 'dark',
-  data: [...],
-});
+### 2. Render a chart
+
+```tsx
+import { useRef } from 'react';
+import { ChartEdgeCommand, type SimpleChartEdgeHandle } from 'chartedge';
+
+const data = [
+  { t: 1700000000, o: 100, h: 102, l: 99, c: 101, v: 1200 },
+  { t: 1700000060, o: 101, h: 103, l: 100, c: 102, v: 900 },
+];
+
+export function App() {
+  const ref = useRef<SimpleChartEdgeHandle>(null);
+  return (
+    <div style={{ height: 480, width: '100%' }}>
+      <ChartEdgeCommand ref={ref} intervalsArray={data} defaultSymbol="DEMO" />
+    </div>
+  );
+}
 ```
 
-### Live Data Update
-```javascript
-chart.appendData([{ time: Date.now(), value: 135.4 }]);
-```
+Use **`ChartEdgePulse`** for plot+axes only, or **`ChartEdgeHost`** (`SimpleChartEdge`) without `productId` for custom toolbars.
 
-## Documentation
+### 3. Documentation
 
-The full documentation is available inside the [Documentation Folder](./docs/Documentation/SUMMARY.md).
+Full guides (glossary, API, live data, drawings, settings, exports) live in **[`documentation/`](./documentation/README.md)**.
 
-| Section | Link |
-|---------|------|
-| Introduction | [📖 Read](./docs/Documentation/Introduction.md) |
-| Installation Guide | [📥 Install](./docs/Documentation/Installation.md) |
-| Usage Instructions | [⚙️ Usage](./docs/Documentation/Usage.md) |
-| Chart Style Options | [🎨 Style Options](./docs/Documentation/ChartStyleOptions.md) |
-| Project Roadmap | [🛤️ Roadmap](./docs/Documentation/Roadmap.md) |
-| Vision | [🌟 Vision](./docs/Documentation/VISION.md) |
-| Terms of Use | [📜 Terms](./docs/Documentation/Terms_of_Use.md) |
-| Contributing | [🤝 Contribute](./docs/Documentation/CONTRIBUTING.md) |
+| Start here | Link |
+|------------|------|
+| Documentation hub | [documentation/README.md](./documentation/README.md) |
+| Quick start | [documentation/03-quick-start.md](./documentation/03-quick-start.md) |
+| Imperative API | [documentation/06-imperative-api.md](./documentation/06-imperative-api.md) |
+| Live updates | [documentation/07-data-and-live-updates.md](./documentation/07-data-and-live-updates.md) |
+
+Legacy / supplementary material may also appear under [`docs/`](./docs/).
 
 ## Roadmap
-See the [Project Roadmap](docs/Project_Roadmap/Project_Roadmap.pdf) for upcoming features and phases.
+
+See [`docs/Project_Roadmap/`](./docs/Project_Roadmap/) or project issues for upcoming work.
 
 ## License
+
 MIT License
 
 ---
