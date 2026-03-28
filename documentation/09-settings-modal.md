@@ -13,7 +13,7 @@ The gear icon in the top toolbar (when enabled) opens the **Chart Settings** mod
 | **Colors** | Background, axis text, bull/bear (and related histogram/bar colors), line chart color |
 | **Drawing shapes** | Default line/fill/selection styles for new drawings |
 | **Regional** | Locale, language (with sensible defaults linkage) |
-| **Financial** | Currency display, notation, tick size, precision, units |
+| **Financial** | Currency code, use-currency toggle, currency display mode, number notation, tick size, min/max fraction & significant digits, auto precision, unit + placement |
 
 ## Locked layout (product tiers)
 

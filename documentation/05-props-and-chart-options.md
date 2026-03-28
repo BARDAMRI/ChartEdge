@@ -75,7 +75,15 @@ These can be toggled from the **Settings** modal (Chart Style → Hover) when us
 
 ### Axes & formatting
 
-Under `base.style.axes`: locale, language, decimals, currency, date format, timezone, trading sessions, holidays, notation, tick size, etc.
+Under `base.style.axes`: locale, language, decimals, currency, date format, timezone, **trading sessions**, **holidays**, exchange, notation, tick size, conversion/display currency fields, etc. See [i18n & axes](./13-internationalization-and-axes.md).
+
+### Overlays / indicators
+
+- **`base.showOverlayLine`** — Master switch for drawing indicator lines on the plot.  
+- **`base.overlays`** — `OverlayWithCalc[]` (recommended for explicit periods).  
+- **`base.overlayKinds`** — Shorthand list of kinds with library default parameters.
+
+See [Overlays & indicators](./12-overlays-and-indicators.md).
 
 ### Drawings default style
 

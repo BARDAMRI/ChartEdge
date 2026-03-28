@@ -28,12 +28,14 @@ For high-frequency streaming, prefer **`applyLiveData`** on the ref to avoid rea
 
 | Value | Behavior (conceptual) |
 |-------|------------------------|
-| `replace` | Replace series with normalized incoming set. |
-| `append` | Add new bars after existing (sorted/validated internally). |
-| `prepend` | Add before existing. |
-| `mergeByTime` | Upsert by timestamp; overlapping `t` updates in place. |
+| `replace` | Replace series with normalized incoming set. Fails `ok` if incoming is empty after validation. |
+| `append` | Append only bars with `t` ≥ last bar’s `t`; same `t` replaces the last bar; earlier times produce **warnings** and are skipped. |
+| `prepend` | Prepend only bars with `t` ≤ first bar’s `t`; same `t` replaces the first bar; later times produce **warnings** and are skipped. |
+| `mergeByTime` | Concatenate, sort by `t`, then **dedupe by time** (last row wins per timestamp). |
 
-Returns **`LiveDataApplyResult`**: `{ ok, intervals, errors, warnings }`. Always check `ok` and surface `errors` in production.
+**Existing** series is normalized on merge; invalid base rows add to `errors`. Incoming rows go through **`normalizeIntervals`** (OHLC clamping, bad volume dropped, low/high swap notes in `warnings`).
+
+Returns **`LiveDataApplyResult`**: `{ ok, intervals, errors, warnings }`. Always check `ok` and surface `errors` in production; inspect `warnings` for skipped bars or clamping.
 
 ## Normalization utilities (exported)
 

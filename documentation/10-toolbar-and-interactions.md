@@ -1,5 +1,9 @@
 # Toolbar & interactions
 
+## Floating settings (no top bar)
+
+If the stage is configured with **`showTopBar: false`** and **`showSettingsBar: true`**, a **floating gear** appears over the plot area (position depends on Y-axis side) to open the same settings modal. Default product tiers either show the full top bar or omit settings entirely (e.g. Pulse).
+
 ## Top bar (Flow, Command, Desk, Apex)
 
 Typical controls (some may hide on very narrow widths):
@@ -18,7 +22,7 @@ Typical controls (some may hide on very narrow widths):
 
 ## Pan & zoom
 
-With default mode (no draw tool active), wheel and drag behaviors follow the chart stage configuration (pan/zoom on the main plot). Drawing modes disable pan so clicks commit to shapes.
+With default mode (no draw tool active), wheel and drag behaviors follow the chart stage configuration (pan/zoom on the main plot). **Select** and **edit** modes use a **default** cursor and intentionally **do not** pan on drag so clicks hit-test shapes. Drawing modes use crosshair/drag semantics appropriate to the tool.
 
 ## Crosshair & tooltip
 
@@ -32,7 +36,11 @@ Branding: low-opacity **ChartEdge watermark** is drawn inside the plot/histogram
 
 ## Keyboard
 
-- **Escape** cancels in-progress polyline / exits certain draw modes (see `ChartCanvas` behavior).
+- **Escape** — Clears in-progress polyline points, exits active draw tools (except select/edit), and returns toward neutral navigation.
+
+## Canvas stack (conceptual)
+
+From back to front: main OHLC (and grid, session shading, watermark), optional histogram, persistent drawings layer, interaction/hover/crosshair layer. Histogram opacity and height ratio come from `chartOptions.base.style.histogram`.
 
 ## Copy
 

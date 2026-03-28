@@ -240,7 +240,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 $checked={settings.showCrosshairValues}
                                 $disabled={!settings.showCrosshair}
                                 className="settings-switch-toggle"
-                                onClick={() => toggle('showCrosshairValues')}
+                                onClick={() =>
+                                    setSettings((prev) => {
+                                        if (!prev.showCrosshair) {
+                                            return prev;
+                                        }
+                                        return {
+                                            ...prev,
+                                            showCrosshairValues: !prev.showCrosshairValues,
+                                        };
+                                    })
+                                }
                             />
                         </FormRow>
                     </SubMenuPane>

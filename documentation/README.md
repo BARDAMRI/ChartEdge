@@ -2,6 +2,8 @@
 
 Complete guides for integrating and operating the ChartEdge React charting library.
 
+Coverage is aligned with the **published `chartedge` package** (`src/index.ts`): exported components, types, and helpers. Behavior that exists only in private modules is summarized only when it affects hosts (e.g. internal i18n tables driving locale defaults).
+
 ## Contents
 
 | # | Guide | Description |
@@ -16,7 +18,9 @@ Complete guides for integrating and operating the ChartEdge React charting libra
 | 8 | [Drawings & shapes](./08-drawings-and-shapes.md) | Toolbar tools, select/edit, programmatic shapes & patches |
 | 9 | [Settings modal](./09-settings-modal.md) | In-app settings categories and persistence |
 | 10 | [Toolbar & interactions](./10-toolbar-and-interactions.md) | Chart type, snapshot, crosshair, tooltip, pan/zoom |
-| 11 | [Exports & advanced](./11-exports-and-advanced.md) | Public API surface, `ChartEdgeStage`, overlays, branding |
+| 11 | [Exports & advanced](./11-exports-and-advanced.md) | Full export list, `ChartEdgeStage`, branding, init/update |
+| 12 | [Overlays & indicators](./12-overlays-and-indicators.md) | SMA/EMA/VWAP/Bollinger, `overlays` / `overlayKinds` |
+| 13 | [i18n & axes](./13-internationalization-and-axes.md) | Locale, RTL, currency, sessions, grid |
 
 ## Older material
 

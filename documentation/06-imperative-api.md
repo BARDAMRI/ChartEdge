@@ -32,9 +32,9 @@ Resolve an index with `getViewInfo()?.intervals.findIndex(...)`. For time-based 
 | `fitVisibleRangeToData()` | Fit visible time range to loaded data. |
 | `getMainCanvasElement()` | Main OHLC `HTMLCanvasElement` (snapshots). |
 | `getCanvasSize()` | `{ width, height, dpr }` (backing store pixels + DPR). |
-| `clearCanvas()` | Clear drawing buffers and internal drawings list. |
-| `redrawCanvas()` | Request full redraw. |
-| `reloadCanvas()` | Reload view from data (stage pipeline). |
+| `clearCanvas()` | Clear off-screen buffers **and** clear the drawings list (shapes removed). |
+| `redrawCanvas()` | Re-run the draw pipeline with current state (no data reload). |
+| `reloadCanvas()` | Stage **reload** hook (rebinds view to current intervals / internal reload path). |
 
 ## Introspection
 

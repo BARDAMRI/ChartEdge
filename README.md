@@ -62,6 +62,9 @@ Full guides (glossary, API, live data, drawings, settings, exports) live in **[`
 | Quick start | [documentation/03-quick-start.md](./documentation/03-quick-start.md) |
 | Imperative API | [documentation/06-imperative-api.md](./documentation/06-imperative-api.md) |
 | Live updates | [documentation/07-data-and-live-updates.md](./documentation/07-data-and-live-updates.md) |
+| Overlays (SMA, EMA, VWAP, …) | [documentation/12-overlays-and-indicators.md](./documentation/12-overlays-and-indicators.md) |
+| Locale, RTL, sessions | [documentation/13-internationalization-and-axes.md](./documentation/13-internationalization-and-axes.md) |
+| Full export list | [documentation/11-exports-and-advanced.md](./documentation/11-exports-and-advanced.md) |
 
 Legacy / supplementary material may also appear under [`docs/`](./docs/).
 

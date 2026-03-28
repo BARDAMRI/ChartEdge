@@ -15,7 +15,23 @@
 
 ## Toolbar (Command / Desk / Apex / custom host with sidebar)
 
-The side bar toggles **modes** (draw line, rectangle, circle, triangle, angle, polyline, arrow, custom symbol, select, edit). Click the active tool again to return to default navigation (`Mode.none`).
+The visible **sidebar** exposes these tools only:
+
+| Tool | Mode |
+|------|------|
+| Line | `drawLine` |
+| Rectangle | `drawRectangle` |
+| Circle | `drawCircle` |
+| Triangle | `drawTriangle` |
+| Angle | `drawAngle` |
+| Select | `select` |
+| Edit | `editShape` |
+
+**Not on the toolbar** (but fully supported via **code**): **Arrow**, **Polyline**, **Custom symbol** (`ShapeType.Arrow` / `Polyline` / `CustomSymbol`). Use `addShape` / `DrawingSpec` for those.
+
+The enum also includes **`Mode.drawText`** for future use; there is no text drawing tool in the default toolbar today.
+
+Click the active tool again to return to default navigation (`Mode.none`).
 
 ### Creating shapes with the mouse
 
@@ -23,11 +39,15 @@ The side bar toggles **modes** (draw line, rectangle, circle, triangle, angle, p
 2. Click (and drag or multi-click per tool) on the plot.  
 3. Shapes commit when enough points are placed (tool-specific).
 
+**Polyline** (programmatic / custom UI only in the default product): add vertices with clicks; **double-click** finishes the path. **Angle** uses a two-step flow (first ray, then second ray) before committing.
+
 ### Select & edit
 
 - **Select** — Click a shape to highlight (top-most hit wins).  
 - **Edit** — Adjust handles where implemented.  
-- **Double-click** or **context menu** (on selected shape) may open **shape properties** (stroke, fill, style).
+- **Double-click** a shape (in select/navigation modes) or **right‑click** a **selected** shape to open **Shape properties** — modal fields include line color/width/style, fill, selection styling, and for custom symbols: text + size (`ShapePropertiesFormState`).
+
+The shell uses the exported **`ShapePropertiesModal`** component wired to `onRequestShapeProperties` on the canvas; you can reuse it in custom hosts.
 
 ## Programmatic creation (`DrawingSpec`)
 

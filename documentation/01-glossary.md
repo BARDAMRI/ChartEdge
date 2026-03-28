@@ -49,3 +49,12 @@ Internal drawing **mode** (toolbar) toggles between none, draw tools, select, an
 
 - **Main canvas** — OHLC layer only (no histogram/drawings) via `getMainCanvasElement`.
 - **Chart region snapshot** — PNG of the composed view (plot + axes) via `captureChartRegionToPngDataUrl` and toolbar integration.
+
+## Indicators
+
+- **Overlay** — A computed line series (e.g. SMA) drawn over price; configured via `base.showOverlayLine` and `base.overlays` or `base.overlayKinds`. See [Overlays & indicators](./12-overlays-and-indicators.md).
+
+## Market calendar (axes)
+
+- **Trading session** — Recurring weekday window (`dayOfWeek` + `HH:mm` start/end) used to dim time outside regular hours.
+- **Holiday** — ISO date string list for calendar-aware behavior where applied.

@@ -1,87 +1,126 @@
 # Public exports & advanced topics
 
-## Primary imports
+This guide mirrors **`src/index.ts`**. Symbols not listed here are **internal** (not semver-stable as public API).
 
-```ts
-import {
-  ChartEdgeCommand,
-  ChartEdgeHost,
-  ChartEdgePulse,
-  ChartEdgeFlow,
-  ChartEdgeDesk,
-  ChartEdgeApex,
-  SimpleChartEdge,
-  ChartType,
-  TimeDetailLevel,
-  AxesPosition,
-  ShapeType,
-  ModeProvider,
-  useMode,
-  // …utilities below
-} from 'chartedge';
-```
+## Components
 
-Full list: see `src/index.ts`.
+| Export | Role |
+|--------|------|
+| `SimpleChartEdge` | Full application shell (toolbar, settings, stage). |
+| `ChartEdgeHost` | **Alias** of `SimpleChartEdge`. |
+| `ChartEdgePulse` | Minimal product (plot + axes). |
+| `ChartEdgeFlow` | Top bar, no drawing sidebar. |
+| `ChartEdgeCommand` | Full trader UI. |
+| `ChartEdgeDesk` | Same as Command; watermark on. |
+| `ChartEdgeApex` | Command-like + `licenseKey` / eval banner. |
+| `ChartEdgeStage` | Headless chart + axes + imperative handle. |
+| `ChartStage` | **Deprecated** — use `ChartEdgeStage`. |
+| `ChartEdgeMark` | DOM wordmark (marketing). |
+| `ChartEdgeAttribution` | DOM attribution strip. |
+| `ShapePropertiesModal` | Shape property editor UI. |
+| `GlobalStyle` | Styled global CSS fragment for the shell. |
 
-## Headless / embedded stage
+### Component prop / handle types
 
-**`ChartEdgeStage`** (and legacy alias `ChartStage`) exposes the canvas + axes without the full app shell. You supply props similar to the internal stage: `intervalsArray`, `chartOptions`, callbacks, etc. You must wrap with **`ModeProvider`** if drawing modes are used.
+`SimpleChartEdgeProps`, `SimpleChartEdgeHandle`, `ChartEdgeHostProps`, `ChartEdgeHostHandle`, `ChartEdgePulseProps`, … `ChartEdgeApexProps`, `ChartEdgeStageProps`, `ChartEdgeStageHandle`, `ChartStageProps`, `ChartStageHandle` (deprecated), `ChartEdgeAttributionProps`, `ShapePropertiesFormState`, `ModalThemeVariant`, `ChartEdgeThemeVariant`.
 
-Types: `ChartEdgeStageProps`, `ChartEdgeStageHandle`.
+## Context
 
-## Overlays
+| Export | Role |
+|--------|------|
+| `ModeProvider` | Wraps tree so drawing toolbar modes work. |
+| `useMode` | Access `{ mode, setMode }` inside provider. |
 
-Exports include **`withOverlayStyle`**, **`OverlaySpecs`**, **`overlay`**, and types **`OverlayWithCalc`**, **`OverlayKind`**, **`OverlayPriceKey`**. Use these to configure extra series lines/areas derived from price data.
+The **`Mode` enum** is used internally by the toolbar; it is **not** re-exported from `chartedge`. Hosts driving drawings programmatically should use **`DrawingSpec`** + ref APIs, not `Mode` values.
 
-## Graph math helpers
+## Core data types
 
-`timeToX`, `xToTime`, `priceToY`, `yToPrice`, `interpolatedCloseAtTime`, `lerp`, `xFromCenter`, `xFromStart` — for custom overlays or plugins aligned to the same scales.
+| Export | Role |
+|--------|------|
+| `Interval` | OHLCV bar. |
+| `TimeRange`, `ChartDimensionsData` | Time window / layout metrics. |
+| `LiveDataPlacement`, `LiveDataApplyResult` | Live merge contract. |
+| `ChartContextInfo` | `getChartContext()` snapshot. |
+| `ChartEdgeProductId` | `'pulse' \| 'flow' \| 'command' \| 'desk' \| 'apex'`. |
 
-## Capture & filenames
+## Chart configuration types
 
-- **`captureChartRegionToPngDataUrl`** — Rasterize a DOM subtree (e.g. chart + axes).  
-- **`buildChartSnapshotFileName`**, **`sanitizeChartSnapshotToken`**, **`contrastingFooterTextColor`** — Metadata and styling for snapshots.  
-- **`ChartSnapshotMeta`** — Typed snapshot metadata.
+| Export | Role |
+|--------|------|
+| `ChartType`, `TimeDetailLevel` | Chart mode & axis tick density. |
+| `AxesPosition` | Y-axis left/right. |
+| `OverlayWithCalc`, `OverlaySeries`, `OverlayOptions` | Indicator configuration. |
+| `OverlayKind`, `OverlayPriceKey` | Enum keys for overlays. |
 
-## Live data merge (imperative)
+## Drawings
 
-- **`applyLiveDataMerge`** — Core merge used by the stage.  
-- **`normalizeInterval`**, **`normalizeIntervals`**, **`dedupeByTimePreferLast`** — Hygiene utilities.
+| Export | Role |
+|--------|------|
+| `ShapeType` | String enum for spec `type`. |
+| `ShapeBaseArgs`, `Drawing` | Internal drawing description types. |
+| `DrawingSpec`, `DrawingPatch`, `DrawingInput` | Spec / patch / instance union for APIs. |
+| `drawingFromSpec`, `applyDrawingPatch`, `isDrawingPatch` | Build & merge helpers. |
+| `DrawingSnapshot`, `DrawingQuery`, `DrawingWithZIndex` | Query & serialization. |
+| `shapeToSnapshot`, `queryDrawingsToSnapshots`, `filterDrawingInstances`, `filterDrawingsWithMeta` | Snapshot pipelines. |
+| `IDrawingShape` | Instance interface. |
+| `LineShapeArgs`, `RectangleShapeArgs`, … `CustomSymbolShapeArgs` | Per-shape argument types. |
+| **Shape classes** | `LineShape`, `RectangleShape`, `CircleShape`, `TriangleShape`, `AngleShape`, `ArrowShape`, `Polyline`, `CustomSymbolShape` — advanced/tests. |
+| `generateDrawingShapeId` | Id factory. |
 
-## Branding (optional DOM)
+## Overlay builders
 
-- **`ChartEdgeMark`** — Wordmark component for marketing chrome.  
-- **`ChartEdgeAttribution`** — Optional footer attribution (default chart uses in-canvas watermark instead).  
+| Export | Role |
+|--------|------|
+| `OverlaySpecs`, `withOverlayStyle`, `overlay` | Build `OverlayWithCalc` entries. |
 
-## Drawing classes (extensions)
+Details: [Overlays & indicators](./12-overlays-and-indicators.md).
 
-Concrete classes (`LineShape`, `RectangleShape`, …) are exported for tests or custom pipelines; most apps use **`DrawingSpec`** + **`addShape`**.
+## Live data utilities
 
-## Global styles
+| Export | Role |
+|--------|------|
+| `applyLiveDataMerge` | Same merge as ref `applyLiveData` (pure function). |
+| `normalizeInterval`, `normalizeIntervals` | Validate/clamp bars. |
+| `dedupeByTimePreferLast` | Collapse duplicate timestamps. |
 
-**`GlobalStyle`** from `chartedge` applies shell-wide CSS helpers used by `SimpleChartEdge`; embed when building a custom shell around `ChartEdgeStage`.
+## Snapshot / export helpers
 
-## IDs
+| Export | Role |
+|--------|------|
+| `captureChartRegionToPngDataUrl` | Rasterize a DOM region. |
+| `buildChartSnapshotFileName`, `sanitizeChartSnapshotToken`, `contrastingFooterTextColor` | Filename & contrast helpers. |
+| `ChartSnapshotMeta` | Metadata type for snapshots. |
 
-**`generateDrawingShapeId`** — Create unique shape ids for specs.
+## Graph math (coordinate helpers)
 
-## Deprecated
+`timeToX`, `xToTime`, `priceToY`, `yToPrice`, `interpolatedCloseAtTime`, `lerp`, `xFromCenter`, `xFromStart` — align custom logic with chart scales.
 
-- `ChartStage` / `ChartStageProps` / `ChartStageHandle` — use `ChartEdgeStage*` names.
+## Not exported (internal)
+
+Examples: `FormattingService`, `deepMerge`, `deepEqual`, toolbar `Tooltip`, most styled wrappers. Do not import these from deep paths in apps if you want upgrade safety.
+
+## `ChartEdgeStage` usage sketch
+
+Wrap with **`ModeProvider`**. Pass **all** required `ChartEdgeStageProps` from TypeScript (intervals, `chartOptions`, tick count, `timeDetailLevel`, `timeFormat12h`, selection state, chart-type handler, settings opener, toolbar flags, etc.). Most hosts use a **product component** or **`ChartEdgeHost`** instead of calling `ChartEdgeStage` directly.
 
 ## Init process (summary)
 
-1. React mounts the product or host component.  
-2. `DEFAULT_GRAPH_OPTIONS` is deep-merged with your `chartOptions` prop (stable reference recommended).  
-3. `intervalsArray` flows into stage state; visible range and price range are derived.  
-4. Canvases allocate buffers; grid + series + optional histogram + watermark + drawings render.  
-5. Ref handle attaches after mount — defer `applyLiveData` / `addShape` until ref is non-null (e.g. `requestAnimationFrame` or `useEffect`).
+1. Mount product or `ChartEdgeHost` / `ChartEdgeStage`.  
+2. Merge `chartOptions` with defaults (stable prop reference recommended).  
+3. Load `intervalsArray`; derive visible time and price ranges.  
+4. Allocate canvases; draw grid, session shading, series, histogram, watermark, overlays (if enabled), drawings.  
+5. After mount, ref is non-null — run imperative calls in `useEffect` or callbacks.
 
 ## Updating (summary)
 
 | Concern | Mechanism |
 |---------|-----------|
-| Series | `intervalsArray` prop or `applyLiveData` / `addInterval` / index update |
-| Styles | `chartOptions` prop (deep merge when content changes) or Settings modal |
-| Drawings | Toolbar, or ref `addShape` / `patchShape` / `setDrawingsFromSpecs` |
-| View | Pan/zoom UI, `fitVisibleRangeToData`, `redrawCanvas` |
+| Series | `intervalsArray` or `applyLiveData` / `addInterval` / index update |
+| Styles | `chartOptions` (deep merge on real changes) or Settings modal |
+| Drawings | Toolbar, or `addShape` / `updateShape` / `patchShape` / `setDrawingsFromSpecs` |
+| View | Pan/zoom, `fitVisibleRangeToData`, `redrawCanvas`, `reloadCanvas` |
+| Theme | Shell toggle + `chartOptions.base.theme` |
+
+## Deprecated
+
+- `ChartStage`, `ChartStageProps`, `ChartStageHandle` → use `ChartEdgeStage*`.
