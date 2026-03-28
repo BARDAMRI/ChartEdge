@@ -25,11 +25,19 @@ export type CanvasSizes = {
 
 
 export type DeepPartial<T> = {
-    [K in keyof T]?: T[K] extends object ? DeepPartial<NonNullable<T[K]>> : T[K];
+    [K in keyof T]?: T[K] extends (string | number | boolean | symbol | Function | any[])
+        ? T[K]
+        : T[K] extends object
+            ? DeepPartial<NonNullable<T[K]>>
+            : T[K];
 };
 
 export type DeepRequired<T> = {
-    [K in keyof T]-?: T[K] extends object ? DeepRequired<NonNullable<T[K]>> : NonNullable<T[K]>;
+    [K in keyof T]-?: T[K] extends (string | number | boolean | symbol | Function | any[])
+        ? NonNullable<T[K]>
+        : T[K] extends object
+            ? DeepRequired<NonNullable<T[K]>>
+            : NonNullable<T[K]>;
 };
 
 

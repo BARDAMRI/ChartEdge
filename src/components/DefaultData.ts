@@ -63,6 +63,23 @@ const AXES_DEFAULT_STYLE: DeepRequired<AxesStyleOptions> = {
     decimalSeparator: ".",
     thousandsSeparator: ",",
     dateFormat: "MMM d",
+    currency: "USD",
+    useCurrency: false,
+    currencyDisplay: "symbol",
+    numberNotation: "standard",
+    tickSize: 0.01,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 8,
+    maximumSignificantDigits: 21,
+    autoPrecision: false,
+    unit: '',
+    unitPlacement: 'suffix',
+    timezone: 'UTC',
+    exchange: '',
+    tradingSessions: [],
+    holidays: [],
+    displayCurrency: 'USD',
+    conversionRate: 1,
 }
 const DRAWINGS_DEFAULT_STYLE: DeepRequired<DrawingStyleOptions> = {
     lineColor: "#2196f3", // A nice blue

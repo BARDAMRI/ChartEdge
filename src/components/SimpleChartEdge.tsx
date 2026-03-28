@@ -23,6 +23,7 @@ import {
     SettingsArea
 } from '../styles/App.styles';
 import {DEFAULT_GRAPH_OPTIONS} from "./DefaultData";
+import {FormattingService} from '../services/FormattingService';
 
 export interface SimpleChartEdgeHandle {
     addShape: (shape: any) => void;
@@ -90,6 +91,27 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
             showSettingsBar: showSettingsBar ?? prev.showSettingsBar,
         }));
     }, [showSidebar, showTopBar, showSettingsBar]);
+
+    useEffect(() => {
+        const handleCopy = (e: ClipboardEvent) => {
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) return;
+
+            const selectedText = selection.toString();
+            if (selectedText) {
+                // Try to parse the selected text as a localized number.
+                // If it succeeds, we put the normalized (canonical) value on the clipboard.
+                const parsed = FormattingService.parseInput(selectedText, finalStyleOptions.base.style.axes);
+                if (parsed !== null) {
+                    e.clipboardData?.setData('text/plain', FormattingService.toClipboard(parsed));
+                    e.preventDefault();
+                }
+            }
+        };
+
+        window.addEventListener('copy', handleCopy);
+        return () => window.removeEventListener('copy', handleCopy);
+    }, [finalStyleOptions.base.style.axes]);
 
 
 
@@ -196,6 +218,17 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                         dateFormat: newSettings.dateFormat,
                         locale: newSettings.locale,
                         language: newSettings.language,
+                        currency: newSettings.currency,
+                        useCurrency: newSettings.useCurrency,
+                        currencyDisplay: newSettings.currencyDisplay,
+                        numberNotation: newSettings.numberNotation,
+                        tickSize: newSettings.tickSize,
+                        minimumFractionDigits: newSettings.minimumFractionDigits,
+                        maximumFractionDigits: newSettings.maximumFractionDigits,
+                        maximumSignificantDigits: newSettings.maximumSignificantDigits,
+                        autoPrecision: newSettings.autoPrecision,
+                        unit: newSettings.unit,
+                        unitPlacement: newSettings.unitPlacement,
                     },
                     candles: {
                         ...prev.base.style.candles,
@@ -245,6 +278,17 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         dateFormat: finalStyleOptions.base.style.axes.dateFormat ?? 'MMM d',
         locale: finalStyleOptions.base.style.axes.locale ?? 'en-US',
         language: finalStyleOptions.base.style.axes.language ?? 'en',
+        currency: finalStyleOptions.base.style.axes.currency ?? 'USD',
+        useCurrency: finalStyleOptions.base.style.axes.useCurrency ?? false,
+        currencyDisplay: finalStyleOptions.base.style.axes.currencyDisplay ?? 'symbol',
+        numberNotation: finalStyleOptions.base.style.axes.numberNotation ?? 'standard',
+        minimumFractionDigits: finalStyleOptions.base.style.axes.minimumFractionDigits ?? 2,
+        maximumFractionDigits: finalStyleOptions.base.style.axes.maximumFractionDigits ?? 8,
+        maximumSignificantDigits: finalStyleOptions.base.style.axes.maximumSignificantDigits ?? 21,
+        tickSize: finalStyleOptions.base.style.axes.tickSize ?? 0.01,
+        autoPrecision: finalStyleOptions.base.style.axes.autoPrecision ?? false,
+        unit: finalStyleOptions.base.style.axes.unit ?? '',
+        unitPlacement: finalStyleOptions.base.style.axes.unitPlacement ?? 'suffix',
     }), [
         layoutOptions.showSidebar,
         layoutOptions.showTopBar,
@@ -254,16 +298,10 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         finalStyleOptions.axes.yAxisPosition,
         finalStyleOptions.axes.numberOfYTicks,
         finalStyleOptions.base.style.backgroundColor,
-        finalStyleOptions.base.style.axes.textColor,
+        finalStyleOptions.base.style.axes,
+        finalStyleOptions.base.style.line.color,
         finalStyleOptions.base.style.candles.bullColor,
         finalStyleOptions.base.style.candles.bearColor,
-        finalStyleOptions.base.style.line.color,
-        finalStyleOptions.base.style.axes.numberFractionDigits,
-        finalStyleOptions.base.style.axes.decimalSeparator,
-        finalStyleOptions.base.style.axes.thousandsSeparator,
-        finalStyleOptions.base.style.axes.dateFormat,
-        finalStyleOptions.base.style.axes.locale,
-        finalStyleOptions.base.style.axes.language,
     ]) as SettingsState;
 
     return (

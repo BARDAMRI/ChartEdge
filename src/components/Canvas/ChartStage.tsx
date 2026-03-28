@@ -310,10 +310,7 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
                         minPrice={visiblePriceRange.min}
                         maxPrice={visiblePriceRange.max}
                         numberOfYTicks={numberOfYTicks}
-                        fractionDigits={chartOptions.base.style.axes.numberFractionDigits ?? 2}
-                        decimalSeparator={chartOptions.base.style.axes.decimalSeparator || '.'}
-                        thousandsSeparator={chartOptions.base.style.axes.thousandsSeparator || ','}
-                        locale={chartOptions.base.style.axes.locale || 'en-US'}
+                        formatting={chartOptions.base.style.axes}
                     />
                 </YAxisContainer>
 
@@ -358,6 +355,7 @@ export const ChartStage = forwardRef<ChartStageHandle, ChartStageProps>(({
                             xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
                             dateFormat={chartOptions.base.style.axes.dateFormat || 'MMM d'}
                             locale={chartOptions.base.style.axes.locale || 'en-US'}
+                            timezone={chartOptions.base.style.axes.timezone}
                         />
                     </XAxisContainer>
                 </CanvasAxisContainer>

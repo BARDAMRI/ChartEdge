@@ -25,10 +25,10 @@ export const MainAppWindow = styled.div`
     width: 100%;
     margin: 0;
     padding: 0;
-    min-height: 450px;
-    min-width: 350px;
+    min-height: 0;
+    min-width: 0;
     box-sizing: border-box;
-    overflow: auto;
+    overflow: hidden;
 `;
 
 export const LowerContainer = styled.div`
@@ -43,6 +43,8 @@ export const ToolbarArea = styled.div`
     height: 100%;
     width: fit-content;
     box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
 `;
 
 export const ChartStageArea = styled.div`
@@ -61,4 +63,6 @@ export const SettingsArea = styled.div`
   flex-direction: row;
   height: fit-content;
   width: 100%;
+  min-width: 0;
+  min-height: 0;
 `;

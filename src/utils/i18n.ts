@@ -5,6 +5,8 @@ export interface LocaleDefaults {
     direction: 'ltr' | 'rtl';
     language: string;
     label: string;
+    defaultCurrency?: string;
+    isUpSuccess?: boolean; // true = Green Up, false = Red Up (e.g. certain Asian markets)
 }
 
 export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
@@ -15,6 +17,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'en',
         label: 'USA (en-US)',
+        defaultCurrency: 'USD',
+        isUpSuccess: true,
     },
     'en-GB': {
         decimalSeparator: '.',
@@ -23,6 +27,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'en',
         label: 'United Kingdom (en-GB)',
+        defaultCurrency: 'GBP',
+        isUpSuccess: true,
     },
     'en-CA': {
         decimalSeparator: '.',
@@ -31,6 +37,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'en',
         label: 'Canada (en-CA)',
+        defaultCurrency: 'CAD',
+        isUpSuccess: true,
     },
     'en-AU': {
         decimalSeparator: '.',
@@ -39,6 +47,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'en',
         label: 'Australia (en-AU)',
+        defaultCurrency: 'AUD',
+        isUpSuccess: true,
     },
     'en-IN': {
         decimalSeparator: '.',
@@ -47,6 +57,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'en',
         label: 'India (en-IN)',
+        defaultCurrency: 'INR',
+        isUpSuccess: true,
     },
     'he-IL': {
         decimalSeparator: '.',
@@ -55,6 +67,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'rtl',
         language: 'he',
         label: 'Israel (he-IL)',
+        defaultCurrency: 'ILS',
+        isUpSuccess: true,
     },
     'es-ES': {
         decimalSeparator: ',',
@@ -63,6 +77,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'es',
         label: 'Spain (es-ES)',
+        defaultCurrency: 'EUR',
+        isUpSuccess: true,
     },
     'es-MX': {
         decimalSeparator: '.',
@@ -71,6 +87,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'es',
         label: 'Mexico (es-MX)',
+        defaultCurrency: 'MXN',
+        isUpSuccess: true,
     },
     'fr-FR': {
         decimalSeparator: ',',
@@ -79,6 +97,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'fr',
         label: 'France (fr-FR)',
+        defaultCurrency: 'EUR',
+        isUpSuccess: true,
     },
     'fr-CA': {
         decimalSeparator: ',',
@@ -87,6 +107,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'fr',
         label: 'Canada (fr-CA)',
+        defaultCurrency: 'CAD',
+        isUpSuccess: true,
     },
     'de-DE': {
         decimalSeparator: ',',
@@ -95,6 +117,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'de',
         label: 'Germany (de-DE)',
+        defaultCurrency: 'EUR',
+        isUpSuccess: true,
     },
     'it-IT': {
         decimalSeparator: ',',
@@ -103,6 +127,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'it',
         label: 'Italy (it-IT)',
+        defaultCurrency: 'EUR',
+        isUpSuccess: true,
     },
     'pt-BR': {
         decimalSeparator: ',',
@@ -111,6 +137,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'pt',
         label: 'Brazil (pt-BR)',
+        defaultCurrency: 'BRL',
+        isUpSuccess: true,
     },
     'pt-PT': {
         decimalSeparator: ',',
@@ -119,6 +147,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'pt',
         label: 'Portugal (pt-PT)',
+        defaultCurrency: 'EUR',
+        isUpSuccess: true,
     },
     'zh-CN': {
         decimalSeparator: '.',
@@ -127,6 +157,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'zh',
         label: 'China (zh-CN)',
+        defaultCurrency: 'CNY',
+        isUpSuccess: false, // Red is Up in China
     },
     'zh-TW': {
         decimalSeparator: '.',
@@ -135,6 +167,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'zh',
         label: 'Taiwan (zh-TW)',
+        defaultCurrency: 'TWD',
+        isUpSuccess: false,
     },
     'ja-JP': {
         decimalSeparator: '.',
@@ -143,6 +177,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'ja',
         label: 'Japan (ja-JP)',
+        defaultCurrency: 'JPY',
+        isUpSuccess: false,
     },
     'ko-KR': {
         decimalSeparator: '.',
@@ -151,6 +187,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'ko',
         label: 'South Korea (ko-KR)',
+        defaultCurrency: 'KRW',
+        isUpSuccess: false,
     },
     'ru-RU': {
         decimalSeparator: ',',
@@ -159,6 +197,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'ru',
         label: 'Russia (ru-RU)',
+        defaultCurrency: 'RUB',
+        isUpSuccess: true,
     },
     'ar-SA': {
         decimalSeparator: '.',
@@ -167,6 +207,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'rtl',
         language: 'ar',
         label: 'Saudi Arabia (ar-SA)',
+        defaultCurrency: 'SAR',
+        isUpSuccess: true,
     },
     'ar-EG': {
         decimalSeparator: '.',
@@ -175,6 +217,8 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'rtl',
         language: 'ar',
         label: 'Egypt (ar-EG)',
+        defaultCurrency: 'EGP',
+        isUpSuccess: true,
     },
     'nl-NL': {
         decimalSeparator: ',',
@@ -183,7 +227,51 @@ export const SUPPORTED_LOCALES: Record<string, LocaleDefaults> = {
         direction: 'ltr',
         language: 'nl',
         label: 'Netherlands (nl-NL)',
+        defaultCurrency: 'EUR',
+        isUpSuccess: true,
     },
+};
+
+export const SUPPORTED_CURRENCIES = [
+    { code: 'USD', label: 'US Dollar ($)' },
+    { code: 'EUR', label: 'Euro (€)' },
+    { code: 'ILS', label: 'Israeli Shekel (₪)' },
+    { code: 'GBP', label: 'British Pound (£)' },
+    { code: 'JPY', label: 'Japanese Yen (¥)' },
+    { code: 'CNY', label: 'Chinese Yuan (¥)' },
+    { code: 'CAD', label: 'Canadian Dollar ($)' },
+    { code: 'AUD', label: 'Australian Dollar ($)' },
+    { code: 'INR', label: 'Indian Rupee (₹)' },
+    { code: 'KRW', label: 'South Korean Won (₩)' },
+    { code: 'RUB', label: 'Russian Ruble (₽)' },
+    { code: 'BRL', label: 'Brazilian Real (R$)' },
+    { code: 'SAR', label: 'Saudi Riyal (﷼)' },
+    { code: 'MXN', label: 'Mexican Peso ($)' },
+    { code: 'TWD', label: 'Taiwan Dollar (NT$)' },
+    { code: 'EGP', label: 'Egyptian Pound (EGP)' },
+];
+
+import * as dateFnsLocales from 'date-fns/locale';
+
+export const getDateFnsLocale = (localeStr: string) => {
+    // Map our locale keys to date-fns equivalent keys if necessary
+    const mapping: Record<string, any> = {
+        'en-US': dateFnsLocales.enUS,
+        'en-GB': dateFnsLocales.enGB,
+        'he-IL': dateFnsLocales.he,
+        'es-ES': dateFnsLocales.es,
+        'fr-FR': dateFnsLocales.fr,
+        'de-DE': dateFnsLocales.de,
+        'it-IT': dateFnsLocales.it,
+        'pt-BR': dateFnsLocales.ptBR,
+        'zh-CN': dateFnsLocales.zhCN,
+        'ja-JP': dateFnsLocales.ja,
+        'ko-KR': dateFnsLocales.ko,
+        'ru-RU': dateFnsLocales.ru,
+        'ar-SA': dateFnsLocales.arSA,
+        'nl-NL': dateFnsLocales.nl,
+    };
+    return mapping[localeStr] || dateFnsLocales.enUS;
 };
 
 export const SUPPORTED_LANGUAGES = [
@@ -223,6 +311,16 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
         'draw_angle': 'Draw Angle',
         'select': 'Select',
         'edit_shape': 'Edit Shape',
+        'open': 'Open',
+        'high': 'High',
+        'low': 'Low',
+        'close': 'Close',
+        'volume': 'Volume',
+        'change': 'Change',
+        'pnl': 'PnL',
+        'yield': 'Yield',
+        'basis_points': 'bps',
+        'volatility': 'Volatility',
     },
     'he': {
         'symbol_placeholder': 'סימול',
@@ -240,6 +338,16 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
         'draw_angle': 'ציור זווית',
         'select': 'בחירה',
         'edit_shape': 'עריכת צורה',
+        'open': 'פתיחה',
+        'high': 'גבוה',
+        'low': 'נמוך',
+        'close': 'סגירה',
+        'volume': 'מחזור',
+        'change': 'שינוי',
+        'pnl': 'רווח/הפסד',
+        'yield': 'תשואה',
+        'basis_points': 'נק׳ בסיס',
+        'volatility': 'תנודתיות',
     },
     'es': {
         'symbol_placeholder': 'Símbolo',
@@ -339,7 +447,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
         'range': 'نطاق',
         'export': 'تصدير',
         'refresh': 'تحديث',
-        'toggle_theme': 'تبديل المظهر',
+        'toggle_theme': 'تبדيل المظهر',
     },
     'nl': {
         'symbol_placeholder': 'Symbool',
@@ -355,4 +463,11 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
 
 export const translate = (key: string, lang: string): string => {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en']?.[key] || key;
+};
+
+/**
+ * Perform locale-aware string comparison for sorting.
+ */
+export const compareStrings = (a: string, b: string, locale: string = 'en-US'): number => {
+    return new Intl.Collator(locale).compare(a, b);
 };

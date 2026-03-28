@@ -14,9 +14,12 @@ import {
     startOfYear,
 } from 'date-fns';
 import {DrawTicksOptions, Tick, TimeRange} from "../../../types/Graph";
-import {TimeDetailLevel} from "../../../types/chartOptions";
+import {TimeDetailLevel, AxesStyleOptions} from "../../../types/chartOptions";
 import {AlignOptions, AxesPosition} from "../../../types/types";
 import {formatNumber} from "./formatters";
+import {getDateFnsLocale} from "../../../utils/i18n";
+import {formatWithTimezone} from "../../../utils/timeUtils";
+import {FormattingService} from "../../../services/FormattingService";
 
 const TICK_FONT_SIZE_PX = 12;
 
@@ -29,7 +32,8 @@ function selectTimeDetailLevel(
     timeFormat: string,
     timeFormat12h: boolean,
     timeDetailLevel: TimeDetailLevel,
-    ctx: CanvasRenderingContext2D
+    ctx: CanvasRenderingContext2D,
+    timezone?: string
 ): {
     intervalFn: (date: Date, amount: number) => Date;
     startOfFn: (date: Date) => Date;
@@ -103,7 +107,9 @@ function generateAndDrawTicksForLevel(
     },
     options: DrawTicksOptions,
     strokeStyle: string,
-    xAxisHeight: number
+    xAxisHeight: number,
+    locale: string = 'en-US',
+    timezone?: string
 ): Tick[] {
     const {intervalFn, startOfFn, formatStr, step} = level;
     const ctx = canvas.getContext('2d');
@@ -132,7 +138,16 @@ function generateAndDrawTicksForLevel(
         const pos = ((tickTimeSec - startTimeSec) / durationSec) * canvasWidth;
 
         if (pos >= 0 && pos <= canvasWidth) {
-            const label = format(currentTickDate, formatStr);
+            const label = timezone 
+                ? formatWithTimezone(tickTime / 1000, { 
+                    year: formatStr.includes('yyyy') || formatStr.includes('YYYY') ? 'numeric' : undefined,
+                    month: formatStr.includes('MMM') ? 'short' : (formatStr.includes('MM') ? '2-digit' : undefined),
+                    day: formatStr.includes('d') || formatStr.includes('D') ? 'numeric' : undefined,
+                    hour: formatStr.includes('H') || formatStr.includes('h') ? '2-digit' : undefined,
+                    minute: formatStr.includes('mm') ? '2-digit' : undefined,
+                    hour12: formatStr.includes('a')
+                  }, locale, timezone)
+                : FormattingService.formatDate(currentTickDate, { locale, dateFormat: formatStr } as any);
             ticks.push({position: pos, label});
         }
 
@@ -141,8 +156,8 @@ function generateAndDrawTicksForLevel(
 
     if (ticks.length === 0) {
         ticks.push(
-            {position: 0, label: format(startDate, formatStr)},
-            {position: canvasWidth, label: format(endDate, formatStr)}
+            {position: 0, label: FormattingService.formatDate(startDate, { locale, dateFormat: formatStr } as any)},
+            {position: canvasWidth, label: FormattingService.formatDate(endDate, { locale, dateFormat: formatStr } as any)}
         );
     }
 
@@ -161,7 +176,8 @@ export function generateAndDrawTimeTicks(
     strokeStyle: string,
     timeDetailLevel: TimeDetailLevel,
     options: DrawTicksOptions,
-    locale: string = 'en-US'
+    locale: string = 'en-US',
+    timezone?: string
 ): Tick[] {
     const {start, end} = timeRange;
     const canvasWidth = canvas.clientWidth;
@@ -177,17 +193,17 @@ export function generateAndDrawTimeTicks(
     const startDate = new Date(start * 1000);
     const endDate = new Date(end * 1000);
 
-    const pixelsPerTick = 150;
-    const estimatedTicks = Math.floor(canvasWidth / pixelsPerTick);
+    const pixelsPerTick = 80;
+    const estimatedTicks = Math.max(2, Math.floor(canvasWidth / pixelsPerTick));
     const maxTicks = Math.min(estimatedTicks, numberOfXTicks);
 
-    const selectedLevel = selectTimeDetailLevel(startDate, endDate, canvasWidth, maxTicks, timeFormat, timeFormat12h, timeDetailLevel, ctx);
+    const selectedLevel = selectTimeDetailLevel(startDate, endDate, canvasWidth, maxTicks, timeFormat, timeFormat12h, timeDetailLevel, ctx, timezone);
 
     if (!selectedLevel) {
         return [];
     }
 
-    return generateAndDrawTicksForLevel(canvas, startDate, endDate, durationSec, canvasWidth, selectedLevel, options, strokeStyle, xAxisHeight);
+    return generateAndDrawTicksForLevel(canvas, startDate, endDate, durationSec, canvasWidth, selectedLevel, options, strokeStyle, xAxisHeight, locale, timezone);
 }
 
 
@@ -202,10 +218,7 @@ export function generateAndDrawYTicks(
     labelFont: string = '12px Arial',
     tickLength: number = 5,
     labelOffset: number = 5,
-    fractionDigits: number = 2,
-    decimalSeparator: string = '.',
-    thousandsSeparator: string = ',',
-    locale: string = 'en-US'
+    formatting: Partial<AxesStyleOptions> = {}
 ): void {
     const ctx = canvas.getContext('2d');
     if (!ctx) {
@@ -220,14 +233,36 @@ export function generateAndDrawYTicks(
     const range = maxValue - minValue;
 
     ctx.clearRect(0, 0, width, height);
+    
+    const pixelsPerTick = 40; 
+    const maxYTicks = Math.max(2, Math.floor(height / pixelsPerTick));
+    const effectiveNumberOfYTicks = Math.min(numberOfYTicks, maxYTicks);
 
-    const ticks = Array.from({length: numberOfYTicks}, (_, i) => {
-        const ratio = i / (numberOfYTicks - 1);
+    if (!isFinite(minValue) || !isFinite(maxValue) || !isFinite(range) || range < 0 || effectiveNumberOfYTicks <= 1) {
+        return;
+    }
+
+    let dynamicFractionDigits = formatting.numberFractionDigits;
+    if (formatting.autoPrecision) {
+        const interval = range / (effectiveNumberOfYTicks - 1);
+        if (interval > 0) {
+            // Log10 of the interval tells us where the first significant digit is.
+            // E.g. if interval is 0.05, log10 is -1.3 -> we need 2 digits.
+            // if interval is 0.001, log10 is -3 -> we need 3 digits.
+            dynamicFractionDigits = Math.max(2, Math.ceil(-Math.log10(interval)));
+        }
+    }
+
+    const ticks = Array.from({length: effectiveNumberOfYTicks}, (_, i) => {
+        const ratio = i / (effectiveNumberOfYTicks - 1);
         const y = paddingTop + ratio * effectiveHeight;
         const value = maxValue - ratio * range;
         return {
             y,
-            label: formatNumber(value, fractionDigits, decimalSeparator, thousandsSeparator, locale)
+            label: FormattingService.formatPrice(value, {
+                ...formatting,
+                numberFractionDigits: dynamicFractionDigits,
+            } as AxesStyleOptions)
         };
     });
 
@@ -259,7 +294,7 @@ function drawXTicks(
     let lastRight = -Infinity;
 
     // drawing each tick and its label
-    ticks.forEach(tick => {
+    ticks.forEach((tick, i) => {
         const x = crisp(tick.position);
 
         ctx.strokeStyle = tickColor;
@@ -275,11 +310,26 @@ function drawXTicks(
         ctx.textBaseline = 'top';
 
         const w = ctx.measureText(tick.label).width;
-        const labelLeft = tick.position - w / 2;
-        const labelRight = tick.position + w / 2;
+        let xPos = tick.position;
+
+        // Ensure boundary labels stay within canvas
+        if (i === 0) {
+            // First tick: shift right if it overflows left
+            if (xPos - w / 2 < 2) {
+                xPos = w / 2 + 2;
+            }
+        } else if (i === ticks.length - 1) {
+            // Last tick: shift left if it overflows right
+            if (xPos + w / 2 > canvasWidth - 2) {
+                xPos = canvasWidth - w / 2 - 2;
+            }
+        }
+
+        const labelLeft = xPos - w / 2;
+        const labelRight = xPos + w / 2;
 
         if (labelLeft > lastRight + 4) {
-            ctx.fillText(tick.label, tick.position, axisY + labelOffset + 5);
+            ctx.fillText(tick.label, xPos, axisY + labelOffset + 5);
             lastRight = labelRight;
         }
     });
@@ -322,6 +372,25 @@ function drawYTicks(
         ctx.lineTo(tickEndX, tick.y);
         ctx.stroke();
 
-        ctx.fillText(tick.label, labelX, tick.y);
+        let label = tick.label;
+        const maxLabelWidth = Math.max(0, width - tickLength - labelOffset - 2); // 2px safety margin
+        let labelWidth = ctx.measureText(label).width;
+
+        if (labelWidth > maxLabelWidth) {
+            const ellipsisWidth = ctx.measureText('...').width;
+            if (maxLabelWidth < ellipsisWidth) {
+                label = ''; // No room even for ellipsis
+            } else {
+                while (label.length > 0 && labelWidth > maxLabelWidth) {
+                    label = label.slice(0, -1);
+                    labelWidth = ctx.measureText(label + '...').width;
+                }
+                label += '...';
+            }
+        }
+
+        if (label) {
+            ctx.fillText(label, labelX, tick.y);
+        }
     }
 }

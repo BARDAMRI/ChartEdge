@@ -6,6 +6,8 @@ export const ToolbarContainer = styled.div.attrs({className: 'toolbar-container'
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-height: 0;
+    max-height: 100%;
 
     /* Transparent surface with subtle frame and depth */
     background: transparent;
@@ -21,14 +23,28 @@ export const ToolbarContainer = styled.div.attrs({className: 'toolbar-container'
 export const ToolbarContent = styled.div.attrs({className: 'toolbar-content'})`
     box-sizing: border-box;
     width: 100%;
-    height: 100%;
+    flex: 1 1 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    overflow: hidden;
+    overflow-y: auto;
+    min-height: 0;
     gap: 2px;
     padding: 1px;
+    
+    /* Hide scrollbars but allow scrolling */
+    /* Hide scrollbars but allow scrolling */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+    &::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+    }
+
+    & > * {
+        flex-shrink: 0;
+    }
 
     & .tooltip-wrapper {
         width: 100%;

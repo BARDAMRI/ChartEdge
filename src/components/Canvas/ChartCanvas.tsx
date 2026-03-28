@@ -25,7 +25,14 @@ import {
     StyledCanvasResponsive
 } from '../../styles/ChartCanvas.styles';
 import {ChartOptions, ChartType} from "../../types/chartOptions";
-import {drawAreaChart, drawBarChart, drawCandlestickChart, drawGrid, drawHistogramChart, drawLineChart} from "./utils/GraphDraw";
+import {
+    drawAreaChart,
+    drawBarChart,
+    drawCandlestickChart,
+    drawGrid,
+    drawHistogramChart,
+    drawLineChart
+} from "./utils/GraphDraw";
 import {drawDrawings} from './utils/drawDrawings';
 import {useChartData} from '../../hooks/useChartData';
 import {usePanAndZoom} from '../../hooks/usePanAndZoom';
@@ -37,8 +44,10 @@ import {xToTime, yToPrice} from "./utils/GraphHelpers";
 import {Drawing} from "../Drawing/types";
 import {IDrawingShape} from "../Drawing/IDrawingShape";
 import {createShape} from "../Drawing/drawHelper";
-import {formatNumber} from './utils/formatters';
-import {format as formatDate} from 'date-fns';
+import {formatNumber, FormatNumberOptions} from './utils/formatters';
+import {FormattingService} from '../../services/FormattingService';
+import {getDateFnsLocale, getLocaleDefaults, translate} from '../../utils/i18n';
+import {isWithinTradingSession} from '../../utils/timeUtils';
 
 interface ChartCanvasProps {
     intervalsArray: Interval[];
@@ -158,6 +167,29 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
 
         // Draw grid behind everything else
         drawGrid(backBufferCtx, cssWidth, cssHeight, chartOptions);
+
+        // Highlight trading sessions if provided
+        const axesStyle = chartOptions.base.style.axes;
+        if (axesStyle.tradingSessions && axesStyle.tradingSessions.length > 0) {
+            const { start, end } = renderContext.visibleRange;
+            const duration = end - start;
+            if (duration > 0) {
+                const tz = axesStyle.timezone;
+                const sessions = axesStyle.tradingSessions;
+                
+                backBufferCtx.fillStyle = 'rgba(200, 200, 200, 0.15)'; // Semi-transparent grey
+                
+                // We'll check in 1-hour increments or based on the range
+                const stepSec = Math.max(300, duration / 200); // at most 200 checks
+                for (let t = start; t < end; t += stepSec) {
+                    if (!isWithinTradingSession(t, sessions, tz)) {
+                        const x = ((t - start) / duration) * cssWidth;
+                        const nextX = ((Math.min(t + stepSec, end) - start) / duration) * cssWidth;
+                        backBufferCtx.fillRect(x, 0, nextX - x, cssHeight);
+                    }
+                }
+            }
+        }
 
         switch (chartOptions?.base?.chartType) {
             case ChartType.Candlestick:
@@ -656,32 +688,60 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
             </ChartingContainer>
 
             {hoveredCandle && !isPanning && !mode && !isWheeling && (
-            <HoverTooltip className={'intervals-data-tooltip'} $isPositive={hoveredCandle.c > hoveredCandle.o}>
-                {(() => {
-                    const axes = chartOptions.base.style.axes;
-                    const frac   = axes.numberFractionDigits ?? 2;
-                    const dec    = axes.decimalSeparator   ?? '.';
-                    const thou   = axes.thousandsSeparator ?? ',';
-                    const dateFmt = (axes as any).dateFormat ?? 'MMM d';
-                    const fmt = (v: number) => formatNumber(v, frac, dec, thou);
-                    let dateStr: string;
-                    try {
-                        dateStr = formatDate(new Date(hoveredCandle.t * 1000), dateFmt);
-                    } catch {
-                        dateStr = new Date(hoveredCandle.t * 1000).toLocaleDateString();
-                    }
-                    return (
-                        <>
-                            {dateStr} &nbsp;|&nbsp;
-                            O: {fmt(hoveredCandle.o)}&nbsp;
-                            H: {fmt(hoveredCandle.h)}&nbsp;
-                            L: {fmt(hoveredCandle.l)}&nbsp;
-                            C: {fmt(hoveredCandle.c)}
-                            {hoveredCandle.v !== undefined && ` | V: ${fmt(hoveredCandle.v)}`}
-                        </>
-                    );
-                })()}
-            </HoverTooltip>
+                <HoverTooltip 
+                    className={'intervals-data-tooltip'} 
+                    $isPositive={hoveredCandle.c > hoveredCandle.o}
+                    $isRTL={getLocaleDefaults(chartOptions.base.style.axes.locale).direction === 'rtl'}
+                >
+                    {(() => {
+                        const axes = chartOptions.base.style.axes;
+                        const lang = axes.language || 'en';
+                        
+                        const dateStr = FormattingService.formatDate(new Date(hoveredCandle.t * 1000), axes);
+                        const change = hoveredCandle.c - hoveredCandle.o;
+                        const changePercent = (change / hoveredCandle.o);
+                        const isVerySmall = canvasSizes.width < 350 || canvasSizes.height < 250;
+
+                        return (
+                            <>
+                                <div style={{fontWeight: 'bold', borderBottom: '1px solid rgba(0,0,0,0.1)', marginBottom: '4px', paddingBottom: '2px'}}>
+                                    {dateStr}
+                                </div>
+                                {!isVerySmall ? (
+                                    <>
+                                        <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                                            <span>{translate('open', lang)}: {FormattingService.formatPrice(hoveredCandle.o, axes)}</span>
+                                            <span>{translate('high', lang)}: {FormattingService.formatPrice(hoveredCandle.h, axes)}</span>
+                                            <span>{translate('low', lang)}: {FormattingService.formatPrice(hoveredCandle.l, axes)}</span>
+                                            <span>{translate('close', lang)}: {FormattingService.formatPrice(hoveredCandle.c, axes)}</span>
+                                        </div>
+                                        <div style={{marginTop: '4px'}}>
+                                            {translate('change', lang)}: 
+                                            <span style={{color: change >= 0 ? 'green' : 'red', fontWeight: 'bold', marginLeft: '4px'}}>
+                                                {FormattingService.formatPrice(change, { ...axes, metricType: 'pnl', showSign: true } as any)} 
+                                                ({FormattingService.formatPrice(changePercent, { ...axes, useCurrency: false, unit: '%', maximumFractionDigits: 2, showSign: true } as any)})
+                                            </span>
+                                        </div>
+                                        {hoveredCandle.v !== undefined && (
+                                            <div style={{fontSize: '11px', opacity: 0.8, marginTop: '2px'}}>
+                                                {translate('volume', lang)}: {FormattingService.formatPrice(hoveredCandle.v, { ...axes, numberNotation: 'compact' } as any)}
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div style={{display: 'flex', flexDirection: 'column', gap: '2px'}}>
+                                        <div>
+                                            {translate('close', lang)}: {FormattingService.formatPrice(hoveredCandle.c, axes)}
+                                        </div>
+                                        <div style={{color: change >= 0 ? 'green' : 'red', fontWeight: 'bold'}}>
+                                            {FormattingService.formatPrice(changePercent, { ...axes, useCurrency: false, unit: '%', maximumFractionDigits: 1, showSign: true } as any)}
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
+                </HoverTooltip>
             )}
         </InnerCanvasContainer>
     );

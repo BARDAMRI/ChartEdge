@@ -11,9 +11,9 @@ export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-t
     border: 1px solid rgba(128, 140, 255, 0.18);
     box-shadow: 0 10px 28px rgba(17, 19, 39, 0.20),
     inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-    overflow: hidden;
+    overflow: visible;
     flex: 0 0 auto;
-
+    min-width: 0;
 `;
 
 const Control = styled.div`
@@ -34,10 +34,9 @@ const Control = styled.div`
         background-image: linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65));
     }
 
-    &:focus-within, &:focus {
-        box-shadow: 0 0 0 3px rgba(120, 130, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
     }
 `;
+
 export const SettingToolbarContent = styled.div.attrs({className: 'setting-toolbar-content'})`
     box-sizing: border-box;
     display: flex;
@@ -46,10 +45,23 @@ export const SettingToolbarContent = styled.div.attrs({className: 'setting-toolb
     flex-direction: row;
     align-items: stretch;
     justify-content: flex-start;
-    overflow: hidden;
+    overflow-x: auto;
     gap: 2px;
     padding: 1px;
-    flex: 0 0 auto;
+    flex: 1 1 0;
+    min-width: 0;
+
+    /* Hide scrollbars but allow scrolling */
+    /* Hide scrollbars but allow scrolling */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+    &::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+    }
+
+    & > * {
+        flex-shrink: 0;
+    }
 
     & .tooltip-wrapper {
         height: 100%;

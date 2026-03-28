@@ -55,9 +55,20 @@ export const SettingsToolbar = ({
             setToolbarWidth(w);
         });
         ro.observe(el);
+
+        const handleWheel = (e: WheelEvent) => {
+            if (e.deltaY !== 0) {
+                el.scrollLeft += e.deltaY;
+            }
+        };
+        el.addEventListener('wheel', handleWheel, { passive: true });
+
         // Fire once immediately
         setToolbarWidth(el.getBoundingClientRect().width);
-        return () => ro.disconnect();
+        return () => {
+            ro.disconnect();
+            el.removeEventListener('wheel', handleWheel);
+        };
     }, []);
 
     if (!showSettingsBar) return null;
@@ -77,8 +88,8 @@ export const SettingsToolbar = ({
     };
 
     return (
-        <SettingsToolbarContainer className="settings-toolbar-container" ref={containerRef}>
-            <SettingToolbarContent className="settings-toolbar-content">
+        <SettingsToolbarContainer className="settings-toolbar-container">
+            <SettingToolbarContent className="settings-toolbar-content" ref={containerRef}>
                 <SymbolInput 
                     className="settings-symbol-input" 
                     name="symbol-input" 

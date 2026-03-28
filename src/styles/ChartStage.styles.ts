@@ -11,19 +11,24 @@ export const ChartStageContainer = styled.div<{ $showTopBar: boolean; $showLeftB
     min-height: 0;
     overflow: hidden;
     box-sizing: border-box;
-    grid-template-rows: ${({$showTopBar}) => $showTopBar ? 'auto 1fr' : '0px 1fr'};
-    grid-template-columns: ${({$showLeftBar}) => $showLeftBar ? 'auto 1fr' : '0px 1fr'};
+    grid-template-rows: ${({$showTopBar}) => $showTopBar ? 'auto minmax(0, 1fr)' : '0px minmax(0, 1fr)'};
+    grid-template-columns: ${({$showLeftBar}) => $showLeftBar ? 'auto minmax(0, 1fr)' : '0px minmax(0, 1fr)'};
 `;
 
 export const TopBar = styled.div`
     grid-row: 1;
     grid-column: 1 / span 2;
+    padding-bottom: 5px;
+    min-height: 0;
+    min-width: 0;
     overflow: hidden;
 `;
 export const LeftBar = styled.div`
     grid-row: 2;
     grid-column: 1;
     overflow: hidden;
+    min-width: 0;
+    min-height: 0;
 `;
 
 interface StageViewProps {
@@ -82,6 +87,8 @@ export const XAxisContainer = styled.div<XAxisProps>`
     grid-column: 1;
     height: ${({xAxisHeight}) => (xAxisHeight ? `${xAxisHeight}px` : '40px')};
     box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
 `;
 
 export const CanvasContainer = styled.div`

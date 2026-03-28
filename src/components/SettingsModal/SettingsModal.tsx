@@ -21,7 +21,8 @@ import {
 } from './SettingsModal.styles';
 import { IconClose, IconSave } from '../Toolbar/icons';
 import { AxesPosition } from '../../types/types';
-import { getLocaleDefaults, SUPPORTED_LANGUAGES, SUPPORTED_LOCALES } from '../../utils/i18n';
+import { getLocaleDefaults, SUPPORTED_LANGUAGES, SUPPORTED_LOCALES, SUPPORTED_CURRENCIES } from '../../utils/i18n';
+import { CurrencyDisplay, NumberNotation } from '../../types/chartOptions';
 
 /* ──────────────────────────────────────────────────
  *  Types
@@ -45,9 +46,20 @@ export interface SettingsState {
     dateFormat: string;
     locale: string;
     language: string;
+    currency: string;
+    useCurrency: boolean;
+    currencyDisplay: CurrencyDisplay;
+    numberNotation: NumberNotation;
+    minimumFractionDigits: number;
+    maximumFractionDigits: number;
+    maximumSignificantDigits: number;
+    tickSize: number;
+    autoPrecision: boolean;
+    unit: string;
+    unitPlacement: 'prefix' | 'suffix';
 }
 
-type Category = 'chart' | 'axes' | 'time' | 'layout' | 'colors' | 'globalization';
+type Category = 'chart' | 'axes' | 'time' | 'layout' | 'colors' | 'globalization' | 'financial';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -67,7 +79,8 @@ const CATEGORIES: { id: Category; icon: string; label: string }[] = [
     { id: 'time',          icon: '⏱',  label: 'Time'          },
     { id: 'layout',        icon: '🖥',  label: 'Layout'        },
     { id: 'colors',        icon: '🎨', label: 'Colors'        },
-    { id: 'globalization', icon: '🌐', label: 'Regional & Language' },
+    { id: 'globalization', icon: '🌐', label: 'Regional'      },
+    { id: 'financial',     icon: '💰', label: 'Financials'    },
 ];
 
 const CATEGORY_TITLE: Record<Category, string> = {
@@ -76,7 +89,8 @@ const CATEGORY_TITLE: Record<Category, string> = {
     time:           'Time',
     layout:         'Layout',
     colors:         'Colors',
-    globalization:  'Regional & Language',
+    globalization:  'Regional & Format',
+    financial:      'Currency & Price',
 };
 
 
@@ -98,20 +112,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             setSettings(initialSettingsRef.current);
             setActive(null);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (isOpen) {
-            setSettings(initialSettingsRef.current);
-            setActive(null);
-        }
     }, [isOpen]);
 
     const handleLanguageChange = (newLang: string) => {
         let newLocale = settings.locale;
-        
-        // Find the first locale that matches the new language
         const matchingLocale = Object.keys(SUPPORTED_LOCALES).find(loc => SUPPORTED_LOCALES[loc].language === newLang);
         if (matchingLocale && !settings.locale.startsWith(newLang)) {
             newLocale = matchingLocale;
@@ -125,6 +129,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             decimalSeparator: defaults.decimalSeparator,
             thousandsSeparator: defaults.thousandsSeparator,
             dateFormat: defaults.dateFormat,
+            currency: defaults.defaultCurrency || prev.currency,
         }));
     };
 
@@ -137,6 +142,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             decimalSeparator: defaults.decimalSeparator,
             thousandsSeparator: defaults.thousandsSeparator,
             dateFormat: defaults.dateFormat,
+            currency: defaults.defaultCurrency || prev.currency,
         }));
     };
 
@@ -291,7 +297,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             case 'globalization':
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
-                        <SectionTitle className="settings-section-title" dir={direction}>Core i18n</SectionTitle>
+                        <SectionTitle className="settings-section-title" dir={direction}>Language & Locale</SectionTitle>
                          <FormRow className="settings-form-row">
                             <FormLabel className="settings-form-label" dir={direction}>Language</FormLabel>
                             <SelectDropdown
@@ -317,43 +323,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             </SelectDropdown>
                         </FormRow>
 
-                        <SectionTitle className="settings-section-title" dir={direction}>Number Format overrides</SectionTitle>
+                        <SectionTitle className="settings-section-title" dir={direction}>Date Format</SectionTitle>
                         <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Decimal Separator</FormLabel>
-                            <SelectDropdown
-                                className="settings-select-dropdown"
-                                value={settings.decimalSeparator}
-                                onChange={(e: any) => change('decimalSeparator', e.target.value)}
-                            >
-                                <option value=".">Dot ( . )</option>
-                                <option value=",">Comma ( , )</option>
-                            </SelectDropdown>
-                        </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Thousands Separator</FormLabel>
-                            <SelectDropdown
-                                className="settings-select-dropdown"
-                                value={settings.thousandsSeparator}
-                                onChange={(e: any) => change('thousandsSeparator', e.target.value)}
-                            >
-                                <option value=",">Comma ( , )</option>
-                                <option value=".">Dot ( . )</option>
-                                <option value=" ">Space (   )</option>
-                                <option value="">None</option>
-                            </SelectDropdown>
-                        </FormRow>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Decimal Places</FormLabel>
-                            <NumberInput
-                                className="settings-number-input"
-                                type="number" min="0" max="8"
-                                value={settings.fractionDigits}
-                                onChange={(e: any) => change('fractionDigits', parseInt(e.target.value) || 0)}
-                            />
-                        </FormRow>
-                        <SectionTitle className="settings-section-title" dir={direction}>Date Format overrides</SectionTitle>
-                        <FormRow className="settings-form-row">
-                            <FormLabel className="settings-form-label" dir={direction}>Date Format Pattern</FormLabel>
+                            <FormLabel className="settings-form-label" dir={direction}>Date Pattern</FormLabel>
                             <SelectDropdown
                                 className="settings-select-dropdown"
                                 value={settings.dateFormat}
@@ -368,6 +340,147 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <option value="d.M.yyyy">23.3.2025</option>
                                 <option value="yyyy. MM. dd.">2025. 03. 23.</option>
                             </SelectDropdown>
+                        </FormRow>
+                    </SubMenuPane>
+                );
+            case 'financial':
+                return (
+                    <SubMenuPane $back={goingBack} className="settings-submenu-pane">
+                        <SectionTitle className="settings-section-title" dir={direction}>Currency</SectionTitle>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label" dir={direction}>Enable Currency</FormLabel>
+                            <SwitchToggle $checked={settings.useCurrency}
+                                          onClick={() => toggle('useCurrency')} />
+                        </FormRow>
+                        {settings.useCurrency && (
+                            <>
+                                <FormRow className="settings-form-row">
+                                    <FormLabel className="settings-form-label" dir={direction}>Select Currency</FormLabel>
+                                    <SelectDropdown
+                                        value={settings.currency}
+                                        onChange={(e: any) => change('currency', e.target.value)}
+                                    >
+                                        {SUPPORTED_CURRENCIES.map(c => (
+                                            <option key={c.code} value={c.code}>{c.label}</option>
+                                        ))}
+                                    </SelectDropdown>
+                                </FormRow>
+                                <FormRow className="settings-form-row">
+                                    <FormLabel className="settings-form-label" dir={direction}>Symbol Placement</FormLabel>
+                                    <SelectDropdown
+                                        value={settings.currencyDisplay}
+                                        onChange={(e: any) => change('currencyDisplay', e.target.value)}
+                                    >
+                                        <option value="symbol">Symbol ($)</option>
+                                        <option value="narrowSymbol">Narrow ($)</option>
+                                        <option value="code">Code (USD)</option>
+                                        <option value="name">Name (dollars)</option>
+                                    </SelectDropdown>
+                                </FormRow>
+                            </>
+                        )}
+
+                        <SectionTitle className="settings-section-title" dir={direction}>Number & Price</SectionTitle>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label" dir={direction}>Notation</FormLabel>
+                            <SelectDropdown
+                                value={settings.numberNotation}
+                                onChange={(e: any) => change('numberNotation', e.target.value)}
+                            >
+                                <option value="standard">Standard</option>
+                                <option value="scientific">Scientific</option>
+                                <option value="compact">Compact</option>
+                            </SelectDropdown>
+                        </FormRow>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label" dir={direction}>Auto Precision</FormLabel>
+                            <SwitchToggle
+                                $checked={settings.autoPrecision}
+                                onClick={() => change('autoPrecision', !settings.autoPrecision)}
+                            />
+                        </FormRow>
+                        <FormRow className="settings-form-row" style={{ opacity: settings.autoPrecision ? 0.5 : 1 }}>
+                            <FormLabel className="settings-form-label" dir={direction}>Decimal Places</FormLabel>
+                            <NumberInput
+                                type="number" min="0" max="15"
+                                value={settings.fractionDigits}
+                                onChange={(e: any) => {
+                                    const val = parseInt(e.target.value) || 0;
+                                    setSettings(prev => ({
+                                        ...prev,
+                                        fractionDigits: val,
+                                        minimumFractionDigits: val,
+                                        maximumFractionDigits: val
+                                    }));
+                                }}
+                                disabled={settings.autoPrecision}
+                            />
+                        </FormRow>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label" dir={direction}>Custom Unit</FormLabel>
+                            <input
+                                className="settings-input"
+                                type="text"
+                                value={settings.unit}
+                                onChange={(e: any) => change('unit', e.target.value)}
+                                placeholder="e.g. %, BTC, pts"
+                                style={{
+                                    flex: 1,
+                                    padding: '6px 10px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #ddd',
+                                    background: 'white',
+                                    color: '#333'
+                                }}
+                            />
+                        </FormRow>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label" dir={direction}>Unit Placement</FormLabel>
+                            <SelectDropdown
+                                value={settings.unitPlacement}
+                                onChange={(e: any) => change('unitPlacement', e.target.value)}
+                            >
+                                <option value="suffix">Suffix (100 BTC)</option>
+                                <option value="prefix">Prefix (BTC 100)</option>
+                            </SelectDropdown>
+                        </FormRow>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label" dir={direction}>Significant Digits</FormLabel>
+                            <NumberInput
+                                type="number" min="1" max="21"
+                                value={settings.maximumSignificantDigits}
+                                onChange={(e: any) => change('maximumSignificantDigits', parseInt(e.target.value) || 21)}
+                            />
+                        </FormRow>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label" dir={direction}>Decimal Mark</FormLabel>
+                            <SelectDropdown
+                                value={settings.decimalSeparator}
+                                onChange={(e: any) => change('decimalSeparator', e.target.value)}
+                            >
+                                <option value=".">Dot ( . )</option>
+                                <option value=",">Comma ( , )</option>
+                            </SelectDropdown>
+                        </FormRow>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label" dir={direction}>Digit Grouping</FormLabel>
+                            <SelectDropdown
+                                value={settings.thousandsSeparator}
+                                onChange={(e: any) => change('thousandsSeparator', e.target.value)}
+                            >
+                                <option value=",">Comma ( , )</option>
+                                <option value=".">Dot ( . )</option>
+                                <option value=" ">Space (   )</option>
+                                <option value="">None</option>
+                            </SelectDropdown>
+                        </FormRow>
+                        <FormRow className="settings-form-row">
+                            <FormLabel className="settings-form-label" dir={direction}>Tick Size</FormLabel>
+                            <NumberInput
+                                type="number" step="0.0001" min="0"
+                                value={settings.tickSize}
+                                onChange={(e: any) => change('tickSize', parseFloat(e.target.value) || 0)}
+                            />
                         </FormRow>
                     </SubMenuPane>
                 );

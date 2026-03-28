@@ -1,7 +1,8 @@
 import React, {useEffect, useLayoutEffect, useRef} from 'react';
 import {generateAndDrawYTicks} from '../utils/generateTicks';
-import {StyledYAxisCanvas} from '../../../styles/YAxis.styles';
-import {AxesPosition} from "../../../types/types";
+import { AxesStyleOptions } from "../../../types/chartOptions";
+import { AxesPosition } from "../../../types/types";
+import { StyledYAxisCanvas } from '../../../styles/YAxis.styles';
 
 interface YAxisProps {
     yAxisPosition: AxesPosition;
@@ -9,10 +10,7 @@ interface YAxisProps {
     minPrice: number;
     maxPrice: number;
     numberOfYTicks: number;
-    fractionDigits: number;
-    decimalSeparator: string;
-    thousandsSeparator: string;
-    locale: string;
+    formatting: AxesStyleOptions;
 }
 
 export default function YAxis({
@@ -20,10 +18,7 @@ export default function YAxis({
                                   minPrice,
                                   maxPrice,
                                   numberOfYTicks,
-                                  fractionDigits,
-                                  decimalSeparator,
-                                  thousandsSeparator,
-                                  locale
+                                  formatting
                               }: YAxisProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -48,8 +43,6 @@ export default function YAxis({
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, rect.width, rect.height);
 
-        // IMPORTANT for grid layout: Y axis container sits only in row 1, so its endPrice already excludes X-axis.
-        // Therefore, pass 0 for xAxisHeight into the tick generator to avoid double-reserving space.
         generateAndDrawYTicks(
             canvas,
             minPrice,
@@ -61,10 +54,7 @@ export default function YAxis({
             '12px Arial',
             5,
             5,
-            fractionDigits,
-            decimalSeparator,
-            thousandsSeparator,
-            locale
+            formatting
         );
     };
 
@@ -82,7 +72,7 @@ export default function YAxis({
 
     useEffect(() => {
         draw();
-    }, [minPrice, maxPrice, numberOfYTicks, yAxisPosition]);
+    }, [minPrice, maxPrice, numberOfYTicks, yAxisPosition, formatting]);
 
     return (
         <StyledYAxisCanvas className={'startPrice-axis-canvas'} ref={canvasRef} $position={yAxisPosition}/>

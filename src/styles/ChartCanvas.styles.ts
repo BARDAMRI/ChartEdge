@@ -72,12 +72,13 @@ export const ChartingContainer = styled.div`
 
 interface HoverTooltipProps {
     $isPositive: boolean;
+    $isRTL?: boolean;
 }
 
 export const HoverTooltip = styled.div<HoverTooltipProps>`
     position: absolute;
     bottom: 5px;
-    right: 10px;
+    ${props => props.$isRTL ? 'left' : 'right'}: 10px;
     opacity: 0.8;
     background-color: rgba(255, 255, 255, 0.4);
     padding: 6px 10px;
@@ -86,9 +87,26 @@ export const HoverTooltip = styled.div<HoverTooltipProps>`
     border-radius: 4px;
     font-size: 12px;
     display: flex;
-    gap: 10px;
+    flex-direction: column; /* Changed to column to support multiple rows of data */
+    gap: 4px;
     z-index: 50;
     white-space: nowrap;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     pointer-events: none;
+    direction: ${props => props.$isRTL ? 'rtl' : 'ltr'};
+    backdrop-filter: blur(4px);
+    
+    max-width: calc(100% - 20px);
+    max-height: calc(100% - 10px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    /* Responsive font size */
+    font-size: clamp(8px, 2vmin, 12px);
+    padding: clamp(2px, 1vmin, 6px) clamp(4px, 1.5vmin, 10px);
+    
+    @media (max-width: 400px), (max-height: 300px) {
+        opacity: 0.95;
+        background-color: rgba(255, 255, 255, 0.95);
+    }
 `;

@@ -14,6 +14,7 @@ interface XAxisProps {
     timeFormat12h: boolean;
     dateFormat?: string;
     locale: string;
+    timezone?: string;
 }
 
 export default function XAxis({
@@ -23,7 +24,8 @@ export default function XAxis({
                                   timeDetailLevel,
                                   timeFormat12h,
                                   dateFormat = 'MMM d',
-                                  locale = 'en-US'
+                                  locale = 'en-US',
+                                  timezone
                               }: XAxisProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const dpr = window.devicePixelRatio || 1;
@@ -57,9 +59,10 @@ export default function XAxis({
                 labelFont: '10px Arial',
                 axisY: 0
             } as DrawTicksOptions,
-            locale
+            locale,
+            timezone
         );
-    }, [xAxisHeight, visibleRange, timeDetailLevel, timeFormat12h, canvasSizes, dpr, dateFormat]);
+    }, [xAxisHeight, visibleRange, timeDetailLevel, timeFormat12h, canvasSizes, dpr, dateFormat, locale]);
 
     return <StyledXAxisCanvas className={'startTime-Axis-Canvas'} ref={canvasRef} $height={xAxisHeight}/>;
 }

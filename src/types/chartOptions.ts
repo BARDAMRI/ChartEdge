@@ -13,6 +13,12 @@ export enum TimeDetailLevel {
     High = 'high',
 }
 
+export interface TradingSession {
+    dayOfWeek: number; // 0-6, where 0 is Sunday
+    start: string; // 'HH:mm' format
+    end: string; // 'HH:mm' format
+}
+
 export enum ChartType {
     Candlestick = 'Candlestick',
     Line = 'Line',
@@ -74,6 +80,9 @@ export interface GridStyleOptions {
     lineDash: number[];
 }
 
+export type NumberNotation = 'standard' | 'scientific' | 'compact';
+export type CurrencyDisplay = 'symbol' | 'narrowSymbol' | 'code' | 'name';
+
 export interface AxesStyleOptions {
     axisPosition: AxesPosition;
     textColor: string;
@@ -86,6 +95,23 @@ export interface AxesStyleOptions {
     decimalSeparator: string;
     thousandsSeparator: string;
     dateFormat: string;
+    numberNotation?: NumberNotation;
+    currency?: string;
+    useCurrency?: boolean;
+    currencyDisplay?: CurrencyDisplay;
+    minimumFractionDigits?: number;
+    maximumFractionDigits?: number;
+    maximumSignificantDigits?: number;
+    tickSize?: number;
+    autoPrecision?: boolean;
+    unit?: string;
+    unitPlacement?: 'prefix' | 'suffix';
+    timezone?: string; // e.g., 'America/New_York', 'Asia/Jerusalem'
+    exchange?: string; // e.g., 'NYSE', 'TASE'
+    tradingSessions?: TradingSession[];
+    holidays?: string[]; // ISO 'YYYY-MM-DD'
+    displayCurrency?: string;
+    conversionRate?: number;
 }
 
 export type StyleOptions = {
