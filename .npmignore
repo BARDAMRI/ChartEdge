@@ -1,0 +1,23 @@
+# Source and tooling — never publish (defense in depth alongside package.json "files").
+scripts/
+src/
+example/
+docs/
+tests/
+test/
+**/*.test.ts
+**/*.spec.ts
+
+vite.config.ts
+tsconfig.json
+tsconfig.*.json
+jest.config.js
+combineFiles.cjs
+index.html
+
+.git/
+.github/
+.gitignore
+.cursor/
+*.log
+.DS_Store

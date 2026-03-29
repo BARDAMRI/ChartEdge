@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-label="TickUp">
+  <rect width="32" height="32" rx="6" fill="#0969da"/>
+  <path fill="#fff" d="M7 23V9h2.4l3.6 6 3.6-6H19v14h-2.2V14.2L13.4 21h-1.3L9.3 14.1V23H7z"/>
+  <path fill="#fff" d="M19 9h2.2v14H19V9z" opacity=".88"/>
+</svg>
