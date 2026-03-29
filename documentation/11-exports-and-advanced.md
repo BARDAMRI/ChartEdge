@@ -1,28 +1,41 @@
 # Public exports & advanced topics
 
-This guide mirrors **`src/index.ts`**. Symbols not listed here are **internal** (not semver-stable as public API).
+Published API is split across **`tickup`** (default) and **`tickup/full`**. Symbols not listed here are **internal** (not semver-stable as public API).
 
-## Components
+## `tickup` (default — basic charts)
 
 | Export | Role |
 |--------|------|
-| `SimpleChartEdge` | Full application shell (toolbar, settings, stage). |
-| `ChartEdgeHost` | **Alias** of `SimpleChartEdge`. |
-| `ChartEdgePulse` | Minimal product (plot + axes). |
-| `ChartEdgeFlow` | Top bar, no drawing sidebar. |
-| `ChartEdgeCommand` | Full trader UI. |
-| `ChartEdgeDesk` | Same as Command; watermark on. |
-| `ChartEdgeApex` | Command-like + `licenseKey` / eval banner. |
-| `ChartEdgeStage` | Headless chart + axes + imperative handle. |
-| `ChartStage` | **Deprecated** — use `ChartEdgeStage`. |
-| `ChartEdgeMark` | DOM wordmark (marketing). |
-| `ChartEdgeAttribution` | DOM attribution strip. |
+| `TickUpStage` | Chart + axes + toolbars (when enabled via props) + optional **compact symbol strip** when `showTopBar` is false and `symbol` / `defaultSymbol` is set + imperative handle. |
+| `TickUpMark` | DOM wordmark. |
+| `TickUpAttribution` | DOM attribution strip. |
+| `GlobalStyle` | Styled global CSS fragment (optional for hosts). |
+| `ModeProvider`, `useMode` | Drawing mode context. |
+| `ChartOptions`, `DeepRequired` | Configuration typing helpers. |
+| Plus | Intervals, live-data utils, overlays builders, drawing specs/factories/query helpers, snapshot helpers, graph math (`timeToX`, …), `ShapeType` & shape arg types, `IDrawingShape`, enums (`ChartType`, `AxesPosition`, overlay keys), branding types. |
+
+## `tickup/full` (product shells + extended)
+
+Everything in **`tickup`**, **plus**:
+
+### Components
+
+| Export | Role |
+|--------|------|
+| `TickUpHost` | Full application shell (toolbar, settings, stage). |
+| `TickUpHost` | **Alias** of `TickUpHost`. |
+| `TickUpPulse` | Minimal product (plot + axes); symbol via compact strip when provided. |
+| `TickUpFlow` | Top bar, no drawing sidebar. |
+| `TickUpCommand` | Full trader UI. |
+| `TickUpDesk` | Same as Command; watermark on. |
+| `TickUpPrimeTier` | Licensed/eval shell: same chrome as Command; `productId: 'prime'`. |
+| `TickUpPrime`, `TickUpStandardEngine` | Engine profiles for `setEngine` / `chartOptions.base.engine`. |
+| `ChartStage` | **Deprecated** — use `TickUpStage`. |
 | `ShapePropertiesModal` | Shape property editor UI. |
-| `GlobalStyle` | Styled global CSS fragment for the shell. |
 
-### Component prop / handle types
+### Component prop / handle types (full)
 
-`SimpleChartEdgeProps`, `SimpleChartEdgeHandle`, `ChartEdgeHostProps`, `ChartEdgeHostHandle`, `ChartEdgePulseProps`, … `ChartEdgeApexProps`, `ChartEdgeStageProps`, `ChartEdgeStageHandle`, `ChartStageProps`, `ChartStageHandle` (deprecated), `ChartEdgeAttributionProps`, `ShapePropertiesFormState`, `ModalThemeVariant`, `ChartEdgeThemeVariant`.
+`TickUpHostProps`, `TickUpHostHandle`, `TickUpHostProps`, `TickUpHostHandle`, `TickUpPulseProps`, `TickUpFlowProps`, `TickUpCommandProps`, `TickUpDeskProps`, `TickUpStageProps`, `TickUpStageHandle`, `ChartStageProps`, `ChartStageHandle` (deprecated), `TickUpAttributionProps`, `ShapePropertiesFormState`, `ModalThemeVariant`, `TickUpThemeVariant`, `TickUpProductId`.
 
 ## Context
 
@@ -31,7 +44,7 @@ This guide mirrors **`src/index.ts`**. Symbols not listed here are **internal** 
 | `ModeProvider` | Wraps tree so drawing toolbar modes work. |
 | `useMode` | Access `{ mode, setMode }` inside provider. |
 
-The **`Mode` enum** is used internally by the toolbar; it is **not** re-exported from `chartedge`. Hosts driving drawings programmatically should use **`DrawingSpec`** + ref APIs, not `Mode` values.
+The **`Mode` enum** is used internally by the toolbar; it is **not** re-exported from the package. Hosts driving drawings programmatically should use **`DrawingSpec`** + ref APIs, not `Mode` values.
 
 ## Core data types
 
@@ -41,7 +54,7 @@ The **`Mode` enum** is used internally by the toolbar; it is **not** re-exported
 | `TimeRange`, `ChartDimensionsData` | Time window / layout metrics. |
 | `LiveDataPlacement`, `LiveDataApplyResult` | Live merge contract. |
 | `ChartContextInfo` | `getChartContext()` snapshot. |
-| `ChartEdgeProductId` | `'pulse' \| 'flow' \| 'command' \| 'desk' \| 'apex'`. |
+| `TickUpProductId` | Product id union — **`tickup/full` only**. Public docs use `pulse` \| `flow` \| `command` \| `desk` only. |
 
 ## Chart configuration types
 
@@ -64,7 +77,7 @@ The **`Mode` enum** is used internally by the toolbar; it is **not** re-exported
 | `shapeToSnapshot`, `queryDrawingsToSnapshots`, `filterDrawingInstances`, `filterDrawingsWithMeta` | Snapshot pipelines. |
 | `IDrawingShape` | Instance interface. |
 | `LineShapeArgs`, `RectangleShapeArgs`, … `CustomSymbolShapeArgs` | Per-shape argument types. |
-| **Shape classes** | `LineShape`, `RectangleShape`, `CircleShape`, `TriangleShape`, `AngleShape`, `ArrowShape`, `Polyline`, `CustomSymbolShape` — advanced/tests. |
+| **Shape classes** | `LineShape`, `RectangleShape`, … — advanced/tests; **`tickup/full` only**. |
 | `generateDrawingShapeId` | Id factory. |
 
 ## Overlay builders
@@ -99,17 +112,17 @@ Details: [Overlays & indicators](./12-overlays-and-indicators.md).
 
 Examples: `FormattingService`, `deepMerge`, `deepEqual`, toolbar `Tooltip`, most styled wrappers. Do not import these from deep paths in apps if you want upgrade safety.
 
-## `ChartEdgeStage` usage sketch
+## `TickUpStage` usage sketch
 
-Wrap with **`ModeProvider`**. Pass **all** required `ChartEdgeStageProps` from TypeScript (intervals, `chartOptions`, tick count, `timeDetailLevel`, `timeFormat12h`, selection state, chart-type handler, settings opener, toolbar flags, etc.). Most hosts use a **product component** or **`ChartEdgeHost`** instead of calling `ChartEdgeStage` directly.
+Wrap with **`ModeProvider`**. Pass **all** required `TickUpStageProps` from TypeScript (intervals, `chartOptions`, tick count, `timeDetailLevel`, `timeFormat12h`, selection state, chart-type handler, settings opener, toolbar flags, etc.). Many hosts use a **product component** or **`TickUpHost`** from **`tickup/full`** instead of wiring `TickUpStage` alone.
 
 ## Init process (summary)
 
-1. Mount product or `ChartEdgeHost` / `ChartEdgeStage`.  
+1. Mount product or `TickUpHost` / `TickUpStage`.  
 2. Merge `chartOptions` with defaults (stable prop reference recommended).  
 3. Load `intervalsArray`; derive visible time and price ranges.  
 4. Allocate canvases; draw grid, session shading, series, histogram, watermark, overlays (if enabled), drawings.  
-5. After mount, ref is non-null — run imperative calls in `useEffect` or callbacks.
+5. After mount, the **ref** is non-null — run imperative calls in `useEffect` or callbacks. **`getViewInfo()` / `getChartContext()`** may still return **`null`** until the inner stage is ready; use optional chaining or retry briefly (see the [`example/`](../example/) app for patterns).
 
 ## Updating (summary)
 
@@ -123,4 +136,4 @@ Wrap with **`ModeProvider`**. Pass **all** required `ChartEdgeStageProps` from T
 
 ## Deprecated
 
-- `ChartStage`, `ChartStageProps`, `ChartStageHandle` → use `ChartEdgeStage*`.
+- `ChartStage`, `ChartStageProps`, `ChartStageHandle` → use `TickUpStage*`.

@@ -1,17 +1,26 @@
 # Toolbar & interactions
 
+## Compact symbol strip (no top bar)
+
+When **`showTopBar`** is **`false`**, there is no symbol text field in the toolbar. If the host passes a non-empty **`symbol`** (after trim) or, when `symbol` is omitted, a non-empty **`defaultSymbol`**, the stage renders a **single read-only row** above the plot showing that ticker. Styling follows **`chartOptions.base.style.axes`** (font, text color, line color for a bottom border) and **`base.style.backgroundColor`**.
+
+- Used automatically by **`TickUpPulse`** when you set `symbol` / `defaultSymbol`.
+- Same behavior for **`TickUpHost`** / **`TickUpStage`** with `showTopBar={false}`.
+
+If the resolved string is empty, no strip is shown (minimal embed stays plot + axes only).
+
 ## Floating settings (no top bar)
 
-If the stage is configured with **`showTopBar: false`** and **`showSettingsBar: true`**, a **floating gear** appears over the plot area (position depends on Y-axis side) to open the same settings modal. Default product tiers either show the full top bar or omit settings entirely (e.g. Pulse).
+If the stage is configured with **`showTopBar: false`** and **`showSettingsBar: true`**, a **floating gear** appears over the plot area (position depends on Y-axis side) to open the same settings modal. **Pulse** keeps **`showSettingsBar` false**, so there is no gear unless you use a custom host layout.
 
-## Top bar (Flow, Command, Desk, Apex)
+## Top bar (Flow, Command, Desk)
 
 Typical controls (some may hide on very narrow widths):
 
 | Control | Action |
 |---------|--------|
 | **Symbol** field | Edit ticker; Enter / search button triggers `onSymbolSearch` if provided. |
-| **Search** | Focus/select symbol or run `onSymbolSearch`. |
+| **Search** | Focus/select symbol or run `onSymbolSearch`. If the handler returns **`false`** or a **rejected Promise**, the field reverts to the last good symbol and `onSymbolChange` runs with that value (see [Props & chart options](./05-props-and-chart-options.md)). |
 | **Chart type** | Dropdown: Candlestick, Line, Area, Bar (menu is portaled for correct hit-testing). |
 | **Settings** | Opens [settings modal](./09-settings-modal.md). |
 | **Snapshot** | Captures chart region or main canvas to PNG (implementation may use `captureChartRegionToPngDataUrl`). |
@@ -32,7 +41,7 @@ When enabled in options or settings:
 - **Crosshair values** — Time label near the bottom track, price label near the Y-axis side.  
 - **Candle tooltip** — Compact OHLC / change / volume panel (grid layout on small charts; scrollable cap).
 
-Branding: low-opacity **ChartEdge watermark** is drawn inside the plot/histogram buffers (not a separate footer), unless disabled via `showAttribution` (Desk forces on).
+Branding: low-opacity **TickUp watermark** is drawn inside the plot/histogram buffers (not a separate footer), unless disabled via `showAttribution` (Desk forces on).
 
 ## Keyboard
 

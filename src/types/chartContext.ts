@@ -3,8 +3,8 @@ import type {AxesPosition} from './types';
 
 /**
  * Serializable snapshot of chart layout, data window, and interaction state for host-side analysis
- * (sizing, visible ranges, symbol, selection). Obtain via {@link SimpleChartEdgeHandle.getChartContext}
- * or {@link ChartEdgeStageHandle.getChartContext}.
+ * (sizing, visible ranges, symbol, selection). Obtain via {@link TickUpHostHandle.getChartContext}
+ * or {@link TickUpStageHandle.getChartContext}.
  */
 export type ChartContextInfo = {
     /** Toolbar symbol if controlled/initial value is known */

@@ -58,7 +58,7 @@ export type DrawWatermarkOptions = {
     maxWidthFrac?: number;
     opacity?: number;
     padding?: number;
-    placement?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+    placement?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center';
 };
 
 /**
@@ -81,20 +81,33 @@ export function drawTickUpWatermark(
         return;
     }
 
-    const maxWidthFrac = options?.maxWidthFrac ?? 0.36;
+    // ─── WATERMARK SIZE KNOBS ───────────────────────────────────────────────
+    // maxWidthFrac  – fraction of canvas width the mark may occupy (0..1)
+    //                 default 0.70 → up to 70 % of the plot width
+    // maxW cap      – hard pixel ceiling (second arg of Math.min)
+    //                 raise this number to allow the mark to grow larger
+    // ─────────────────────────────────────────────────────────────────────────
+    const maxWidthFrac = options?.maxWidthFrac ?? 0.70;
     const opacity = options?.opacity ?? 0.13;
     const pad = options?.padding ?? 8;
 
-    const maxW = Math.min(168, cssWidth * maxWidthFrac);
+    const maxW = Math.min(600, cssWidth * maxWidthFrac);
     const scale = maxW / img.naturalWidth;
     const w = maxW;
     const h = img.naturalHeight * scale;
 
-    const placement = options?.placement ?? 'top-right';
-    const isLeft = placement === 'bottom-left' || placement === 'top-left';
-    const x = isLeft ? pad : Math.max(pad, cssWidth - w - pad);
-    const isTop = placement === 'top-left' || placement === 'top-right';
-    const y = isTop ? pad : Math.max(pad, cssHeight - h - pad);
+    const placement = options?.placement ?? 'center';
+    let x: number;
+    let y: number;
+    if (placement === 'center') {
+        x = (cssWidth - w) / 2;
+        y = (cssHeight - h) / 2;
+    } else {
+        const isLeft = placement === 'bottom-left' || placement === 'top-left';
+        x = isLeft ? pad : Math.max(pad, cssWidth - w - pad);
+        const isTop = placement === 'top-left' || placement === 'top-right';
+        y = isTop ? pad : Math.max(pad, cssHeight - h - pad);
+    }
 
     ctx.save();
     ctx.globalAlpha = opacity;

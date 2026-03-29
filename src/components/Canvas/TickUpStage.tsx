@@ -1,17 +1,28 @@
-import React, {useCallback, useEffect, useRef, useState, forwardRef, useImperativeHandle} from 'react';
+import React, {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+    forwardRef,
+    useImperativeHandle,
+} from 'react';
 import {ChartCanvas, ChartCanvasHandle} from './ChartCanvas';
 import XAxis from "./Axes/XAxis";
 import YAxis from "./Axes/YAxis";
 import {
     CanvasAxisContainer,
     CanvasContainer,
-    ChartEdgeStageContainer, ChartView,
+    TickUpStageContainer,
+    ChartView,
+    CompactSymbolStrip,
     YAxisContainer,
     XAxisContainer,
     TopBar,
     LeftBar,
     FloatingSettingsButton
-} from '../../styles/ChartEdgeStage.styles';
+} from '../../styles/TickUpStage.styles';
 import {PriceRange, TimeRange} from "../../types/Graph";
 import {Interval} from "../../types/Interval";
 import {ChartOptions, ChartType, TimeDetailLevel} from "../../types/chartOptions";
@@ -36,6 +47,7 @@ import {
 import {Toolbar} from '../Toolbar/Toolbar';
 import {SettingsToolbar} from '../Toolbar/SettingsToolbar';
 import {IconGear} from "../Toolbar/icons";
+import {Mode, useMode} from '../../contexts/ModeContext';
 import type {LiveDataPlacement, LiveDataApplyResult} from "../../types/liveData";
 import type {ChartContextInfo} from "../../types/chartContext";
 import {
@@ -121,7 +133,7 @@ function findVisibleIndexRange(arr: Interval[], vrange: TimeRange, intervalSecon
     return [s, e];
 }
 
-export interface ChartEdgeStageProps {
+export interface TickUpStageProps {
     intervalsArray: Interval[];
     numberOfYTicks: number;
     timeDetailLevel: TimeDetailLevel;
@@ -136,22 +148,22 @@ export interface ChartEdgeStageProps {
     showSettingsBar: boolean;
     /** Called when the toolbar refresh control is used; parent can reload remote data. */
     onRefreshRequest?: () => void | Promise<void>;
-    /** Toggles app/chart theme (wired from host, e.g. ChartEdge shell). */
+    /** Toggles app/chart theme (wired from host, e.g. TickUp shell). */
     onToggleTheme?: () => void;
     symbol?: string;
     defaultSymbol?: string;
     onSymbolChange?: (symbol: string) => void;
-    onSymbolSearch?: (symbol: string) => void;
+    onSymbolSearch?: (symbol: string) => void | boolean | Promise<void | boolean>;
     /** Sync with app chart theme for fullscreen modals */
     themeVariant?: 'light' | 'dark';
     /**
-     * Renders the ChartEdge mark inside the plot/histogram canvases (no extra layout height).
+     * Renders the TickUp mark inside the plot/histogram canvases (no extra layout height).
      * When false, no in-chart branding is drawn.
      */
     showBrandWatermark?: boolean;
 }
 
-export interface ChartEdgeStageHandle {
+export interface TickUpStageHandle {
     /** Accepts a shape class instance or a plain {@link DrawingSpec} (`{ type, points, style?, id? }`). */
     addShape: (shape: DrawingInput) => void;
     /**
@@ -170,6 +182,12 @@ export interface ChartEdgeStageHandle {
     applyLiveData: (updates: Interval | Interval[], placement: LiveDataPlacement) => LiveDataApplyResult;
     /** Pans/zooms the time axis so the full loaded series is visible. */
     fitVisibleRangeToData: () => void;
+    /**
+     * If the last bar sits past the right edge of the visible window, pans the window right by the
+     * smallest amount that brings it into view while keeping the same time span when possible.
+     * No-op when the latest data is already visible — avoids the jump of {@link fitVisibleRangeToData}.
+     */
+    nudgeVisibleTimeRangeToLatest: (options?: { trailingPaddingSec?: number }) => void;
     getMainCanvasElement: () => HTMLCanvasElement | null;
     getViewInfo: () => {
         intervals: Interval[];
@@ -189,9 +207,13 @@ export interface ChartEdgeStageHandle {
     clearCanvas: () => void;
     redrawCanvas: () => void;
     reloadCanvas: () => void;
+    /** Same behavior as the package drawing toolbar; requires {@link ModeProvider} above the stage. */
+    setInteractionMode: (mode: Mode) => void;
+    /** Deletes the shape at {@link selectedIndex}, if any, and clears selection. */
+    deleteSelectedDrawing: () => void;
 }
 
-export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStageProps>(({
+export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                                                                               intervalsArray,
                                                                               numberOfYTicks,
                                                                               timeDetailLevel,
@@ -212,6 +234,7 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
                                                                               themeVariant = 'dark',
                                                                               showBrandWatermark = true,
                                                                           }, ref) => {
+    const {setMode} = useMode();
     const containerRef = useRef<HTMLDivElement | null>(null);
     const {ref: canvasAreaRef, size: canvasSizes} = useElementSize<HTMLDivElement>();
     const [intervals, setIntervals] = useState<Interval[]>(intervalsArray);
@@ -230,6 +253,7 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
     const canvasRef = useRef<ChartCanvasHandle | null>(null);
     const chartViewRef = useRef<HTMLDivElement | null>(null);
     const symbolInputRef = useRef<HTMLInputElement | null>(null);
+    const followLatestRef = useRef<boolean>(false);
 
     const openShapeProperties = useCallback(
         (index: number) => {
@@ -283,20 +307,25 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
 
     const handleFitVisibleRange = useCallback(() => {
         if (!intervals.length) {
-            console.warn('[ChartEdge] Fit range: no intervals loaded.');
+            console.warn('[TickUp] Fit range: no intervals loaded.');
             return;
         }
+        // Activate "follow latest" mode: keep viewport pinned to the right edge on each new bar
+        followLatestRef.current = true;
         const pad = 60;
         const intervalSeconds = getIntervalSeconds(intervals, 60);
-        const start = intervals[0].t - pad;
-        const end = intervals[intervals.length - 1].t + pad;
+        // Show last ~100 bars (or full set if fewer)
+        const lastT = intervals[intervals.length - 1].t;
+        const end = lastT + intervalSeconds;
+        const spanBars = Math.min(100, intervals.length);
+        const start = end - spanBars * intervalSeconds;
         const [startIndex, endIndex] = findVisibleIndexRange(intervals, {start, end}, intervalSeconds);
         setVisibleRange({start, end, startIndex, endIndex});
     }, [intervals]);
 
     const handleExportDataCsv = useCallback(() => {
         if (!intervals.length) {
-            console.warn('[ChartEdge] Export: no data to export.');
+            console.warn('[TickUp] Export: no data to export.');
             return;
         }
         try {
@@ -308,7 +337,7 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
             a.click();
             URL.revokeObjectURL(url);
         } catch (e) {
-            console.error('[ChartEdge] Export failed', e);
+            console.error('[TickUp] Export failed', e);
         }
     }, [intervals]);
 
@@ -339,7 +368,7 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
             footerTextColor: chartOptions.base.style.axes.textColor,
         });
         if (!dataUrl) {
-            console.error('[ChartEdge] Snapshot: chart view (axes + plot) not ready or empty.');
+            console.error('[TickUp] Snapshot: chart view (axes + plot) not ready or empty.');
             return;
         }
         try {
@@ -348,7 +377,7 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
             link.href = dataUrl;
             link.click();
         } catch (e) {
-            console.error('[ChartEdge] Snapshot failed', e);
+            console.error('[TickUp] Snapshot failed', e);
         }
     }, [
         chartOptions.base.chartType,
@@ -372,18 +401,62 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
                 reloadViewToData();
             }
         } catch (e) {
-            console.error('[ChartEdge] Refresh failed', e);
+            console.error('[TickUp] Refresh failed', e);
         } finally {
             canvasRef.current?.redrawCanvas();
         }
     }, [onRefreshRequest, reloadViewToData]);
 
-    useEffect(() => {
-        setIntervals(intervalsArray);
+    useLayoutEffect(() => {
+        setIntervals((prev) => {
+            if (prev === intervalsArray) return prev;
+            if (intervalsArray.length === 0) return intervalsArray;
+
+            if (
+                prev.length === intervalsArray.length &&
+                prev.length > 0 &&
+                prev.every((p, i) => p === intervalsArray[i])
+            ) {
+                return prev;
+            }
+
+            if (prev.length === intervalsArray.length && prev.length > 0) {
+                let i = 0;
+                const n = prev.length;
+                while (i < n - 1 && prev[i] === intervalsArray[i]) i++;
+                if (i === n - 1) {
+                    const pl = prev[n - 1];
+                    const nl = intervalsArray[n - 1];
+                    if (pl === nl) return prev;
+                    if (
+                        pl &&
+                        nl &&
+                        pl.t === nl.t &&
+                        pl.o === nl.o &&
+                        pl.h === nl.h &&
+                        pl.l === nl.l &&
+                        pl.c === nl.c &&
+                        (pl.v ?? 0) === (nl.v ?? 0)
+                    ) {
+                        return prev;
+                    }
+                }
+            }
+
+            if (prev.length + 1 === intervalsArray.length) {
+                let i = 0;
+                while (i < prev.length && prev[i] === intervalsArray[i]) i++;
+                if (i === prev.length) return intervalsArray;
+            }
+
+            return intervalsArray;
+        });
     }, [intervalsArray]);
 
     function updateVisibleRange(newRangeTime: TimeRange) {
         if (!intervals || intervals.length === 0) return;
+        // User is manually scrolling/panning — exit follow-latest mode
+        followLatestRef.current = false;
         const intervalSeconds = getIntervalSeconds(intervals, 60);
         const [startIndex, endIndex] = findVisibleIndexRange(intervals, newRangeTime, intervalSeconds);
         setVisibleRange({...newRangeTime, startIndex, endIndex});
@@ -408,6 +481,23 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
                 };
             }
             return prev;
+        });
+    }, [intervals]);
+
+    // Follow-latest: when active, auto-nudge viewport right every time intervals change
+    useEffect(() => {
+        if (!followLatestRef.current || !intervals.length) return;
+        const intervalSeconds = getIntervalSeconds(intervals, 60);
+        const lastT = intervals[intervals.length - 1].t;
+        const requiredEnd = lastT + intervalSeconds;
+        setVisibleRange(prev => {
+            if (requiredEnd <= prev.end) return prev;
+            const span = prev.end - prev.start;
+            if (!(span > 0)) return prev;
+            const newEnd = requiredEnd;
+            const newStart = newEnd - span;
+            const [si, ei] = findVisibleIndexRange(intervals, {start: newStart, end: newEnd}, intervalSeconds);
+            return {start: newStart, end: newEnd, startIndex: si, endIndex: ei};
         });
     }, [intervals]);
 
@@ -504,21 +594,21 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
         applyLiveData(updates: Interval | Interval[], placement: LiveDataPlacement): LiveDataApplyResult {
             const result = applyLiveDataMerge(intervals, updates, placement);
             if (result.warnings.length) {
-                console.warn('[ChartEdge] Live data warnings:', result.warnings);
+                console.warn('[TickUp] Live data warnings:', result.warnings);
             }
             if (result.errors.length && result.intervals.length === 0) {
-                console.error('[ChartEdge] Live data errors:', result.errors);
+                console.error('[TickUp] Live data errors:', result.errors);
                 return result;
             }
             if (result.errors.length) {
-                console.warn('[ChartEdge] Live data issues:', result.errors);
+                console.warn('[TickUp] Live data issues:', result.errors);
             }
             setIntervals(result.intervals);
             return result;
         },
         fitVisibleRangeToData() {
             if (!intervals.length) {
-                console.warn('[ChartEdge] fitVisibleRangeToData: no data');
+                console.warn('[TickUp] fitVisibleRangeToData: no data');
                 return;
             }
             const pad = 60;
@@ -527,6 +617,37 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
             const end = intervals[intervals.length - 1].t + pad;
             const [startIndex, endIndex] = findVisibleIndexRange(intervals, {start, end}, intervalSeconds);
             setVisibleRange({start, end, startIndex, endIndex});
+        },
+        nudgeVisibleTimeRangeToLatest(options?: { trailingPaddingSec?: number }) {
+            const leadPad = 60;
+            setVisibleRange((prev) => {
+                if (!intervals.length) return prev;
+                const lastT = intervals[intervals.length - 1]!.t;
+                const intervalSeconds = getIntervalSeconds(intervals, 60);
+                const pad =
+                    options?.trailingPaddingSec ?? Math.max(intervalSeconds, 60);
+                const requiredEnd = lastT + pad;
+                if (requiredEnd <= prev.end) return prev;
+                const span = prev.end - prev.start;
+                if (!(span > 0)) return prev;
+                const delta = requiredEnd - prev.end;
+                let newStart = prev.start + delta;
+                let newEnd = requiredEnd;
+                const firstT = intervals[0]!.t;
+                if (newStart < firstT - leadPad) {
+                    newStart = firstT - leadPad;
+                    newEnd = newStart + span;
+                    if (newEnd < requiredEnd) {
+                        newEnd = requiredEnd;
+                    }
+                }
+                const [startIndex, endIndex] = findVisibleIndexRange(
+                    intervals,
+                    {start: newStart, end: newEnd},
+                    intervalSeconds
+                );
+                return {start: newStart, end: newEnd, startIndex, endIndex};
+            });
         },
         getMainCanvasElement() {
             return canvasRef.current?.getMainCanvasElement() ?? null;
@@ -596,15 +717,42 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
         },
         reloadCanvas() {
             reloadViewToData();
-        }
+        },
+        setInteractionMode(mode: Mode) {
+            setMode(mode);
+        },
+        deleteSelectedDrawing() {
+            if (selectedIndex == null) {
+                return;
+            }
+            setDrawings((prev) => {
+                if (selectedIndex < 0 || selectedIndex >= prev.length) {
+                    return prev;
+                }
+                return prev.filter((_, i) => i !== selectedIndex);
+            });
+            setSelectedIndex?.(null);
+            setShapePropsOpen(false);
+            setShapePropsIndex(null);
+            canvasRef.current?.redrawCanvas?.();
+        },
     }));
 
+    const compactSymbolLabel = useMemo(() => {
+        const fromControlled = symbol !== undefined ? String(symbol).trim() : '';
+        const fromDefault = defaultSymbol != null ? String(defaultSymbol).trim() : '';
+        return fromControlled || fromDefault;
+    }, [symbol, defaultSymbol]);
+    const showSymbolStrip = !showTopBar && compactSymbolLabel.length > 0;
+    const primeGlass = chartOptions.base.engine === 'prime';
+
     return (
-        <ChartEdgeStageContainer
+        <TickUpStageContainer
             ref={containerRef}
-            className={"chart-edge-stage"}
+            className={"tickup-stage"}
             $showTopBar={showTopBar}
             $showLeftBar={showLeftBar}
+            $showSymbolStrip={showSymbolStrip}
         >
             {showTopBar && (
                 <TopBar className="top-toolbar-cell">
@@ -625,22 +773,42 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
                         onSnapshotPng={handleSnapshotPng}
                         onRefresh={handleToolbarRefresh}
                         onToggleTheme={onToggleTheme}
+                        primeGlass={primeGlass}
                     />
                 </TopBar>
             )}
+
+            {!showTopBar && showSymbolStrip ? (
+                <CompactSymbolStrip
+                    className="tickup-compact-symbol-strip"
+                    style={{
+                        padding: '6px 12px',
+                        font: chartOptions.base.style.axes.font,
+                        fontWeight: 700,
+                        color: chartOptions.base.style.axes.textColor,
+                        backgroundColor: chartOptions.base.style.backgroundColor,
+                        borderBottom: `1px solid ${chartOptions.base.style.axes.lineColor}`,
+                    }}
+                    role="status"
+                    aria-label={`Symbol ${compactSymbolLabel}`}
+                >
+                    {compactSymbolLabel}
+                </CompactSymbolStrip>
+            ) : null}
 
             {showLeftBar && (
                 <LeftBar className="side-toolbar-cell">
                     <Toolbar 
                         language={chartOptions.base.style.axes.language}
                         locale={chartOptions.base.style.axes.locale}
+                        primeGlass={primeGlass}
                     />
                 </LeftBar>
             )}
 
             <ChartView
                 ref={chartViewRef}
-                className="chart-main-cell chart-edge-chart-snapshot-root"
+                className="chart-main-cell tickup-chart-snapshot-root"
                 $yAxisWidth={windowSpread.INITIAL_Y_AXIS_WIDTH}
                 $xAxisHeight={windowSpread.INITIAL_X_AXIS_HEIGHT}
                 $yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
@@ -690,7 +858,13 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
                                 canvasSizes={canvasSizes}
                                 windowSpread={windowSpread}
                                 showBrandWatermark={showBrandWatermark}
-                                brandTheme={themeVariant === 'dark' ? 'dark' : 'light'}
+                                brandTheme={
+                                    chartOptions.base.theme === 'dark'
+                                        ? 'dark'
+                                        : chartOptions.base.theme === 'grey'
+                                          ? 'grey'
+                                          : 'light'
+                                }
                             />
                         )}
                     </CanvasContainer>
@@ -719,6 +893,6 @@ export const ChartEdgeStage = forwardRef<ChartEdgeStageHandle, ChartEdgeStagePro
                 onApply={handleApplyShapeProperties}
                 themeVariant={themeVariant}
             />
-        </ChartEdgeStageContainer>
+        </TickUpStageContainer>
     );
 });

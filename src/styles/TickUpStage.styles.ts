@@ -1,7 +1,11 @@
 import styled from 'styled-components';
 import {AxesPosition} from "../types/types";
 
-export const ChartEdgeStageContainer = styled.div<{ $showTopBar: boolean; $showLeftBar: boolean }>`
+export const TickUpStageContainer = styled.div<{
+    $showTopBar: boolean;
+    $showLeftBar: boolean;
+    $showSymbolStrip: boolean;
+}>`
     display: grid;
     flex: 1 1 auto;
     height: 100%;
@@ -10,8 +14,20 @@ export const ChartEdgeStageContainer = styled.div<{ $showTopBar: boolean; $showL
     min-height: 0;
     overflow: hidden;
     box-sizing: border-box;
-    grid-template-rows: ${({$showTopBar}) => $showTopBar ? 'auto minmax(0, 1fr)' : '0px minmax(0, 1fr)'};
-    grid-template-columns: ${({$showLeftBar}) => $showLeftBar ? 'auto minmax(0, 1fr)' : '0px minmax(0, 1fr)'};
+    grid-template-rows: ${({$showTopBar, $showSymbolStrip}) =>
+        $showTopBar || $showSymbolStrip ? 'auto minmax(0, 1fr)' : '0px minmax(0, 1fr)'};
+    grid-template-columns: ${({$showLeftBar}) => ($showLeftBar ? 'auto minmax(0, 1fr)' : '0px minmax(0, 1fr)')};
+`;
+
+/** Read-only symbol label when the top toolbar is hidden (e.g. Pulse) but a symbol was provided. */
+export const CompactSymbolStrip = styled.div`
+    grid-row: 1;
+    grid-column: 1 / span 2;
+    flex-shrink: 0;
+    min-height: 0;
+    min-width: 0;
+    box-sizing: border-box;
+    z-index: 2;
 `;
 
 export const TopBar = styled.div`

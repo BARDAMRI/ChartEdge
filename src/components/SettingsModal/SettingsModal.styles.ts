@@ -1,6 +1,6 @@
 import styled, { keyframes, css } from 'styled-components';
 
-/** Pass from app theme (e.g. SimpleChartEdge `themeVariant`). */
+/** Pass from app theme (e.g. TickUpHost `themeVariant`). */
 export type ModalThemeVariant = 'light' | 'dark';
 
 const slideInLeft = keyframes`

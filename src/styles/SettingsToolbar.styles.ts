@@ -1,6 +1,10 @@
-import styled from 'styled-components';
+import styled, {css} from 'styled-components';
 
-export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-toolbar-container'})`
+interface PrimeGlassProps {
+    $primeGlass?: boolean;
+}
+
+export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-toolbar-container'})<PrimeGlassProps>`
     display: flex;
     flex-direction: row;
     width: 100%;
@@ -14,6 +18,14 @@ export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-t
     overflow: visible;
     flex: 0 0 auto;
     min-width: 0;
+
+    ${({$primeGlass}) =>
+        $primeGlass &&
+        css`
+            background: rgba(15, 18, 25, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        `}
 `;
 
 const Control = styled.div`
@@ -32,8 +44,6 @@ const Control = styled.div`
     &:hover {
         background-color: rgba(255, 255, 255, 0.09);
         background-image: linear-gradient(180deg, rgba(62, 197, 255, 0.65), rgba(90, 72, 222, 0.65));
-    }
-
     }
 `;
 

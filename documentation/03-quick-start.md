@@ -1,10 +1,12 @@
 # Quick start
 
+TickUp Charts is **React-first**: embed **`TickUpHost`**, **`TickUpStage`**, or product components (`TickUpCommand`, …). There is **no** imperative `TickUpCore(container)` class — use props + refs (e.g. **`TickUpHostHandle.setEngine(TickUpPrime)`** for the Prime engine). See [Prime engine & Pro roadmap](./15-prime-engine-and-pro-roadmap.md).
+
 ## 1. Render a product component
 
 ```tsx
 import { useRef } from 'react';
-import { ChartEdgeCommand, type SimpleChartEdgeHandle } from 'chartedge';
+import { TickUpCommand, type TickUpHostHandle } from 'tickup/full';
 
 const sample = [
   { t: 1700000000, o: 100, h: 102, l: 99, c: 101, v: 1200 },
@@ -12,11 +14,11 @@ const sample = [
 ];
 
 export function App() {
-  const chartRef = useRef<SimpleChartEdgeHandle>(null);
+  const chartRef = useRef<TickUpHostHandle>(null);
 
   return (
     <div style={{ height: 480, width: '100%' }}>
-      <ChartEdgeCommand
+      <TickUpCommand
         ref={chartRef}
         intervalsArray={sample}
         defaultSymbol="DEMO"
@@ -26,7 +28,7 @@ export function App() {
 }
 ```
 
-`ChartEdgeCommand` is the full-trader layout. For a minimal plot only, use **`ChartEdgePulse`** (same props, different chrome).
+`TickUpCommand` is the full-trader layout. For a minimal plot only, use **`TickUpPulse`** (same props, different chrome). Pass **`symbol`** or **`defaultSymbol`** so the ticker appears in a **compact strip** above the chart (Pulse has no top-bar symbol field). See [Products & layout](./04-products-and-layout.md) and [Toolbar & interactions](./10-toolbar-and-interactions.md).
 
 ## 2. Give the chart a sized parent
 
@@ -39,7 +41,7 @@ Control the series with props:
 ```tsx
 const [bars, setBars] = useState<Interval[]>(initial);
 
-<ChartEdgeCommand ref={chartRef} intervalsArray={bars} />;
+<TickUpCommand ref={chartRef} intervalsArray={bars} />;
 ```
 
 When `intervalsArray` changes reference or content, the stage syncs. For streaming updates without replacing the whole array, prefer the **imperative** API below.
@@ -69,7 +71,7 @@ const options = useMemo(
   []
 );
 
-<ChartEdgeCommand chartOptions={options} intervalsArray={bars} />;
+<TickUpCommand chartOptions={options} intervalsArray={bars} />;
 ```
 
 See [Props & chart options](./05-props-and-chart-options.md).

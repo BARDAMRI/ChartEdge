@@ -1,44 +1,40 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import type {Interval, SimpleChartEdgeHandle} from 'chartedge';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import type {Interval, TickUpHostHandle} from 'tickup/full';
 import {
     AxesPosition,
-    ChartEdgeApex,
-    ChartEdgeCommand,
-    ChartEdgeDesk,
-    ChartEdgeFlow,
-    ChartEdgePulse,
+    TickUpPulse,
+    TickUpFlow,
+    TickUpCommand,
+    TickUpDesk,
+    TickUpPrimeTier,
+    TickUpPrime,
     ShapeType,
     TimeDetailLevel,
-} from 'chartedge';
-import './App.css';
+} from 'tickup/full';
+import {Zap, Play, Pause, RefreshCw, Sun, Moon} from 'lucide-react';
+import logoLightTransparentUrl from '@brand/logos/tickup-logo-full-light-transparent.png';
+import logoDarkTransparentUrl from '@brand/logos/tickup-logo-full-dark-transparent.png';
+import './index.css';
 
+// ----------------------------------------------------------------------------
+// DATA GENERATION
+// ----------------------------------------------------------------------------
 function simplePRNG(seed = 12345) {
     let s = seed >>> 0;
     const rand = () => (s = (1664525 * s + 1013904223) >>> 0) / 0xffffffff;
     return {rand};
 }
 
-function makeSimpleIntervals(params: {
-    startTime: number;
-    startPrice: number;
-    intervalSec: number;
-    count: number;
-    seed?: number;
-    driftPerBar?: number;
-    vol?: number;
-    addGapsEvery?: number;
-}): Interval[] {
-    const {
-        startTime,
-        startPrice,
-        intervalSec,
-        count,
-        seed = 12345,
-        driftPerBar = 0.04,
-        vol = 0.6,
-        addGapsEvery,
-    } = params;
-
+function makeSimpleIntervals({
+    startTime,
+    startPrice,
+    intervalSec,
+    count,
+    seed = 12345,
+    driftPerBar = 0.04,
+    vol = 0.6,
+    addGapsEvery,
+}: any): Interval[] {
     const rng = simplePRNG(seed);
     const out: Interval[] = [];
     let t = startTime;
@@ -124,50 +120,54 @@ function jitterLastBar(last: Interval): Interval {
 
 const LIVE_TICK_MS = 900;
 
-type TierKey = 'pulse' | 'flow' | 'command' | 'desk' | 'apex';
+// ----------------------------------------------------------------------------
+// STRUCTURE
+// ----------------------------------------------------------------------------
+type TierKey = 'pulse' | 'flow' | 'command' | 'desk' | 'prime';
 
-/** Programmatic demo shapes (line, rectangle, circle) are seeded only on these tiers. */
 const TIERS_WITH_DEMO_SHAPES: TierKey[] = ['pulse', 'flow'];
 
 const TIER_ROWS: {
     key: TierKey;
     title: string;
     blurb: string;
-    Cmp: typeof ChartEdgeCommand;
+    Cmp: any; // e.g. typeof TickUpCommand
+    lux?: boolean;
 }[] = [
     {
         key: 'pulse',
-        title: 'ChartEdge Pulse',
-        blurb: 'Minimal embed — price plot and axes only (no toolbars).',
-        Cmp: ChartEdgePulse,
+        title: 'TickUp Pulse',
+        blurb: 'Minimal embed — price plot and axes only (no toolbars). Pure data.',
+        Cmp: TickUpPulse,
     },
     {
         key: 'flow',
-        title: 'ChartEdge Flow',
+        title: 'TickUp Flow',
         blurb: 'Analysis — top bar & settings; no drawing tools sidebar.',
-        Cmp: ChartEdgeFlow,
+        Cmp: TickUpFlow,
     },
     {
         key: 'command',
-        title: 'ChartEdge Command',
+        title: 'TickUp Command',
         blurb: 'Full trader UI — drawings, modals, programmatic API.',
-        Cmp: ChartEdgeCommand,
+        Cmp: TickUpCommand,
     },
     {
         key: 'desk',
-        title: 'ChartEdge Desk',
+        title: 'TickUp Desk',
         blurb: 'Broker-style — same as Command; attribution always on.',
-        Cmp: ChartEdgeDesk,
+        Cmp: TickUpDesk,
     },
     {
-        key: 'apex',
-        title: 'ChartEdge Apex',
-        blurb: 'Premium tier (preview) — evaluation banner until licenseKey is set.',
-        Cmp: ChartEdgeApex,
+        key: 'prime',
+        title: 'TickUp Prime',
+        blurb: 'The luxury offering — next-gen vibrant WebGL features & ultra-performance.',
+        Cmp: TickUpPrimeTier,
+        lux: true,
     },
 ];
 
-function seedDemoShapes(api: SimpleChartEdgeHandle | null, series: Interval[]) {
+function seedDemoShapes(api: TickUpHostHandle | null, series: Interval[]) {
     if (!api?.addShape || !series.length) {
         return;
     }
@@ -221,25 +221,27 @@ function seedDemoShapes(api: SimpleChartEdgeHandle | null, series: Interval[]) {
 }
 
 export default function App() {
-    const refs = useRef<Record<TierKey, SimpleChartEdgeHandle | null>>({
+    const refs = useRef<Record<TierKey, TickUpHostHandle | null>>({
         pulse: null,
         flow: null,
         command: null,
         desk: null,
-        apex: null,
+        prime: null,
     });
 
-    const commandRef = useRef<SimpleChartEdgeHandle | null>(null);
+    const commandRef = useRef<TickUpHostHandle | null>(null);
 
     const tierRefCallbacks = useMemo(() => {
-        const keys: TierKey[] = ['pulse', 'flow', 'command', 'desk', 'apex'];
-        const out = {} as Record<TierKey, (h: SimpleChartEdgeHandle | null) => void>;
+        const keys: TierKey[] = ['pulse', 'flow', 'command', 'desk', 'prime'];
+        const out = {} as Record<TierKey, (h: TickUpHostHandle | null) => void>;
         keys.forEach((key) => {
-            out[key] = (h: SimpleChartEdgeHandle | null) => {
+            out[key] = (h: TickUpHostHandle | null) => {
                 refs.current[key] = h;
                 if (key === 'command') {
                     commandRef.current = h;
                 }
+                
+                // We avoid calling h.setEngine here during render/ref assignment
             };
         });
         return out;
@@ -250,6 +252,33 @@ export default function App() {
     const tickCountRef = useRef(0);
     const programmaticShapesSeededRef = useRef(false);
 
+    const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+        if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: light)').matches) {
+            return 'light';
+        }
+        return 'dark';
+    });
+
+    useEffect(() => {
+        const mqLight = window.matchMedia('(prefers-color-scheme: light)');
+        const handler = (e: MediaQueryListEvent) => {
+            setTheme(e.matches ? 'light' : 'dark');
+        };
+        mqLight.addEventListener('change', handler);
+        return () => mqLight.removeEventListener('change', handler);
+    }, []);
+
+    // Apply Prime engine once using an effect
+    useLayoutEffect(() => {
+        const timer = requestAnimationFrame(() => {
+            const h = refs.current.prime;
+            if (h?.setEngine) {
+                h.setEngine(TickUpPrime);
+            }
+        });
+        return () => cancelAnimationFrame(timer);
+    }, []);
+
     const exampleVisibleRange = useMemo(() => {
         if (!series.length) {
             return {start: 0, end: 1};
@@ -258,25 +287,33 @@ export default function App() {
         return {start: series[0].t, end: lastT + INTERVAL_SEC};
     }, [series]);
 
-    const {minPrice, maxPrice} = useMemo(() => {
-        if (!series.length) {
-            return {minPrice: 0, maxPrice: 100};
-        }
-        const flat = series.flatMap((c) => [c.l, c.h, c.c, c.o]);
-        return {minPrice: Math.min(...flat), maxPrice: Math.max(...flat)};
-    }, [series]);
-
-    const chartOptions = useMemo(
+    const standardChartOptions = useMemo(
         () => ({
             base: {
+                theme: theme,
                 showOverlayLine: true,
                 showHistogram: true,
+                style: {
+                    backgroundColor: theme === 'dark' ? '#0b0e14' : '#ffffff',
+                    grid: {
+                        lineColor: theme === 'dark' ? '#334155' : '#e2e8f0',
+                    },
+                    histogram: {
+                        bullColor: theme === 'dark' ? 'rgba(38, 166, 154, 0.5)' : 'rgba(38, 166, 154, 0.5)',
+                        bearColor: theme === 'dark' ? 'rgba(239, 83, 80, 0.5)' : 'rgba(239, 83, 80, 0.5)',
+                        opacity: theme === 'dark' ? 0.9 : 0.6,
+                    },
+                    axes: {
+                        lineColor: theme === 'dark' ? '#334155' : '#e2e8f0',
+                        textColor: theme === 'dark' ? '#94a3b8' : '#64748b',
+                    }
+                }
             },
             axes: {
-                yAxisPosition: AxesPosition.left,
+                yAxisPosition: AxesPosition.right,
             },
         }),
-        []
+        [theme]
     );
 
     const pushLiveTick = useCallback(() => {
@@ -284,7 +321,8 @@ export default function App() {
         if (!api?.applyLiveData || !api.getViewInfo) {
             return;
         }
-        const {intervals} = api.getViewInfo();
+        const viewInfo = api.getViewInfo();
+        const intervals = viewInfo?.intervals;
         if (!intervals?.length) {
             return;
         }
@@ -297,9 +335,6 @@ export default function App() {
                 : api.applyLiveData(makeNextBar(last, INTERVAL_SEC), 'append');
         if (result.intervals.length) {
             setSeries(result.intervals);
-        }
-        if (!result.ok && result.errors.length) {
-            console.warn('[example] live data:', result.errors, result.warnings);
         }
     }, []);
 
@@ -372,53 +407,149 @@ export default function App() {
         onRefreshRequest: handleRefreshSeries,
         defaultSymbol: 'DEMO',
         onSymbolSearch: handleSymbolSearch,
-        initialNumberOfYTicks: 5,
-        initialXAxisHeight: 40,
-        initialYAxisWidth: 50,
-        initialTimeDetailLevel: TimeDetailLevel.Auto,
-        initialTimeFormat12h: false,
+        initialNumberOfYTicks: 8,
+        initialTimeDetailLevel: TimeDetailLevel.Medium,
         initialVisibleTimeRange: exampleVisibleRange,
-        chartOptions,
+        chartOptions: standardChartOptions,
+        themeVariant: theme,
+        onThemeVariantChange: setTheme,
     };
 
     return (
-        <div className="app-root app-compare">
-            <header className="compare-header">
-                <h1 className="compare-title">ChartEdge product comparison</h1>
-                <p className="compare-lead">
-                    Same synthetic series and chart options on every tier. Live updates run through{' '}
-                    <strong>Command</strong>’s API; all panels follow <code>intervalsArray</code>.
-                </p>
+        <div 
+            className={`flex min-h-screen flex-col font-sans transition-colors duration-300 ${
+                theme === 'dark' ? 'bg-[#050608] text-slate-200' : 'bg-slate-50 text-slate-800'
+            }`} 
+            style={{ backgroundImage: theme === 'dark' ? 'radial-gradient(circle at 50% 10%, rgba(62,197,255,0.06), transparent 50%)' : 'radial-gradient(circle at 50% 10%, rgba(62,197,255,0.15), transparent 50%)' }}
+        >
+            <header className={`sticky top-0 z-50 py-4 px-6 lg:px-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-b ${
+                theme === 'dark' ? 'border-white/5 bg-[#0f121c]/80 backdrop-blur-md' : 'border-slate-200 bg-white/80 backdrop-blur-md'
+            }`}>
+                <div className="flex items-center">
+                    <img
+                        src={theme === 'dark' ? logoLightTransparentUrl : logoDarkTransparentUrl}
+                        alt="TickUp Charts"
+                        className="h-16 w-auto max-w-[min(360px,70vw)] object-contain object-left"
+                    />
+                </div>
+
+                <div className={`flex items-center gap-3 rounded-full border p-1.5 pl-4 pr-1.5 shadow-xl ${
+                    theme === 'dark' ? 'border-white/10 bg-black/40' : 'border-slate-200 bg-white/60'
+                }`}>
+                    <div className="flex items-center gap-2 pr-2">
+                        <span className="relative flex h-3 w-3">
+                            {!livePaused && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>}
+                            <span className={`relative inline-flex h-3 w-3 rounded-full ${livePaused ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                        </span>
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+                            {livePaused ? 'Live Paused' : 'Live Data API'}
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setLivePaused((p) => !p)}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-all hover:scale-105 active:scale-95 ${
+                            livePaused 
+                                ? (theme === 'dark' ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30' : 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30') 
+                                : (theme === 'dark' ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-black/5 text-slate-800 hover:bg-black/10')
+                        }`}
+                        title={livePaused ? "Resume Data" : "Pause Data"}
+                    >
+                        {livePaused ? <Play className="h-4 w-4" fill="currentColor" /> : <Pause className="h-4 w-4" fill="currentColor" />}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleRefreshSeries}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-all hover:scale-105 active:scale-95 ${
+                            theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-black/5 text-slate-500 hover:bg-black/10 hover:text-slate-900'
+                        }`}
+                        title="Reset Data"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setTheme((t) => t === 'dark' ? 'light' : 'dark')}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-all hover:scale-105 active:scale-95 ${
+                            theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-black/5 text-amber-500 hover:bg-black/10 hover:text-amber-600'
+                        }`}
+                        title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                    >
+                        {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    </button>
+                </div>
             </header>
 
-            <div className="live-demo-bar">
-                <span className="live-demo-label">
-                    Live data demo
-                    <span className={`live-demo-status ${livePaused ? 'paused' : 'on'}`}>
-                        {livePaused ? 'paused' : 'running'}
-                    </span>
-                </span>
-                <span className="live-demo-hint">
-                    Uses <code>applyLiveData</code> on Command (<code>mergeByTime</code> / <code>append</code>).
-                </span>
-                <button type="button" className="live-demo-btn" onClick={() => setLivePaused((p) => !p)}>
-                    {livePaused ? 'Resume' : 'Pause'}
-                </button>
-            </div>
+            <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-12 p-6 lg:gap-16 lg:p-12 mb-20">
+                <div className="text-center pt-8 pb-4">
+                    <h1 className="mb-6 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-7xl">
+                        <span className={`text-transparent bg-clip-text bg-gradient-to-b ${theme === 'dark' ? 'from-white to-slate-400' : 'from-slate-800 to-slate-500'}`}>Next-Gen</span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-b from-[#3EC5FF] to-[#0A6B99] ml-4 drop-shadow-lg">Analysis</span>
+                    </h1>
+                    <p className={`mx-auto max-w-3xl text-lg mb-8 leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                        TickUp is an ultra-fast, lightweight charting engine built for serious financial applications. 
+                        With a remarkably tiny footprint, full developer support, and seamless turnkey integrations, it scales 
+                        effortlessly from simple data embeds to immersive, WebGL-accelerated trading platforms. 
+                        Give your users the institutional-grade technical analysis tools they deserve.
+                    </p>
+                    <div className={`flex flex-wrap items-center justify-center gap-4 text-xs lg:text-sm font-semibold uppercase tracking-wider ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                        <span className={`flex items-center gap-2 rounded-full border px-4 py-2 shadow-sm ${theme === 'dark' ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}>
+                            <span className="text-[#3EC5FF]">⚡</span> Ultra Lightweight
+                        </span>
+                        <span className={`flex items-center gap-2 rounded-full border px-4 py-2 shadow-sm ${theme === 'dark' ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}>
+                            <span className="text-emerald-400">🛡️</span> Developer Native
+                        </span>
+                        <span className={`flex items-center gap-2 rounded-full border px-4 py-2 shadow-sm ${theme === 'dark' ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}>
+                            <span className="text-[#5A48DE]">✨</span> WebGL Accelerated
+                        </span>
+                    </div>
+                </div>
 
-            <div className="chart-compare-list">
-                {TIER_ROWS.map(({key, title, blurb, Cmp}) => (
-                    <section key={key} className="chart-compare-panel" data-tier={key}>
-                        <div className="chart-compare-panel-head">
-                            <h2 className="chart-compare-panel-title">{title}</h2>
-                            <p className="chart-compare-panel-blurb">{blurb}</p>
-                        </div>
-                        <div className="chart-compare-chart-wrap">
-                            <Cmp ref={tierRefCallbacks[key]} {...sharedProps} />
-                        </div>
-                    </section>
-                ))}
-            </div>
+                <div className="flex flex-col gap-16">
+                    {TIER_ROWS.map(({key, title, blurb, Cmp, lux}) => (
+                        <section 
+                            key={key} 
+                            className={`group relative overflow-hidden rounded-[2rem] border transition-all duration-500 ${
+                                lux 
+                                    ? (theme === 'dark' 
+                                        ? 'border-[#3EC5FF]/30 bg-[#0c121e]/80 shadow-[0_0_80px_-20px_rgba(62,197,255,0.25)] hover:border-[#3EC5FF]/60 hover:shadow-[0_0_100px_-20px_rgba(62,197,255,0.4)]'
+                                        : 'border-[#3EC5FF]/40 bg-white/90 shadow-[0_0_60px_-10px_rgba(62,197,255,0.15)] hover:border-[#3EC5FF]/70 hover:shadow-[0_0_80px_-10px_rgba(62,197,255,0.25)]')
+                                    : (theme === 'dark'
+                                        ? 'border-white/5 bg-white/[0.02] shadow-2xl hover:border-white/10'
+                                        : 'border-slate-200 bg-white shadow-xl hover:border-slate-300')
+                            }`}
+                        >
+                            <div className={`absolute inset-0 z-0 bg-gradient-to-b pointer-events-none ${theme === 'dark' ? 'from-white/[0.03] to-transparent' : 'from-slate-100 to-transparent'}`} />
+                            
+                            <div className={`relative z-10 flex flex-col gap-2 border-b p-6 lg:flex-row lg:items-center lg:justify-between lg:p-8 ${theme === 'dark' ? 'border-white/5' : 'border-slate-100'}`}>
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <h2 className={`text-2xl font-bold tracking-tight lg:text-3xl ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                                            {title}
+                                        </h2>
+                                        {lux && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-[#5A48DE]/20 px-3 py-1 text-xs font-bold uppercase tracking-widest text-violet-300 ring-1 ring-violet-400/30">
+                                                <Zap className="h-3 w-3" fill="currentColor" /> Luxury
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className={`mt-2 text-sm lg:text-base ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>{blurb}</p>
+                                </div>
+                            </div>
+
+                            <div className="relative z-10 p-2 sm:p-4 lg:p-6 pb-0 shadow-inner">
+                                <div className={`relative w-full overflow-hidden rounded-xl border ${theme === 'dark' ? 'bg-black/50' : 'bg-slate-50'} ${
+                                    lux 
+                                        ? (theme === 'dark' ? 'h-[550px] border-[#3EC5FF]/20 shadow-[inset_0_0_40px_rgba(62,197,255,0.05)]' : 'h-[550px] border-[#3EC5FF]/30 shadow-[inset_0_0_20px_rgba(62,197,255,0.02)]') 
+                                        : (theme === 'dark' ? 'h-[500px] border-white/10' : 'h-[500px] border-slate-200')
+                                }`}>
+                                    <Cmp ref={tierRefCallbacks[key]} {...sharedProps} />
+                                </div>
+                            </div>
+                        </section>
+                    ))}
+                </div>
+            </main>
         </div>
     );
 }

@@ -22,7 +22,7 @@ import {
     HoverTooltip,
     InnerCanvasContainer,
     StyledCanvasNonResponsive,
-    StyledCanvasResponsive
+    StyledCanvasResponsive,
 } from '../../styles/ChartCanvas.styles';
 import {ChartOptions, ChartRenderContext, ChartType} from "../../types/chartOptions";
 import {
@@ -51,11 +51,13 @@ import {FormattingService} from '../../services/FormattingService';
 import {getDateFnsLocale, getLocaleDefaults, translate} from '../../utils/i18n';
 import {isWithinTradingSession} from '../../utils/timeUtils';
 import {
-    drawChartEdgeWatermark,
-    loadChartEdgeWatermarkImages,
-    type ChartEdgeWatermarkImages,
-} from '../../branding/chartEdgeWatermark';
-
+    drawTickUpWatermark,
+    loadTickUpWatermarkImages,
+    type DrawWatermarkOptions,
+    type TickUpWatermarkImages,
+} from '../../branding/tickupWatermark';
+import {isPrimeEngine} from '../../engines/prime/PrimeRenderer';
+import {TICKUP_PRIME_PRIMARY, TICKUP_PRIME_SECONDARY} from '../../engines/prime/TickUpPrime';
 function syncTriangleNormalization(shape: IDrawingShape | null, rc: ChartRenderContext | null, pr: PriceRange) {
     if (!shape || !rc) return;
     if (shape instanceof TriangleShape) {
@@ -75,6 +77,24 @@ function minPointsToCommit(mode: Mode): number {
     }
 }
 
+/** Single prominent watermark centered on the main chart area. */
+function tickupWatermarkDrawOpts(
+    brandTheme: 'light' | 'dark' | 'grey',
+    prime: boolean,
+): DrawWatermarkOptions {
+    const dark = brandTheme === 'dark';
+    // maxWidthFrac is intentionally omitted here so the global default in
+    // tickupWatermark.ts (currently 0.70) applies.  Edit it there to resize.
+    if (prime) {
+        return {opacity: dark ? 0.18 : 0.13, placement: 'center', padding: 0};
+    }
+    return {
+        opacity: dark ? 0.32 : 0.20,
+        placement: 'center',
+        padding: 0,
+    };
+}
+
 interface ChartCanvasProps {
     intervalsArray: Interval[];
     drawings: IDrawingShape[];
@@ -91,10 +111,10 @@ interface ChartCanvasProps {
     canvasSizes: CanvasSizes;
     parentContainerRef?: React.RefObject<HTMLDivElement>;
     windowSpread: WindowSpreadOptions;
-    /** Draw bundled ChartEdge marks inside plot / histogram (no DOM footer). */
+    /** Draw bundled TickUp marks inside plot / histogram (no DOM footer). */
     showBrandWatermark?: boolean;
-    /** Matches chart shell theme for choosing light vs dark mark artwork. */
-    brandTheme?: 'light' | 'dark';
+    /** Matches chart `base.theme` for choosing light / dark / grey mark artwork. */
+    brandTheme?: 'light' | 'dark' | 'grey';
 }
 
 export interface ChartCanvasHandle {
@@ -152,7 +172,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
     const angleDrawPhaseRef = useRef<1 | 2>(1);
     const [_, setChartDimensions] = React.useState<ChartDimensionsData | null>(null);
     const chartDimensionsRef = React.useRef<ChartDimensionsData | null>(null);
-    const watermarkImagesRef = useRef<ChartEdgeWatermarkImages | null>(null);
+    const watermarkImagesRef = useRef<TickUpWatermarkImages | null>(null);
     const [watermarkImagesReady, setWatermarkImagesReady] = useState(0);
     const isInteractionMode =
         mode === Mode.none || mode === Mode.select || mode === Mode.editShape;
@@ -240,13 +260,14 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         drawGrid(backBufferCtx, cssWidth, cssHeight, chartOptions);
 
         if (showBrandWatermark && watermarkImagesRef.current) {
-            drawChartEdgeWatermark(
+            const prime = isPrimeEngine(chartOptions);
+            drawTickUpWatermark(
                 backBufferCtx,
                 cssWidth,
                 cssHeight,
                 brandTheme,
                 watermarkImagesRef.current,
-                {opacity: 0.12, maxWidthFrac: 0.34, placement: 'bottom-right', padding: 8}
+                tickupWatermarkDrawOpts(brandTheme, prime)
             );
         }
 
@@ -348,17 +369,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                 };
 
                 drawHistogramChart(histBackBufferCtx, histogramRenderContext, chartOptions);
-
-                if (showBrandWatermark && watermarkImagesRef.current) {
-                    drawChartEdgeWatermark(
-                        histBackBufferCtx,
-                        targetWidth,
-                        targetHeight,
-                        brandTheme,
-                        watermarkImagesRef.current,
-                        {opacity: 0.09, maxWidthFrac: 0.48, placement: 'bottom-left', padding: 5}
-                    );
-                }
+                // Watermark is shown on the main chart canvas only — not repeated on histogram
             }
         }
     }, [chartOptions, showBrandWatermark, brandTheme]);
@@ -447,14 +458,48 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
             const showCrossVals = showCross && chartOptions.base.showCrosshairValues;
 
             if (showCross && isInteractionMode && point && !isPanning && !isWheeling) {
-                hoverCtx.strokeStyle = 'rgba(100, 100, 100, 0.7)';
-                hoverCtx.lineWidth = 1;
-                hoverCtx.beginPath();
-                hoverCtx.moveTo(point.x, 0);
-                hoverCtx.lineTo(point.x, cssHeight);
-                hoverCtx.moveTo(0, point.y);
-                hoverCtx.lineTo(cssWidth, point.y);
-                hoverCtx.stroke();
+                const primeCross = isPrimeEngine(chartOptions);
+                hoverCtx.save();
+                hoverCtx.lineWidth = primeCross ? 1.5 : 1;
+                if (primeCross) {
+                    const gv = hoverCtx.createLinearGradient(point.x, 0, point.x, cssHeight);
+                    gv.addColorStop(0, TICKUP_PRIME_PRIMARY);
+                    gv.addColorStop(1, TICKUP_PRIME_SECONDARY);
+                    hoverCtx.strokeStyle = gv;
+                    hoverCtx.shadowColor = 'rgba(62, 197, 255, 0.35)';
+                    hoverCtx.shadowBlur = 8;
+                    hoverCtx.beginPath();
+                    hoverCtx.moveTo(point.x, 0);
+                    hoverCtx.lineTo(point.x, cssHeight);
+                    hoverCtx.stroke();
+                    hoverCtx.shadowBlur = 0;
+                    const gh = hoverCtx.createLinearGradient(0, point.y, cssWidth, point.y);
+                    gh.addColorStop(0, TICKUP_PRIME_PRIMARY);
+                    gh.addColorStop(1, TICKUP_PRIME_SECONDARY);
+                    hoverCtx.strokeStyle = gh;
+                    hoverCtx.beginPath();
+                    hoverCtx.moveTo(0, point.y);
+                    hoverCtx.lineTo(cssWidth, point.y);
+                    hoverCtx.stroke();
+                    hoverCtx.beginPath();
+                    hoverCtx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+                    hoverCtx.strokeStyle = TICKUP_PRIME_PRIMARY;
+                    hoverCtx.lineWidth = 2;
+                    hoverCtx.stroke();
+                    hoverCtx.beginPath();
+                    hoverCtx.arc(point.x, point.y, 2.2, 0, Math.PI * 2);
+                    hoverCtx.fillStyle = TICKUP_PRIME_SECONDARY;
+                    hoverCtx.fill();
+                } else {
+                    hoverCtx.strokeStyle = chartOptions.base.style.axes?.lineColor || 'rgba(100, 100, 100, 0.7)';
+                    hoverCtx.beginPath();
+                    hoverCtx.moveTo(point.x, 0);
+                    hoverCtx.lineTo(point.x, cssHeight);
+                    hoverCtx.moveTo(0, point.y);
+                    hoverCtx.lineTo(cssWidth, point.y);
+                    hoverCtx.stroke();
+                }
+                hoverCtx.restore();
 
                 if (showCrossVals && renderContext) {
                     const axes = chartOptions.base.style.axes;
@@ -547,7 +592,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
 
     useEffect(() => {
         let cancelled = false;
-        loadChartEdgeWatermarkImages().then((imgs) => {
+        loadTickUpWatermarkImages().then((imgs) => {
             if (cancelled) {
                 return;
             }
@@ -683,6 +728,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
     const handleMouseLeave = () => {
         currentPointRef.current = undefined;
         setHoverPoint(null);
+        setHoveredCandle(null);
         scheduleDraw();
     };
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -975,7 +1021,8 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                     {(() => {
                         const axes = chartOptions.base.style.axes;
                         const lang = axes.language || 'en';
-                        const isDarkPanel = chartOptions.base.theme === 'dark' || chartOptions.base.theme === 'grey';
+                        const chartBaseTheme = chartOptions.base.theme;
+                        const isDarkPanel = chartBaseTheme === 'dark' || chartBaseTheme === 'grey';
                         const change = hoveredCandle.c - hoveredCandle.o;
                         const changePercent = change / hoveredCandle.o;
                         const changeColor = isDarkPanel

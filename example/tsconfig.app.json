@@ -2,8 +2,14 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "chartedge": [
-        "../dist"
+      "tickup": [
+        "../dist/index"
+      ],
+      "tickup/full": [
+        "../dist/full"
+      ],
+      "@brand/*": [
+        "../src/assets/brand/*"
       ]
     },
     "allowSyntheticDefaultImports": true,
@@ -30,6 +36,10 @@
     "noUncheckedSideEffectImports": true
   },
   "include": [
-    "src"
+    "src",
+    "data-generator.ts"
+  ],
+  "exclude": [
+    "dist"
   ]
 }

@@ -17,17 +17,18 @@
 
 ## Products (tiers)
 
-ChartEdge ships **named product components** that fix toolbar layout:
+TickUp ships **named product components** that fix toolbar layout:
 
 | Product   | Typical use |
 |-----------|-------------|
-| **Pulse** | Minimal embed: plot + axes only |
+| **Pulse** | Minimal embed: plot + axes only; optional **compact symbol strip** if `symbol` / `defaultSymbol` is non-empty |
 | **Flow**  | Top bar (symbol, settings, chart type); no drawing sidebar |
 | **Command** | Full UI: side drawing bar + top bar |
 | **Desk**  | Same as Command; in-chart branding watermark required |
-| **Apex**  | Same chrome as Command; optional `licenseKey`, evaluation banner if missing |
 
-Use **`ChartEdgeHost`** (`SimpleChartEdge`) **without** `productId` to control `showSidebar` / `showTopBar` / `showSettingsBar` yourself.
+Use **`TickUpHost`** (`TickUpHost`) **without** `productId` to control `showSidebar` / `showTopBar` / `showSettingsBar` yourself.
+
+**Prime** may refer to **`productId: 'prime'`** (**`TickUpPrimeTier`**) or the **`prime`** render engine (**`chartOptions.base.engine`** / **`TickUpPrime`**). See [Prime engine & Pro roadmap](./15-prime-engine-and-pro-roadmap.md).
 
 ## Live data
 

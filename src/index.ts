@@ -1,8 +1,11 @@
-// Props and Types
-export type {SimpleChartEdgeProps, SimpleChartEdgeHandle} from './components/SimpleChartEdge';
-export type {ChartEdgeHostProps, ChartEdgeHostHandle} from './components/SimpleChartEdge';
-export {ChartEdgeHost} from './components/SimpleChartEdge';
-export type {ChartEdgeProductId} from './types/chartProducts';
+/**
+ * **Default npm entry — basic charts:** `TickUpStage`, data helpers, overlays, drawings (types +
+ * factories), snapshots, and branding. Build your own chrome around the canvas.
+ *
+ * **Full product UI** (Pulse, Flow, Command, Desk, `TickUpHost`, shape classes, …) is
+ * published separately as `import … from 'tickup/full'`.
+ */
+
 export type {Interval} from './types/Interval';
 export type {LiveDataPlacement, LiveDataApplyResult} from './types/liveData';
 export {applyLiveDataMerge, normalizeInterval, normalizeIntervals, dedupeByTimePreferLast} from './utils/liveDataMerge';
@@ -28,16 +31,10 @@ export {
     filterDrawingInstances,
 } from './components/Drawing/drawingQuery';
 export type {ChartContextInfo} from './types/chartContext';
-export type {ChartEdgeStageHandle, ChartEdgeStageProps} from './components/Canvas/ChartEdgeStage';
-export {ChartEdgeStage} from './components/Canvas/ChartEdgeStage';
-/** @deprecated Use {@link ChartEdgeStageHandle} */
-export type {ChartStageHandle, ChartStageProps} from './components/Canvas/ChartStage';
-/** @deprecated Use {@link ChartEdgeStage} */
-export {ChartStage} from './components/Canvas/ChartStage';
+export type {TickUpStageHandle, TickUpStageProps} from './components/Canvas/TickUpStage';
+export {TickUpStage} from './components/Canvas/TickUpStage';
 export type {DrawingStyleOptions, DrawingPoint, CanvasPoint} from './types/Drawings';
 export type {IDrawingShape} from './components/Drawing/IDrawingShape';
-
-
 export type {
     LineShapeArgs,
     RectangleShapeArgs,
@@ -46,55 +43,32 @@ export type {
     AngleShapeArgs,
     ArrowShapeArgs,
     PolylineShapeArgs,
-    CustomSymbolShapeArgs
+    CustomSymbolShapeArgs,
 } from './types/Drawings';
-// Enums
 export {AxesPosition} from './types/types';
 export {TimeDetailLevel, ChartType} from './types/chartOptions';
+export type {ChartOptions} from './types/chartOptions';
+export type {DeepRequired} from './types/types';
 export {OverlayPriceKey, OverlayKind} from './types/overlay';
-
-// Components — product lines (ChartEdge-branded tiers)
-export {
-    ChartEdgePulse,
-    ChartEdgeFlow,
-    ChartEdgeCommand,
-    ChartEdgeDesk,
-    ChartEdgeApex,
-} from './components/ChartEdgeProducts';
-export type {
-    ChartEdgePulseProps,
-    ChartEdgeFlowProps,
-    ChartEdgeCommandProps,
-    ChartEdgeDeskProps,
-    ChartEdgeApexProps,
-} from './components/ChartEdgeProducts';
-
-export {SimpleChartEdge} from './components/SimpleChartEdge';
-export {ChartEdgeMark} from './branding/ChartEdgeMark';
-export type {ChartEdgeThemeVariant} from './branding/ChartEdgeMark';
-export {ChartEdgeAttribution} from './branding/ChartEdgeAttribution';
-export type {ChartEdgeAttributionProps} from './branding/ChartEdgeAttribution';
-export {ShapePropertiesModal} from './components/ShapePropertiesModal/ShapePropertiesModal';
-export type {ShapePropertiesFormState} from './components/ShapePropertiesModal/applyShapeProperties';
-export type {ModalThemeVariant} from './components/SettingsModal/SettingsModal.styles';
-export {ModeProvider, useMode} from './contexts/ModeContext';
+export {TickUpMark} from './branding/TickUpMark';
+export type {TickUpThemeVariant} from './branding/TickUpMark';
+export {TickUpAttribution} from './branding/TickUpAttribution';
+export type {TickUpAttributionProps} from './branding/TickUpAttribution';
+export {Mode, ModeProvider, useMode} from './contexts/ModeContext';
 export {withOverlayStyle, OverlaySpecs, overlay} from './components/Canvas/utils/drawOverlay';
 export {GlobalStyle} from './styles/App.styles';
 export {generateDrawingShapeId} from './components/Drawing/IDrawingShape';
 
-
-// Drawing Shapes
-export {CustomSymbolShape} from './components/Drawing/CustomSymbolShape';
-export {LineShape} from './components/Drawing/LineShape';
-export {RectangleShape} from './components/Drawing/RectangleShape';
-export {CircleShape} from './components/Drawing/CircleShape';
-export {TriangleShape} from './components/Drawing/TriangleShape';
-export {AngleShape} from './components/Drawing/AngleShape';
-export {ArrowShape} from './components/Drawing/ArrowShape';
-export {Polyline} from './components/Drawing/Polyline';
-
-
-// graph helpers
+export type {TickUpChartEngine} from './engines/TickUpEngine';
+export {TickUpPrime, TickUpStandardEngine} from './engines/prime/TickUpPrime';
+export {TICKUP_PRIME_PRIMARY, TICKUP_PRIME_SECONDARY, TICKUP_PRIME_TEXT} from './engines/prime/TickUpPrime';
 export {
-    timeToX, xToTime, priceToY, yToPrice, interpolatedCloseAtTime, lerp, xFromCenter, xFromStart
+    timeToX,
+    xToTime,
+    priceToY,
+    yToPrice,
+    interpolatedCloseAtTime,
+    lerp,
+    xFromCenter,
+    xFromStart,
 } from './components/Canvas/utils/GraphHelpers';

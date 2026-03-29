@@ -301,7 +301,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <SubMenuPane $back={goingBack} className="settings-submenu-pane">
                             <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Toolbars</SectionTitle>
                             <p style={{margin: '8px 0 0', fontSize: 13, opacity: 0.85}} dir={direction}>
-                                Toolbar layout is fixed for this ChartEdge product and cannot be changed here.
+                                Toolbar layout is fixed for this TickUp product and cannot be changed here.
                             </p>
                         </SubMenuPane>
                     );

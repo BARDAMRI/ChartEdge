@@ -17,7 +17,7 @@ The gear icon in the top toolbar (when enabled) opens the **Chart Settings** mod
 
 ## Locked layout (product tiers)
 
-For `ChartEdgePulse`, `ChartEdgeFlow`, `ChartEdgeCommand`, `ChartEdgeDesk`, and `ChartEdgeApex`, toolbar visibility is fixed by the product. The Layout section either hides the toggles or explains that chrome is product-controlled (`lockToolbarLayout` on the modal).
+For `TickUpPulse`, `TickUpFlow`, `TickUpCommand`, and `TickUpDesk`, toolbar visibility is fixed by the product. The Layout section either hides the toggles or explains that chrome is product-controlled (`lockToolbarLayout` on the modal).
 
 ## Persistence
 

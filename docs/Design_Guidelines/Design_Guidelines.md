@@ -1,6 +1,8 @@
-# ChartEdge - Design Guidelines
+# TickUp Charts — design guidelines
 
-## General Principles
+Chart options and modal settings drive most plot colors; the shell uses **styled-components** themed wrappers. Defaults live in **`src/components/DefaultData.ts`**.
+
+## General principles
 - Clean and minimal UI
 - Focus on clarity and readability
 - Subtle animations (no flashy effects)

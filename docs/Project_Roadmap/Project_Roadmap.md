@@ -1,30 +1,31 @@
-# ChartEdge - Project Roadmap
+# TickUp Charts — project roadmap
 
-## MVP Phase
-- Setup Vite + TypeScript project
-- Implement basic Canvas rendering
-- Render line chart and candlestick chart
-- Implement pan and zoom interactions
-- Add tooltip/fixed value box
+## Current reality (shipped)
 
-## Phase 2: Drawing and Editing
-- Enable interactive drawing (lines, rectangles, circles, angles)
-- Enable editing of drawn shapes (move, resize, delete)
-- Add style picker for drawing elements
+The library on **`npm`** (`tickup` / `tickup/full`) already includes:
 
-## Phase 3: Styling and Theming
-- Develop dynamic theming API
-- Support light/dark/grey custom themes
-- Enable runtime style updates
+- **Vite + TypeScript** dual library build (ESM + CJS) and **`.d.ts`** via `tsc --emitDeclarationOnly`
+- **Canvas 2D** main chart + **volume histogram**
+- **Pan / zoom**, crosshair, candle tooltip, session shading (axes options)
+- **Chart types:** candlestick, line, area, bar
+- **Themes:** light / dark / grey + shell theme toggle
+- **Drawings:** toolbar + full imperative API (`addShape`, `patchShape`, …)
+- **Live data:** `applyLiveData` + pure merge helpers
+- **Overlays:** `overlayKinds` / `overlays` (SMA, EMA, VWAP, Bollinger, …)
+- **Product tiers (public docs):** Pulse, Flow, Command, Desk + **`TickUpHost`** for custom chrome
+- **Settings modal**, i18n / RTL-aware formatting, symbol toolbar with failed-search **revert**
+- **PNG** snapshot helpers, toolbar **CSV** export
 
-## Phase 4: Advanced Features
-- Introduce real-time data streaming
-- WebGL optional renderer
-- Plugin support for indicators (RSI, MACD)
-- Export chart images (PNG, SVG)
+## Possible next phases
 
-## Milestones
-- MVP Released
-- Drawing Mode Released
-- Full Theming Support
-- Real-time Streaming & Plugins
+- **Testing:** broaden **Jest** unit/integration coverage  
+- **Indicators:** more built-in kinds or documented extension patterns  
+- **Docs site:** optional VitePress (root README mentions this)  
+- **Prime tier / engine:** collaborator runbook **[`../internal/tickup-prime-tier.md`](../internal/tickup-prime-tier.md)**  
+
+## Non-goals / deferred
+
+- **WebGL** as default renderer (Canvas 2D remains the core story)  
+- **3D** charts  
+
+Track concrete work in **GitHub issues**; integration truth remains **[`../../documentation/`](../../documentation/README.md)**.

@@ -11,31 +11,31 @@ These are **peer dependencies**; your app must install them.
 ## npm
 
 ```bash
-npm install chartedge react react-dom styled-components
+npm install tickup react react-dom styled-components
 ```
 
 ## TypeScript
 
-Types ship with the package (`dist/index.d.ts`). Enable `strict` as usual; import types from `chartedge`.
+Types ship with the package (`dist/index.d.ts`). Enable `strict` as usual; import types from `tickup`.
 
 ## Bundler notes
 
-- **ESM** entry: `chartedge` → `dist/index.es.js`  
+- **ESM** entry: `tickup` → `dist/index.es.js`  
 - **CJS** entry: `dist/index.cjs.js`  
 
 Vite, Webpack, and Next.js typically resolve the correct format automatically.
 
 ## Styled-components
 
-ChartEdge uses styled-components for layout and themed UI. Ensure your app wraps the tree appropriately (e.g. single `ThemeProvider` if you use one globally; ChartEdge does not require a specific theme object for its internal styled components).
+TickUp uses styled-components for layout and themed UI. Ensure your app wraps the tree appropriately (e.g. single `ThemeProvider` if you use one globally; TickUp does not require a specific theme object for its internal styled components).
 
 ## Verify
 
 ```tsx
-import { ChartEdgeCommand } from 'chartedge';
+import { TickUpCommand } from 'tickup/full';
 
 export function SmokeTest() {
-  return <ChartEdgeCommand style={{ height: 400 }} />;
+  return <TickUpCommand style={{ height: 400 }} />;
 }
 ```
 

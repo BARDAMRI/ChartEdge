@@ -4,7 +4,7 @@
 
 ## Our Pledge
 
-We as members, contributors, and leaders pledge to make participation in ChartEdge an open, welcoming, diverse, inclusive, and harassment-free experience for everyone.
+We as members, contributors, and leaders pledge to make participation in TickUp an open, welcoming, diverse, inclusive, and harassment-free experience for everyone.
 
 We are committed to providing a friendly, safe, and supportive environment for all, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
@@ -41,4 +41,4 @@ All complaints will be reviewed and investigated and will result in a response t
 
 ---
 
-Thank you for helping make ChartEdge a welcoming and friendly community! 🤝
+Thank you for helping make TickUp a welcoming and friendly community! 🤝

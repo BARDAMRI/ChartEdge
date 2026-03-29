@@ -25,7 +25,7 @@ import {
   OverlaySpecs,
   overlay,
   type OverlayWithCalc,
-} from 'chartedge';
+} from 'tickup';
 
 const overlays: OverlayWithCalc[] = [
   withOverlayStyle({ lineColor: '#ff9800', lineWidth: 2 })(OverlaySpecs.ema(12)),
@@ -48,7 +48,7 @@ An array of **`OverlayKind`** string keys (or calc specs in the type definition;
 | `vwap` | Volume-weighted average price (uses interval volume when present). |
 | `bbands_mid`, `bbands_upper`, `bbands_lower` | Bollinger mid/upper/lower; `period`, optional `stddev`, optional `price`. |
 
-## Exported API (from `chartedge`)
+## Exported API (from `tickup`)
 
 | Export | Role |
 |--------|------|

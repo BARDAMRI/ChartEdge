@@ -4,17 +4,8 @@ import styled, { createGlobalStyle } from 'styled-components';
  * Global styles applied to html, body and root element
  */
 export const GlobalStyle = createGlobalStyle<{ $pageBackground?: string }>`
-    html, body, #root {
-        height: 100%;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        min-height: 0;
-        min-width: 0;
-        box-sizing: border-box;
-        background-color: ${(p) => p.$pageBackground ?? '#ffffff'};
-        overflow: hidden;
-    }
+    /* Global styles intentionally relaxed to prevent hijacking the host application's body/scrolling. 
+       Host applications should configure html/body sizing themselves if they desire a full-screen layout. */
 `;
 
 export const MainAppWindow = styled.div`

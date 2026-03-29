@@ -1,16 +1,58 @@
-# Basic Usage
+# Basic usage
 
-Here’s a simple example of how to initialize a ChartEdge chart:
+TickUp Charts is **not** a vanilla `ChartManager` constructor. You render **React components** and pass **OHLCV intervals** (`Interval`: unix **`t`** in **seconds**, `o`/`h`/`l`/`c`, optional `v`).
 
-```typescript
-import { ChartManager } from 'chartedge';
+## Full shell (typical)
 
-const container = document.getElementById('chart-container');
-const chart = new ChartManager(container, { showOverlayLine: true });
-chart.setData([
-  { time: 1627686000000, close: 145 },
-  { time: 1627689600000, close: 148 },
-]);
+From **`tickup/full`**:
+
+```tsx
+import { useRef } from 'react';
+import { TickUpCommand, type TickUpHostHandle } from 'tickup/full';
+
+const data = [
+  { t: 1700000000, o: 100, h: 102, l: 99, c: 101, v: 1200 },
+  { t: 1700000060, o: 101, h: 103, l: 100, c: 102, v: 900 },
+];
+
+export function App() {
+  const ref = useRef<TickUpHostHandle>(null);
+  return (
+    <div style={{ height: 480, width: '100%' }}>
+      <TickUpCommand
+        ref={ref}
+        intervalsArray={data}
+        symbol="DEMO"
+        onSymbolChange={(s) => console.log('symbol', s)}
+        onSymbolSearch={(s) => {
+          /* return false or reject Promise to revert toolbar on failure */
+        }}
+      />
+    </div>
+  );
+}
 ```
 
-Full API documentation will be expanded as ChartEdge grows.
+Swap **`TickUpCommand`** for **`TickUpPulse`**, **`TickUpFlow`**, or **`TickUpDesk`** as needed.
+
+## Canvas-only stage
+
+From **`tickup`** — you must wrap with **`ModeProvider`** and supply all **`TickUpStage`** props (see types and **[`../../documentation/11-exports-and-advanced.md`](../../documentation/11-exports-and-advanced.md)**):
+
+```tsx
+import { TickUpStage, ModeProvider } from 'tickup';
+import type { ChartOptions, DeepRequired } from 'tickup';
+// Build merged chartOptions (see documentation/05-props-and-chart-options.md)
+```
+
+## Live updates
+
+Prefer the ref API **`applyLiveData(updates, placement)`** with **`mergeByTime`**, **`append`**, etc. See **[`../../documentation/07-data-and-live-updates.md`](../../documentation/07-data-and-live-updates.md)**.
+
+## Further reading
+
+- **[Quick start](../../documentation/03-quick-start.md)**
+- **[Imperative API](../../documentation/06-imperative-api.md)**
+- **[Props & chart options](../../documentation/05-props-and-chart-options.md)**
+
+The legacy snippet that referenced **`ChartManager`** is removed — it never matched the shipped API.

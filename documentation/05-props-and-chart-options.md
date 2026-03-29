@@ -1,6 +1,6 @@
 # Props & chart options
 
-## `SimpleChartEdgeProps` / `ChartEdgeHostProps`
+## `TickUpHostProps` / `TickUpHostHandle`
 
 ### Data & view
 
@@ -32,25 +32,36 @@ When you **do** change options intentionally, any deep change triggers a merge i
 
 | Prop | Purpose |
 |------|---------|
-| `symbol` | Controlled symbol string. |
-| `defaultSymbol` | Uncontrolled initial symbol. |
-| `onSymbolChange` | Symbol field changes. |
-| `onSymbolSearch` | Search submit (button or Enter). |
+| `symbol` | Controlled symbol string (toolbar input when the top bar is shown). |
+| `defaultSymbol` | Initial symbol when `symbol` is **omitted** (uncontrolled). Ignored for display once `symbol` is passed. |
+| `onSymbolChange` | Fired when the user edits the symbol in the **top bar** (Flow, Command, Desk). |
+| `onSymbolSearch` | Search submit (button or Enter) when the top bar is present. Return **`false`** or **reject** the returned `Promise` if loading the symbol failed — the input reverts to the last successfully displayed ticker and **`onSymbolChange`** is invoked with that previous value so controlled state stays consistent. Return **`true`** or **`undefined`** on success. |
 | `onRefreshRequest` | User hit Refresh in toolbar. |
+
+**When the top bar is hidden** (e.g. **Pulse**, or `showTopBar: false` on `TickUpHost`):
+
+- There is no editable symbol control; use React state and pass **`symbol`** (or **`defaultSymbol`** only) from the host.
+- If the resolved text is non-empty (trimmed controlled value, else trimmed `defaultSymbol`), a **read-only symbol strip** is rendered above the chart. Empty string hides it.
+
+`getChartContext()` still reports the same symbol metadata for introspection.
 
 ### Other
 
 | Prop | Purpose |
 |------|---------|
-| `productId` | Lock layout to a tier (`pulse` \| `flow` \| `command` \| `desk` \| `apex`). |
-| `showAttribution` | In-chart ChartEdge watermark (default true; forced on for Desk). |
-| `licenseKey` | Apex licensing hook. |
+| `productId` | Lock layout to a tier (`pulse` \| `flow` \| `command` \| `desk` \| `prime`). |
+| `showAttribution` | In-chart TickUp watermark (default true; forced on for Desk). Uses transparent bundled marks. |
+| `licenseKey` | For **`productId: 'prime'`**: non-empty value hides the eval strip. |
+| `themeVariant` | Shell **light** \| **dark** — when set, the host is **controlled**; keep it in sync with your app state and update from **`onThemeVariantChange`** when the user toggles theme in the toolbar. |
+| `defaultThemeVariant` | Initial shell theme when **`themeVariant`** is omitted (uncontrolled). Default **`light`**. |
+| `onThemeVariantChange` | Called when the user toggles light/dark from the settings toolbar; use with **`themeVariant`** for controlled mode or alone to observe toggles in uncontrolled mode. |
 
 ## `ChartOptions` structure (high level)
 
 ```ts
 ChartOptions = {
   base: {
+    engine?,             // 'standard' | 'prime' — canvas profile (see doc 15)
     chartType,           // Candlestick | Line | Area | Bar
     theme,
     showOverlayLine,

@@ -25,6 +25,14 @@ import { captureChartRegionToPngDataUrl } from '../../utils/captureChartRegion';
 /* Minimum toolbar width (px) below which the gear/settings icon is hidden */
 const MIN_WIDTH_FOR_SETTINGS_ICON = 260;
 
+function isSymbolSearchSuccess(v: void | boolean | undefined): boolean {
+    return v !== false;
+}
+
+function isThenable(v: unknown): v is Promise<unknown> {
+    return v != null && typeof (v as Promise<unknown>).then === 'function';
+}
+
 interface SettingToolbarProps {
     handleChartTypeChange: (type: ChartType) => void;
     selectedChartType?: ChartType;
@@ -43,8 +51,11 @@ interface SettingToolbarProps {
     /**
      * When set, the search control and Enter in the symbol field call this with the trimmed symbol.
      * When unset, search focuses/selects the symbol field only.
+     * Return **`false`** or a **rejected Promise** if the lookup failed — the field reverts to the last
+     * successfully displayed symbol and `onSymbolChange` is called with that value so controlled hosts stay in sync.
+     * Return **`true`** or **`undefined`** (void) for success.
      */
-    onSymbolSearch?: (symbol: string) => void;
+    onSymbolSearch?: (symbol: string) => void | boolean | Promise<void | boolean>;
     /** Optional extra handler when search is activated (e.g. focus-only); ignored if `onSymbolSearch` is set. */
     onSearch?: () => void;
     /** Fit the time axis to all loaded bars. */
@@ -55,6 +66,8 @@ interface SettingToolbarProps {
     onSnapshotPng?: () => void;
     onRefresh?: () => void | Promise<void>;
     onToggleTheme?: () => void;
+    /** Prime engine: glass-style toolbar surface */
+    primeGlass?: boolean;
 }
 
 export const SettingsToolbar = ({
@@ -75,12 +88,37 @@ export const SettingsToolbar = ({
     onSnapshotPng,
     onRefresh,
     onToggleTheme,
+    primeGlass = false,
 }: SettingToolbarProps) => {
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [toolbarWidth, setToolbarWidth] = useState<number>(Infinity);
+    const symbolFieldFocusedRef = useRef(false);
+    const committedSymbolRef = useRef(
+        symbol !== undefined ? String(symbol ?? '') : String(defaultSymbol ?? '')
+    );
+    const [fieldValue, setFieldValue] = useState(() =>
+        symbol !== undefined ? String(symbol ?? '') : String(defaultSymbol ?? '')
+    );
 
     const direction = getLocaleDefaults(locale).direction;
+
+    const isControlled = symbol !== undefined;
+
+    useEffect(() => {
+        if (symbolFieldFocusedRef.current) {
+            return;
+        }
+        if (isControlled) {
+            const s = String(symbol ?? '');
+            setFieldValue(s);
+            committedSymbolRef.current = s;
+        } else {
+            const s = String(defaultSymbol ?? '');
+            setFieldValue(s);
+            committedSymbolRef.current = s;
+        }
+    }, [symbol, defaultSymbol, isControlled]);
 
     useEffect(() => {
         const el = containerRef.current;
@@ -115,7 +153,7 @@ export const SettingsToolbar = ({
             onSnapshotPng();
             return;
         }
-        const root = document.querySelector('.chart-edge-chart-snapshot-root');
+        const root = document.querySelector('.tickup-chart-snapshot-root');
         const bg =
             root instanceof HTMLElement
                 ? getComputedStyle(root).backgroundColor || '#ffffff'
@@ -131,13 +169,13 @@ export const SettingsToolbar = ({
                 link.href = dataUrl;
                 link.click();
             } catch (e) {
-                console.error('[ChartEdge] Snapshot failed', e);
+                console.error('[TickUp] Snapshot failed', e);
             }
             return;
         }
         const canvas = document.querySelector('canvas.chart-data-canvas');
         if (!(canvas instanceof HTMLCanvasElement)) {
-            console.error('[ChartEdge] Snapshot: chart region and main canvas not found.');
+            console.error('[TickUp] Snapshot: chart region and main canvas not found.');
             return;
         }
         try {
@@ -146,19 +184,54 @@ export const SettingsToolbar = ({
             link.href = canvas.toDataURL('image/png');
             link.click();
         } catch (e) {
-            console.error('[ChartEdge] Snapshot failed', e);
+            console.error('[TickUp] Snapshot failed', e);
         }
     };
 
+    const revertSymbolToLastCommitted = useCallback(() => {
+        const prev = committedSymbolRef.current;
+        setFieldValue(prev);
+        onSymbolChange?.(prev);
+    }, [onSymbolChange]);
+
+    const applySearchSuccess = useCallback(
+        (trimmed: string) => {
+            committedSymbolRef.current = trimmed;
+            setFieldValue(trimmed);
+            onSymbolChange?.(trimmed);
+        },
+        [onSymbolChange]
+    );
+
     const triggerSymbolSearch = useCallback(() => {
         const el = symbolInputRef?.current;
-        const raw =
-            symbol !== undefined
-                ? String(symbol ?? '').trim()
-                : (el?.value?.trim() ?? '');
+        const raw = fieldValue.trim();
+
         if (onSymbolSearch) {
-            onSymbolSearch(raw);
-        } else if (onSearch) {
+            const outcome = onSymbolSearch(raw);
+            if (isThenable(outcome)) {
+                outcome.then(
+                    (v) => {
+                        if (!isSymbolSearchSuccess(v)) {
+                            revertSymbolToLastCommitted();
+                        } else {
+                            applySearchSuccess(raw);
+                        }
+                    },
+                    () => {
+                        revertSymbolToLastCommitted();
+                    }
+                );
+            } else if (!isSymbolSearchSuccess(outcome)) {
+                revertSymbolToLastCommitted();
+            } else {
+                applySearchSuccess(raw);
+            }
+            el?.focus();
+            return;
+        }
+
+        if (onSearch) {
             onSearch();
         } else if (el) {
             el.focus();
@@ -166,7 +239,17 @@ export const SettingsToolbar = ({
             return;
         }
         el?.focus();
-    }, [onSymbolSearch, onSearch, symbolInputRef, symbol]);
+    }, [applySearchSuccess, fieldValue, onSearch, onSymbolSearch, revertSymbolToLastCommitted, symbolInputRef]);
+
+    const handleSymbolFieldChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const v = e.target.value;
+            setFieldValue(v);
+            onSymbolChange?.(v);
+        },
+        [onSymbolChange]
+    );
+
 
     const handleRange = () => onFitVisibleRange?.();
 
@@ -175,14 +258,14 @@ export const SettingsToolbar = ({
     const handleRefreshClick = () => {
         const p = onRefresh?.();
         if (p && typeof (p as Promise<void>).then === 'function') {
-            (p as Promise<void>).catch((e) => console.error('[ChartEdge] Refresh failed', e));
+            (p as Promise<void>).catch((e) => console.error('[TickUp] Refresh failed', e));
         }
     };
 
     const handleTheme = () => onToggleTheme?.();
 
     return (
-        <SettingsToolbarContainer className="settings-toolbar-container">
+        <SettingsToolbarContainer $primeGlass={primeGlass} className="settings-toolbar-container">
             <SettingToolbarContent className="settings-toolbar-content" ref={containerRef} dir={direction}>
                 <SymbolToolbarCluster className="settings-symbol-cluster" dir={direction}>
                     <SymbolInput
@@ -192,17 +275,14 @@ export const SettingsToolbar = ({
                         placeholder={translate('symbol_placeholder', language)}
                         dir={direction}
                         aria-label={translate('symbol_placeholder', language)}
-                        {...(symbol !== undefined
-                            ? {
-                                  value: symbol,
-                                  onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-                                      onSymbolChange?.(e.target.value),
-                              }
-                            : {
-                                  defaultValue: defaultSymbol ?? '',
-                                  onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-                                      onSymbolChange?.(e.target.value),
-                              })}
+                        value={fieldValue}
+                        onChange={handleSymbolFieldChange}
+                        onFocus={() => {
+                            symbolFieldFocusedRef.current = true;
+                        }}
+                        onBlur={() => {
+                            symbolFieldFocusedRef.current = false;
+                        }}
                         onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();

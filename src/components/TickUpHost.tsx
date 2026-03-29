@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState, forwardRef, useImperativeHandle, useRef} from 'react';
-import {ChartEdgeStage} from './Canvas/ChartEdgeStage';
+import {TickUpStage} from './Canvas/TickUpStage';
 import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {SettingsModal, SettingsState} from './SettingsModal/SettingsModal';
@@ -11,7 +11,7 @@ import {
     ChartType,
     TimeDetailLevel
 } from '../types/chartOptions';
-import {ModeProvider} from '../contexts/ModeContext';
+import {Mode, ModeProvider} from '../contexts/ModeContext';
 import {deepMerge} from "../utils/deepMerge";
 import {deepEqual} from "../utils/deepEqual";
 import {
@@ -29,22 +29,32 @@ import type {DrawingInput, DrawingPatch, DrawingSpec} from './Drawing/drawHelper
 import type {DrawingQuery, DrawingSnapshot} from './Drawing/drawingQuery';
 import type {ChartContextInfo} from '../types/chartContext';
 import type {IDrawingShape} from './Drawing/IDrawingShape';
-import type {ChartEdgeProductId} from '../types/chartProducts';
+import type {TickUpProductId} from '../types/tickupProducts';
+import type {TickUpChartEngine} from '../engines/TickUpEngine';
 
 /** Stable reference when `chartOptions` prop is omitted so sync effect is not fooled by a fresh `{}` each render. */
 const EMPTY_CHART_OPTIONS: DeepPartial<ChartOptions> = {};
 
-export interface SimpleChartEdgeHandle {
+/**
+ * Imperative API for {@link TickUpHost} and product components
+ * (`TickUpCommand`, `TickUpPulse`, …). Pass a React `ref` typed as this interface.
+ */
+export interface TickUpHostHandle {
     addShape: (shape: DrawingInput) => void;
     updateShape: (shapeId: string, newShape: DrawingInput | DrawingPatch) => void;
     patchShape: (shapeId: string, patch: DrawingPatch) => void;
     setDrawingsFromSpecs: (specs: DrawingSpec[]) => void;
     deleteShape: (shapeId: string) => void;
     addInterval: (interval: Interval) => void;
-    updateInterval: (intervalId: string, newInterval: Interval) => void;
-    deleteInterval: (intervalId: string) => void;
+    updateInterval: (index: number, newInterval: Interval) => void;
+    deleteInterval: (index: number) => void;
     applyLiveData: (updates: Interval | Interval[], placement: LiveDataPlacement) => LiveDataApplyResult;
     fitVisibleRangeToData: () => void;
+    /**
+     * If the last bar has moved past the right edge of the window, pans the view by the minimum amount
+     * so it stays visible (same time span when possible). No-op when already in view.
+     */
+    nudgeVisibleTimeRangeToLatest: (options?: { trailingPaddingSec?: number }) => void;
     getMainCanvasElement: () => HTMLCanvasElement | null;
     getViewInfo: () => {
         intervals: Interval[];
@@ -61,9 +71,19 @@ export interface SimpleChartEdgeHandle {
     clearCanvas: () => void;
     redrawCanvas: () => void;
     reloadCanvas: () => void;
+    /** Merge an engine profile (e.g. {@link TickUpPrime}) into live chart options. */
+    setEngine: (engine: TickUpChartEngine) => void;
+    /** Forwarded to the stage — drawing toolbar modes (line, select, …). */
+    setInteractionMode: (mode: Mode) => void;
+    /** Deletes the selected drawing on the stage, if any. */
+    deleteSelectedDrawing: () => void;
 }
 
-export type SimpleChartEdgeProps = {
+/**
+ * Props for {@link TickUpHost} and the tier components (`TickUpPulse`, `TickUpFlow`, …).
+ * When `productId` is set, toolbar layout props (`showSidebar`, `showTopBar`, `showSettingsBar`) are fixed and omitted from product prop types.
+ */
+export type TickUpHostProps = {
     intervalsArray?: Interval[];
     initialNumberOfYTicks?: number;
     initialXAxisHeight?: number;
@@ -74,7 +94,7 @@ export type SimpleChartEdgeProps = {
     chartOptions?: DeepPartial<ChartOptions>;
     /**
      * Toolbar chrome — only honored when `productId` is omitted (legacy / unbundled host).
-     * When `productId` is set (ChartEdge Pulse, Flow, …), layout is fixed by product and these props are ignored.
+     * When `productId` is set (TickUp Pulse, Flow, …), layout is fixed by product and these props are ignored.
      */
     showSidebar?: boolean;
     showTopBar?: boolean;
@@ -87,23 +107,39 @@ export type SimpleChartEdgeProps = {
     /** Initial toolbar symbol when uncontrolled. */
     defaultSymbol?: string;
     onSymbolChange?: (symbol: string) => void;
-    /** Invoked when the user submits symbol search (search button or Enter). */
-    onSymbolSearch?: (symbol: string) => void;
+    /**
+     * Invoked when the user submits symbol search (search button or Enter).
+     * Return `false` or reject the promise if the lookup failed — the toolbar reverts to the last good symbol
+     * and calls `onSymbolChange` with it (for controlled hosts). Return `true` or void on success.
+     */
+    onSymbolSearch?: (symbol: string) => void | boolean | Promise<void | boolean>;
     /**
      * Locks toolbar chrome to the product line: side drawing bar, top bar, and settings entry cannot be
      * changed via props or settings for this instance. Omit for a host-controlled layout (see `showSidebar` / `showTopBar` / `showSettingsBar`).
      */
-    productId?: ChartEdgeProductId;
+    productId?: TickUpProductId;
     /**
-     * In-chart logo watermark (bundled SVG marks, low opacity, no extra layout row).
+     * In-chart logo watermark (bundled transparent PNG, low opacity, no extra layout row).
      * Forced on for `productId="desk"`. Default true. Set false to disable branding.
      */
     showAttribution?: boolean;
-    /** Reserved for ChartEdge Apex; when missing under `productId="apex"`, shows an evaluation notice. */
+    /** For `productId="prime"`: non-empty value hides the eval strip. */
     licenseKey?: string | null;
+    /**
+     * Shell **light** / **dark** (toolbar, settings modal chrome, `GlobalStyle` page background).
+     * When set, the host is **controlled**: update this prop when {@link onThemeVariantChange} fires
+     * (e.g. from the settings toolbar sun/moon control).
+     */
+    themeVariant?: 'light' | 'dark';
+    /**
+     * Initial shell theme when {@link themeVariant} is omitted (uncontrolled). Defaults to **`light`**.
+     */
+    defaultThemeVariant?: 'light' | 'dark';
+    /** Notified when the user toggles shell theme from the toolbar. */
+    onThemeVariantChange?: (variant: 'light' | 'dark') => void;
 };
 
-function chartEdgeProductLayoutDefaults(id: ChartEdgeProductId | undefined): {
+function tickupProductLayoutDefaults(id: TickUpProductId | undefined): {
     showSidebar: boolean;
     showTopBar: boolean;
     showSettingsBar: boolean;
@@ -115,13 +151,13 @@ function chartEdgeProductLayoutDefaults(id: ChartEdgeProductId | undefined): {
             return {showSidebar: false, showTopBar: true, showSettingsBar: true};
         case 'command':
         case 'desk':
-        case 'apex':
+        case 'prime':
         default:
             return {showSidebar: true, showTopBar: true, showSettingsBar: true};
     }
 }
 
-export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdgeProps>((props, ref) => {
+export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, ref) => {
     const {
         intervalsArray = [],
         initialNumberOfYTicks = 5,
@@ -139,10 +175,13 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         productId,
         licenseKey,
         showAttribution = true,
+        themeVariant: themeVariantProp,
+        defaultThemeVariant = 'light',
+        onThemeVariantChange,
     } = props;
 
     const hasLockedChrome = productId != null;
-    const tierLayout = chartEdgeProductLayoutDefaults(productId);
+    const tierLayout = tickupProductLayoutDefaults(productId);
     const showSidebar = hasLockedChrome ? tierLayout.showSidebar : (showSidebarProp ?? tierLayout.showSidebar);
     const showTopBar = hasLockedChrome ? tierLayout.showTopBar : (showTopBarProp ?? tierLayout.showTopBar);
     const showSettingsBar = hasLockedChrome ? tierLayout.showSettingsBar : (showSettingsBarProp ?? tierLayout.showSettingsBar);
@@ -151,7 +190,17 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
     const [finalStyleOptions, setStyleOptions] = useState<DeepRequired<ChartOptions>>(() =>
         deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions)
     );
-    const [themeVariant, setThemeVariant] = useState<'light' | 'dark'>('light');
+    const [internalThemeVariant, setInternalThemeVariant] = useState<'light' | 'dark'>(defaultThemeVariant);
+    const isThemeControlled = themeVariantProp !== undefined;
+    const themeVariant = isThemeControlled ? themeVariantProp! : internalThemeVariant;
+
+    const handleThemeToggle = () => {
+        const next = themeVariant === 'light' ? 'dark' : 'light';
+        if (!isThemeControlled) {
+            setInternalThemeVariant(next);
+        }
+        onThemeVariantChange?.(next);
+    };
     const [selectedIndex, setSelectedIndex] = useState<null | number>(null);
     const stageRef = useRef<any>(null);
 
@@ -178,7 +227,7 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
 
     useEffect(() => {
         if (hasLockedChrome) {
-            const d = chartEdgeProductLayoutDefaults(productId);
+            const d = tickupProductLayoutDefaults(productId);
             setLayoutOptions(prev => ({
                 ...prev,
                 showSidebar: d.showSidebar,
@@ -187,7 +236,7 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
             }));
             return;
         }
-        const d = chartEdgeProductLayoutDefaults(undefined);
+        const d = tickupProductLayoutDefaults(undefined);
         setLayoutOptions(prev => ({
             ...prev,
             showSidebar: showSidebarProp !== undefined ? showSidebarProp : d.showSidebar,
@@ -250,14 +299,14 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                 stageRef.current.addInterval(interval);
             }
         },
-        updateInterval: (intervalId: string, newInterval: Interval) => {
+        updateInterval: (index: number, newInterval: Interval) => {
             if (stageRef.current && stageRef.current.updateInterval) {
-                stageRef.current.updateInterval(intervalId, newInterval);
+                stageRef.current.updateInterval(index, newInterval);
             }
         },
-        deleteInterval: (intervalId: string) => {
+        deleteInterval: (index: number) => {
             if (stageRef.current && stageRef.current.deleteInterval) {
-                stageRef.current.deleteInterval(intervalId);
+                stageRef.current.deleteInterval(index);
             }
         },
         getViewInfo: () => {
@@ -325,7 +374,19 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         fitVisibleRangeToData: () => {
             stageRef.current?.fitVisibleRangeToData?.();
         },
+        nudgeVisibleTimeRangeToLatest: (options?: { trailingPaddingSec?: number }) => {
+            stageRef.current?.nudgeVisibleTimeRangeToLatest?.(options);
+        },
         getMainCanvasElement: () => stageRef.current?.getMainCanvasElement?.() ?? null,
+        setEngine: (engine: TickUpChartEngine) => {
+            setStyleOptions((prev) => deepMerge(prev, engine.getChartOptionsPatch()));
+        },
+        setInteractionMode: (mode: Mode) => {
+            stageRef.current?.setInteractionMode?.(mode);
+        },
+        deleteSelectedDrawing: () => {
+            stageRef.current?.deleteSelectedDrawing?.();
+        },
     }));
 
     const handleChartTypeChange = (newType: ChartType) => {
@@ -514,13 +575,13 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         } as DeepPartial<ChartOptions>);
     }, [finalStyleOptions, themeVariant]);
 
-    const apexEval = productId === 'apex' && !licenseKey;
+    const primeTierEval = productId === 'prime' && !licenseKey;
 
     return (
         <ModeProvider>
             <GlobalStyle $pageBackground={themeVariant === 'dark' ? '#121212' : '#ffffff'}/>
             <MainAppWindow
-                className={'chart-edge-root'}
+                className={'tickup-root'}
                 style={{
                     backgroundColor: chartOptionsForStage.base.style.backgroundColor,
                     display: 'flex',
@@ -528,7 +589,7 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                     minHeight: 0,
                 }}
             >
-                {apexEval ? (
+                {primeTierEval ? (
                     <div
                         style={{
                             flexShrink: 0,
@@ -541,11 +602,11 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                             borderBottom: `1px solid ${themeVariant === 'dark' ? '#444c56' : '#f0d060'}`,
                         }}
                     >
-                        ChartEdge Apex — evaluation mode. Provide <code>licenseKey</code> when your license is active.
+                        TickUp Prime tier — evaluation mode. Provide <code>licenseKey</code> when your license is active.
                     </div>
                 ) : null}
                 <div style={{flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column'}}>
-                    <ChartEdgeStage
+                    <TickUpStage
                         ref={stageRef}
                         intervalsArray={intervalsArray}
                         numberOfYTicks={chartOptionsForStage.axes.numberOfYTicks}
@@ -560,7 +621,7 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
                         openSettingsMenu={() => setIsSettingsOpen(true)}
                         showSettingsBar={layoutOptions.showSettingsBar}
                         onRefreshRequest={onRefreshRequest}
-                        onToggleTheme={() => setThemeVariant((v) => (v === 'light' ? 'dark' : 'light'))}
+                        onToggleTheme={handleThemeToggle}
                         symbol={symbol}
                         defaultSymbol={defaultSymbol}
                         onSymbolChange={onSymbolChange}
@@ -582,8 +643,3 @@ export const SimpleChartEdge = forwardRef<SimpleChartEdgeHandle, SimpleChartEdge
         </ModeProvider>
     );
 });
-
-/** Primary shell implementation; same ref API as {@link SimpleChartEdge}. */
-export const ChartEdgeHost = SimpleChartEdge;
-export type ChartEdgeHostHandle = SimpleChartEdgeHandle;
-export type ChartEdgeHostProps = SimpleChartEdgeProps;

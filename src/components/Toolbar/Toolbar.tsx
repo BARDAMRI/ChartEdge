@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {Mode, useMode} from '../../contexts/ModeContext';
 import {ModeButton} from './Buttons';
 import {
@@ -14,22 +14,20 @@ import { translate, getLocaleDefaults } from '../../utils/i18n';
 interface ToolbarProps {
     language?: string;
     locale?: string;
+    primeGlass?: boolean;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
     language = 'en', 
-    locale = 'en-US' 
+    locale = 'en-US',
+    primeGlass = false,
 }) => {
     const {mode, setMode} = useMode();
-
-    useEffect(() => {
-        console.log('Toolbar mode changed:', mode);
-    }, [mode]);
 
     const direction = getLocaleDefaults(locale).direction;
 
     return (
-        <ToolbarContainer>
+        <ToolbarContainer $primeGlass={primeGlass}>
             <ToolbarContent>
                 <Tooltip content={translate('draw_line', language)} tooltipAxis={TooltipAxis.vertical} placement={Placement.auto}
                          axis={TooltipAxis.vertical}

@@ -13,7 +13,7 @@
 | **Polyline** | Multiple vertices; double-click to finish in UI. |
 | **CustomSymbol** | 1 anchor point + `symbol` string + `size`. |
 
-## Toolbar (Command / Desk / Apex / custom host with sidebar)
+## Toolbar (Command / Desk / custom host with sidebar)
 
 The visible **sidebar** exposes these tools only:
 

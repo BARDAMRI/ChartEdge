@@ -128,8 +128,12 @@ export type StyleOptions = {
     backgroundColor: string;
 }
 
+export type TickUpRenderEngine = 'standard' | 'prime';
+
 interface BaseChartOptions {
     chartType?: ChartType;
+    /** Visual / render profile. `prime` enables neon styling, glass toolbars, and Prime crosshair. */
+    engine?: TickUpRenderEngine;
     theme: ChartTheme;
     showOverlayLine: boolean;
     showHistogram: boolean;

@@ -39,7 +39,7 @@ Returns **`LiveDataApplyResult`**: `{ ok, intervals, errors, warnings }`. Always
 
 ## Normalization utilities (exported)
 
-From `chartedge`:
+From `tickup`:
 
 - **`normalizeInterval`** — Validate/clamp one partial row; returns `{ value, notes }`.  
 - **`normalizeIntervals`** — Batch version; `errors` / `warnings` arrays.  

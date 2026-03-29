@@ -1,13 +1,11 @@
+# Terms of Use (legacy stub)
 
+**Authoritative legal templates** for TickUp Charts products and services (Terms of Service, Privacy Policy, Acceptable Use) now live in the repository’s **`legal/`** folder.
 
-# Terms of Use
+- **Hub:** [`../../legal/README.md`](../../legal/README.md)  
+- **Terms of Service:** [`../../legal/TERMS_OF_SERVICE.md`](../../legal/TERMS_OF_SERVICE.md)  
+- **Documentation overview:** [`../../documentation/14-legal-and-policies.md`](../../documentation/14-legal-and-policies.md)
 
-By using ChartEdge, you agree to the following terms:
+**Open-source software** in this project is governed by the **LICENSE** file in the repository root (when present), in addition to any separate agreements for hosted or commercial offerings described in the Terms of Service template.
 
-- ChartEdge is distributed under a modified MIT License.
-- Non-commercial use is permitted without restrictions.
-- Commercial use (including integration into commercial products) requires prior written permission from the authors.
-- No warranty is provided. The software is provided "AS IS", without any guarantees of functionality, security, or fitness for a particular purpose.
-- The full license text can be found [here](./LICENSE).
-
-For commercial licensing inquiries, please contact: [contact@chartedgelabs.com]
+For questions: use the contact placeholders you set in `legal/TERMS_OF_SERVICE.md` after customization.

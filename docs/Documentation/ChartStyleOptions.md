@@ -1,136 +1,88 @@
-# ChartOptions
+# Chart options & styles (legacy page)
 
-ChartOptions is a configuration object that centralizes all the design and visual settings of a ChartEdge chart.
+> **Authoritative reference:** **[`../../documentation/05-props-and-chart-options.md`](../../documentation/05-props-and-chart-options.md)** and **[`../../documentation/12-overlays-and-indicators.md`](../../documentation/12-overlays-and-indicators.md)**.  
+> **Default values:** **`src/components/DefaultData.ts`** (`DEFAULT_GRAPH_OPTIONS`, style blocks).
 
-It allows full and easy control over every visual parameter of the chart — both at the code level and dynamically via a future UI.
+The tables below described an **older, flat** shape. The shipped type is **`ChartOptions`** with a **`base`** object and top-level **`axes`**:
 
----
-
-## Full Structure
-
-| Section         | Purpose                                  |
-|-----------------|------------------------------------------|
-| [backgroundColor](#backgroundcolor) | Canvas background color |
-| [grid](#grid)               | Settings for grid lines       |
-| [axes](#axes)               | Settings for the X and Y axes |
-| [candles](#candles)         | Settings for candlestick charts |
-| [lineOverlay](#lineoverlay) | Settings for overlay lines    |
-| [padding](#padding)         | Settings for safety margins   |
-
----
-
-## backgroundColor
-
-| Field | Type | Description |
-|------|------|-------------|
-| `backgroundColor` | `string` | Sets the background color of the entire canvas. |
-
-Example:  
-`#ffffff` (white), `#1e1e1e` (dark grey)
-
----
-
-## grid
-
-| Field | Type | Description |
-|------|------|-------------|
-| `lineColor` | `string` | Color of grid lines. |
-| `lineWidth` | `number` | Width of grid lines (in pixels). |
-| `horizontalLines` | `number` | Number of horizontal grid lines. |
-| `verticalLines` | `number` | Number of vertical grid lines. |
-| `showGrid` | `boolean` | Whether to display grid lines. |
-| `lineDash` | `number[]` | Dash pattern for lines (e.g., `[5,5]` for dashed lines). |
-
----
-
-## axes
-
-| Field | Type | Description |
-|------|------|-------------|
-| `textColor` | `string` | Color of axis label text. |
-| `font` | `string` | Font used for axis labels (e.g., `10px Arial`). |
-| `lineColor` | `string` | Color of the axis lines. |
-| `lineWidth` | `number` | Width of the axis lines (in pixels). |
-| `showAxes` | `boolean` | Whether to display the axes. |
-| `axisPosition` | `'left'` or `'right'` | Side of the Y-axis. |
-
----
-
-## candles
-
-| Field | Type | Description |
-|------|------|-------------|
-| `upColor` | `string` | Color of a bullish (rising) candle body. |
-| `downColor` | `string` | Color of a bearish (falling) candle body. |
-| `borderColor` | `string` | Color of the candle border. |
-| `borderWidth` | `number` | Width of the candle border (in pixels). |
-| `bodyWidthFactor` | `number` | Ratio of the body endTime relative to the total available endTime. |
-
----
-
-## lineOverlay
-
-| Field | Type | Description |
-|------|------|-------------|
-| `color` | `string` | Color of the overlay line. |
-| `lineWidth` | `number` | Width of the overlay line (in pixels). |
-| `dashed` | `boolean` | Whether the overlay line is dashed. |
-
----
-
-## padding
-
-| Field | Type | Description |
-|------|------|-------------|
-| `type` | `'percent'` or `'pixels'` | How the padding is calculated. |
-| `value` | `number` | The padding value (either % or pixels depending on type). |
-
----
-
-## Key Notes
-
-- Every field has a default value.
-- Many settings can be changed dynamically during runtime.
-- All canvas rendering is based on `styleOptions`, not hardcoded values.
-- Adding new style options in the future is designed to be simple and non-breaking.
-
----
-
-# 🚀 Example Usage
-
-```typescript
-const customStyle: ChartOptions = {
-    backgroundColor: '#ffffff',
-    grid: {
-        lineColor: 'rgba(200,200,200,0.4)',
-        lineWidth: 1,
-        horizontalLines: 5,
-        verticalLines: 5,
-        showGrid: true,
-        lineDash: [],
+```ts
+ChartOptions = {
+  base: {
+    chartType,           // Candlestick | Line | Area | Bar
+    theme,               // 'light' | 'dark' | 'grey' | string
+    showOverlayLine,
+    showHistogram,
+    showCrosshair,
+    showCrosshairValues,
+    showCandleTooltip,
+    style: {
+      candles, line, area, bar, histogram, grid, overlay, axes, drawings,
+      showGrid,
+      backgroundColor,
     },
-    axes: {
-        textColor: '#666',
-        font: '10px Arial',
-        lineColor: '#666',
-        lineWidth: 1.5,
-        showAxes: true,
-        axisPosition: 'right',
-    },
-    candles: {
-        upColor: '#4caf50',
-        downColor: '#f44336',
-        borderColor: '#333',
-        borderWidth: 1,
-        bodyWidthFactor: 0.7,
-    },
-    lineOverlay: {
-        color: '#007bff',
-        lineWidth: 1,
-        dashed: false,
-    },
-    padding: {
-        type: 'percent',
-        value: 2,
-    }
+    overlays?,           // explicit overlay series + calc
+    overlayKinds?,       // SMA, EMA, VWAP, Bollinger, …
+  },
+  axes: {
+    yAxisPosition,       // enum AxesPosition
+    currency,
+    numberOfYTicks,
+  },
 };
+```
+
+Axis **locale**, **timezone**, **trading sessions**, **holidays**, etc. live under **`base.style.axes`** (see i18n doc).
+
+## Example (deep partial, as apps usually pass)
+
+```tsx
+import { AxesPosition, ChartType } from 'tickup';
+
+const chartOptions = {
+  base: {
+    chartType: ChartType.Candlestick,
+    theme: 'light',
+    showHistogram: true,
+    showCrosshair: true,
+    style: {
+      showGrid: true,
+      backgroundColor: '#ffffff',
+      grid: { lineColor: '#e0e0e0', lineWidth: 1, gridSpacing: 50, lineDash: [] },
+      candles: {
+        bullColor: '#26a69a',
+        bearColor: '#ef5350',
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        borderColor: '#333333',
+        borderWidth: 1,
+        bodyWidthFactor: 0.6,
+        spacingFactor: 0.2,
+      },
+    },
+  },
+  axes: {
+    yAxisPosition: AxesPosition.left,
+    numberOfYTicks: 5,
+  },
+};
+```
+
+---
+
+## Deprecated flat tables (do not use as schema)
+
+The following sections are **retained only for keyword search**. Field names and nesting **do not** match `ChartOptions` today.
+
+<details>
+<summary>Old flat outline (obsolete)</summary>
+
+| Section (obsolete) | Notes |
+|--------------------|--------|
+| backgroundColor | Now under `base.style.backgroundColor` |
+| grid | `base.style.grid` |
+| axes | `base.style.axes` + `ChartOptions.axes` for y ticks / side |
+| candles | `base.style.candles` |
+| lineOverlay | Use `base.style.overlay` + `base.showOverlayLine` / overlays |
+| padding | Not a top-level `ChartOptions` field in current API |
+
+</details>

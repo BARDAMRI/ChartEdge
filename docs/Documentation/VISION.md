@@ -1,6 +1,6 @@
-# Vision for ChartEdge
+# Vision for TickUp Charts
 
-ChartEdge is designed to redefine the standards of web-based financial and analytical charting libraries.
+TickUp Charts is a **React** charting library for the web, distributed on **npm** (`tickup` / `tickup/full`), focused on financial OHLCV and professional embeds.
 
 ## Long-Term Vision
 

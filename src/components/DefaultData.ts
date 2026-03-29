@@ -109,6 +109,7 @@ const DEFAULT_STYLES: DeepRequired<StyleOptions> = {
 export const DEFAULT_GRAPH_OPTIONS: DeepRequired<ChartOptions> = {
     base: {
         chartType: ChartType.Candlestick,
+        engine: 'standard',
         theme: 'light',
         showOverlayLine: false,
         showHistogram: true,

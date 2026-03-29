@@ -73,7 +73,7 @@ export function createShape(newDraw: Drawing): IDrawingShape {
             shape = new CustomSymbolShape(newDraw.args as CustomSymbolShapeArgs, newDraw.style as DrawingStyleOptions, shapeId);
             break;
         default:
-            console.warn('[ChartEdge] createShape: unsupported mode, using empty line placeholder', newDraw.mode);
+            console.warn('[TickUp] createShape: unsupported mode, using empty line placeholder', newDraw.mode);
             shape = new LineShape({points: []}, newDraw.style as DrawingStyleOptions, shapeId);
             break;
     }
@@ -121,7 +121,7 @@ function minPointsRequired(type: ShapeType): number {
 
 /**
  * Builds a drawing class instance from a plain spec (type + points + optional style).
- * Use with {@link ChartEdgeStageHandle.addShape} / {@link SimpleChartEdgeHandle.addShape} or {@link setDrawingsFromSpecs}.
+ * Use with {@link TickUpStageHandle.addShape} / {@link TickUpHostHandle.addShape} or {@link setDrawingsFromSpecs}.
  */
 export function drawingFromSpec(
     spec: DrawingSpec,
@@ -129,7 +129,7 @@ export function drawingFromSpec(
 ): IDrawingShape | null {
     const need = minPointsRequired(spec.type);
     if (!Array.isArray(spec.points) || spec.points.length < need) {
-        console.warn('[ChartEdge] drawingFromSpec: not enough points for', spec.type, spec);
+        console.warn('[TickUp] drawingFromSpec: not enough points for', spec.type, spec);
         return null;
     }
     const defaultStyle = chartOptions.base.style.drawings as DrawingStyleOptions;
@@ -166,7 +166,7 @@ export function drawingFromSpec(
                 id
             );
         default:
-            console.warn('[ChartEdge] drawingFromSpec: unsupported type', spec.type);
+            console.warn('[TickUp] drawingFromSpec: unsupported type', spec.type);
             return null;
     }
 }

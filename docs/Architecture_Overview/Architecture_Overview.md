@@ -1,28 +1,36 @@
-# ChartEdge - Architecture Overview
+# TickUp Charts — architecture overview
 
-## Core
-- Manages chart lifecycle (init, resize, destroy)
-- Handles incoming data (append, update)
-- Manages user interactions (pan, zoom, drawing mode)
+High-level map of the **shipped** React application (aligned with `src/`).
 
-## Renderer
-- Converts logical data into pixel rendering
-- Optimized Canvas 2D operations
-- Layered drawing: background, grid, data, shapes, overlays
+## Host shell (`tickup/full`)
 
-## Shapes Manager
-- Manages user-drawn or API-drawn shapes
-- Supports static and interactive elements
-- Handles rendering and event capturing
+- **`TickUpHost`** — root layout: **`GlobalStyle`**, optional Prime-tier eval banner, **`ModeProvider`**, **`SettingsModal`**, wires **`TickUpStage`**.
+- **Product wrappers** — **`TickUpPulse`**, **`TickUpFlow`**, **`TickUpCommand`**, **`TickUpDesk`**, **`TickUpPrimeTier`**: fixed `productId` and chrome flags.
+- **`SettingsToolbar`** — symbol field (with search / revert-on-failure), chart type, snapshot, range, CSV, refresh, theme.
+- **`Toolbar`** (left) — drawing modes and tools when sidebar is on.
 
-## Theme Manager
-- Applies themes (light/dark/custom)
-- Handles runtime style updates
+## Stage (`TickUpStage`)
 
-## Utilities
-- Coordinate transformations (time <-> pixel)
-- Scaling calculations
-- Animation and easing helpers
+- Owns **intervals** state, **visible range**, **drawings** list, **shape properties** modal trigger.
+- Composes **Y axis**, **X axis**, **`ChartCanvas`** (main + histogram), optional **compact symbol strip** when there is no top bar but `symbol` / `defaultSymbol` is set.
+- Exposes the **imperative handle** (shapes, intervals, `applyLiveData`, `getViewInfo`, `getChartContext`, …).
 
-## Data Flow
-External Data -> Core -> Renderer -> Canvas
+## Renderer (`ChartCanvas` + helpers)
+
+- **Canvas 2D** layers (conceptually back → front): background, grid, session shading, main series (candle/line/area/bar), histogram, overlays, drawings, interaction/crosshair/tooltip, optional **watermark**.
+- **Utilities** — `GraphHelpers` (`timeToX`, `priceToY`, …), overlay drawing, drawing hit-tests.
+
+## Data flow
+
+**Host / props** `intervalsArray` → stage state → **`ChartCanvas`**; streaming via **`applyLiveData`** or host-driven prop updates. **`chartOptions`** deep-merges from props and settings modal.
+
+## Theming
+
+- **`base.theme`** on chart options: light / dark / grey (+ string escape hatch).
+- Shell **light/dark** toggle merges dark-friendly **`base.style`** overrides for the plot.
+
+## Internal / collaborator docs
+
+- **`docs/internal/`** — not published on npm; maintainer runbooks (e.g. Prime tier).
+
+For API detail, use **[`../../documentation/`](../../documentation/README.md)**.

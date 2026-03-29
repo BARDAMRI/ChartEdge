@@ -1,6 +1,10 @@
-import styled from 'styled-components';
+import styled, {css} from 'styled-components';
 
-export const ToolbarContainer = styled.div.attrs({className: 'toolbar-container'})`
+interface PrimeGlassProps {
+    $primeGlass?: boolean;
+}
+
+export const ToolbarContainer = styled.div.attrs({className: 'toolbar-container'})<PrimeGlassProps>`
     box-sizing: border-box;
     width: clamp(24px, 5vmin, 40px); 
     display: flex;
@@ -18,6 +22,14 @@ export const ToolbarContainer = styled.div.attrs({className: 'toolbar-container'
     border: 1px solid rgba(128, 140, 255, 0.18);
     box-shadow: 0 10px 28px rgba(17, 19, 39, 0.20),
     inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+
+    ${({$primeGlass}) =>
+        $primeGlass &&
+        css`
+            background: rgba(15, 18, 25, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        `}
 `;
 
 export const ToolbarContent = styled.div.attrs({className: 'toolbar-content'})`

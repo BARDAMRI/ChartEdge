@@ -1,11 +1,13 @@
-# Contributing to ChartEdge
+# Contributing to TickUp Charts
 
-First of all, thank you for considering contributing to ChartEdge!  
+First of all, thank you for considering contributing to TickUp Charts!  
 Your help is extremely valuable to make this project better for everyone.
+
+The **canonical** contributing guide for this repository is **[`../../CONTRIBUTING.md`](../../CONTRIBUTING.md)** (build steps, package layout, maintainer pointer to **`docs/internal/`**). This file is a shorter duplicate for readers browsing **`docs/Documentation/`** only.
 
 ---
 
-## How to Contribute
+## How to contribute
 
 1. **Fork** the repository.
 2. **Create a new branch** from `main`:
@@ -48,16 +50,21 @@ Your help is extremely valuable to make this project better for everyone.
 
 ---
 
-## Running Locally
+## Running locally
 
 After cloning the repository:
 
 ```bash
 npm install
-npm run dev
+npm run build    # library: tsc + Vite lib + declarations
+npm test         # Jest
 ```
 
-You should see the development server running locally.
+For the **Vite example** app:
+
+```bash
+cd example && npm install && npm run dev
+```
 
 ---
 
@@ -65,7 +72,7 @@ You should see the development server running locally.
 
 We expect everyone to follow the [Code of Conduct](./CODE_OF_CONDUCT.md) when interacting in the project.
 
-Let's make the ChartEdge community welcoming and supportive! 🤝
+Let's make the TickUp community welcoming and supportive! 🤝
 
 ---
 
@@ -77,4 +84,4 @@ Let's make the ChartEdge community welcoming and supportive! 🤝
 
 ---
 
-Thank you again for being part of ChartEdge! 🚀
+Thank you again for being part of TickUp Charts! 🚀
