@@ -462,11 +462,11 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                     }`}
             >
                 <a href={DOCS_HUB_URL} className="flex min-w-0 items-center gap-2 py-0.5" target="_blank" rel="noreferrer">
-                    <img
+                    {/* <img
                         src={headerLogoSrc}
                         alt="TickUp Charts"
                         className="h-[3rem] w-auto max-w-[min(340px,58vw)] object-contain object-left md:h-[3.5rem]"
-                    />
+                    /> */}
                 </a>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     <div
