@@ -56,12 +56,18 @@ When you **do** change options intentionally, any deep change triggers a merge i
 | `defaultThemeVariant` | Initial shell theme when **`themeVariant`** is omitted (uncontrolled). Default **`light`**. |
 | `onThemeVariantChange` | Called when the user toggles light/dark from the settings toolbar; use with **`themeVariant`** for controlled mode or alone to observe toggles in uncontrolled mode. |
 
+### Shell vs chart theme
+
+- **`themeVariant` / `defaultThemeVariant` / `onThemeVariantChange`** drive **`GlobalStyle`** (page background), settings-modal chrome, and related shell UI — not the plot alone.
+- Plot colors still come from **`chartOptions`** (`base.theme`, `base.style`, …). Keep them **consistent** with the shell (e.g. light shell + `base.theme: 'light'`) so axes, grid, and watermarks stay readable.
+- For the **Prime** renderer (`base.engine: 'prime'`), use **`getTickUpPrimeThemePatch('light' | 'dark')`** or **`createTickUpPrimeEngine(theme)`** with **`ref.setEngine`** so the merged patch matches your host theme. **`TickUpPrime`** alone applies the **dark** Prime plot; see [Prime engine & Pro roadmap](./15-prime-engine-and-pro-roadmap.md).
+
 ## `ChartOptions` structure (high level)
 
 ```ts
 ChartOptions = {
   base: {
-    engine?,             // 'standard' | 'prime' — canvas profile (see doc 15)
+    engine?,             // 'standard' | 'prime' — canvas profile; prime + base.theme 'light' uses light Prime palette & toolbars (see doc 15)
     chartType,           // Candlestick | Line | Area | Bar
     theme,
     showOverlayLine,

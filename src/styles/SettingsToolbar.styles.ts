@@ -2,6 +2,7 @@ import styled, {css} from 'styled-components';
 
 interface PrimeGlassProps {
     $primeGlass?: boolean;
+    $primeGlassLight?: boolean;
 }
 
 export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-toolbar-container'})<PrimeGlassProps>`
@@ -19,8 +20,52 @@ export const SettingsToolbarContainer = styled.div.attrs({className: 'settings-t
     flex: 0 0 auto;
     min-width: 0;
 
-    ${({$primeGlass}) =>
+    ${({$primeGlass, $primeGlassLight}) =>
         $primeGlass &&
+        $primeGlassLight &&
+        css`
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(90, 72, 222, 0.22);
+            box-shadow:
+                0 10px 28px rgba(15, 23, 42, 0.08),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+
+            & .settings-toolbar-button {
+                border: 1px solid rgba(90, 72, 222, 0.28);
+                background-color: rgba(255, 255, 255, 0.55);
+
+                &::after {
+                    background: radial-gradient(
+                        120% 120% at 30% 0%,
+                        rgba(255, 255, 255, 0.95) 0%,
+                        rgba(62, 197, 255, 0.12) 52%,
+                        rgba(90, 72, 222, 0.08) 100%
+                    );
+                    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+                }
+
+                &:hover {
+                    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
+                    background-color: rgba(255, 255, 255, 0.78);
+                    background-image: linear-gradient(
+                        180deg,
+                        rgba(62, 197, 255, 0.4),
+                        rgba(90, 72, 222, 0.38)
+                    );
+                }
+
+                &:hover svg .icon-bg {
+                    fill: rgba(90, 72, 222, 0.35);
+                    stroke: rgba(2, 132, 199, 0.65);
+                }
+            }
+        `}
+
+    ${({$primeGlass, $primeGlassLight}) =>
+        $primeGlass &&
+        !$primeGlassLight &&
         css`
             background: rgba(15, 18, 25, 0.7);
             backdrop-filter: blur(12px);

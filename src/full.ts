@@ -18,7 +18,7 @@ export {
     contrastingFooterTextColor,
     captureChartRegionToPngDataUrl,
 } from './utils/captureChartRegion';
-export type {TimeRange} from './types/Graph';
+export type {TimeRange, VisibleViewRanges} from './types/Graph';
 export type {ChartDimensionsData} from './types/Graph';
 export type {OverlayWithCalc, OverlaySeries, OverlayOptions} from './types/overlay';
 export type {ShapeBaseArgs, Drawing} from './components/Drawing/types';
@@ -72,7 +72,12 @@ export type {
 } from './components/TickUpProducts';
 
 export type {TickUpChartEngine} from './engines/TickUpEngine';
-export {TickUpPrime, TickUpStandardEngine} from './engines/prime/TickUpPrime';
+export {
+    TickUpPrime,
+    TickUpStandardEngine,
+    createTickUpPrimeEngine,
+    getTickUpPrimeThemePatch,
+} from './engines/prime/TickUpPrime';
 export {TICKUP_PRIME_PRIMARY, TICKUP_PRIME_SECONDARY, TICKUP_PRIME_TEXT} from './engines/prime/TickUpPrime';
 
 export {TickUpMark} from './branding/TickUpMark';
@@ -109,3 +114,4 @@ export {
 
 export type {ChartOptions} from './types/chartOptions';
 export type {DeepRequired} from './types/types';
+export {ChartTheme} from './types/types';

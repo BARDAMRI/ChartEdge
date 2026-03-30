@@ -8,7 +8,7 @@ import React, {
     forwardRef,
     useImperativeHandle,
 } from 'react';
-import {ChartCanvas, ChartCanvasHandle} from './ChartCanvas';
+import { ChartCanvas, ChartCanvasHandle } from './ChartCanvas';
 import XAxis from "./Axes/XAxis";
 import YAxis from "./Axes/YAxis";
 import {
@@ -23,13 +23,13 @@ import {
     LeftBar,
     FloatingSettingsButton
 } from '../../styles/TickUpStage.styles';
-import {PriceRange, TimeRange} from "../../types/Graph";
-import {Interval} from "../../types/Interval";
-import {ChartOptions, ChartType, TimeDetailLevel} from "../../types/chartOptions";
-import {AxesPosition, DeepRequired, windowSpread} from "../../types/types";
-import {useElementSize} from '../../hooks/useElementSize';
-import {findPriceRange} from "./utils/helpers";
-import {IDrawingShape} from "../Drawing/IDrawingShape";
+import { PriceRange, TimeRange } from "../../types/Graph";
+import { Interval } from "../../types/Interval";
+import { ChartOptions, ChartType, TimeDetailLevel } from "../../types/chartOptions";
+import { AxesPosition, DeepRequired, windowSpread, ChartTheme } from "../../types/types";
+import { useElementSize } from '../../hooks/useElementSize';
+import { findPriceRange, getBarIntervalSeconds } from "./utils/helpers";
+import { IDrawingShape } from "../Drawing/IDrawingShape";
 import {
     applyDrawingPatch,
     drawingFromSpec,
@@ -39,17 +39,17 @@ import {
     type DrawingPatch,
     type DrawingSpec,
 } from "../Drawing/drawHelper";
-import {ShapePropertiesModal} from '../ShapePropertiesModal/ShapePropertiesModal';
+import { ShapePropertiesModal } from '../ShapePropertiesModal/ShapePropertiesModal';
 import {
     applyShapePropertiesForm,
     type ShapePropertiesFormState,
 } from '../ShapePropertiesModal/applyShapeProperties';
-import {Toolbar} from '../Toolbar/Toolbar';
-import {SettingsToolbar} from '../Toolbar/SettingsToolbar';
-import {IconGear} from "../Toolbar/icons";
-import {Mode, useMode} from '../../contexts/ModeContext';
-import type {LiveDataPlacement, LiveDataApplyResult} from "../../types/liveData";
-import type {ChartContextInfo} from "../../types/chartContext";
+import { Toolbar } from '../Toolbar/Toolbar';
+import { SettingsToolbar } from '../Toolbar/SettingsToolbar';
+import { IconGear } from "../Toolbar/icons";
+import { Mode, useMode } from '../../contexts/ModeContext';
+import type { LiveDataPlacement, LiveDataApplyResult } from "../../types/liveData";
+import type { ChartContextInfo } from "../../types/chartContext";
 import {
     filterDrawingInstances,
     queryDrawingsToSnapshots,
@@ -57,7 +57,7 @@ import {
     type DrawingQuery,
     type DrawingSnapshot,
 } from "../Drawing/drawingQuery";
-import {applyLiveDataMerge} from "../../utils/liveDataMerge";
+import { applyLiveDataMerge } from "../../utils/liveDataMerge";
 import {
     buildChartSnapshotFileName,
     captureChartRegionToPngDataUrl,
@@ -80,22 +80,8 @@ function intervalsToCsv(rows: Interval[]): string {
 }
 
 
-const median = (nums: number[]): number => {
-    if (nums.length === 0) return 0;
-    const mid = Math.floor(nums.length / 2);
-    return nums.length % 2 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
-};
-
 function getIntervalSeconds(arr: Interval[], fallbackSeconds = 60): number {
-    if (!arr || arr.length <= 1) return Math.max(1, fallbackSeconds);
-    const deltas: number[] = [];
-    for (let i = 1; i < arr.length; i++) {
-        const d = Math.max(0, arr[i].t - arr[i - 1].t);
-        deltas.push(d);
-    }
-    deltas.sort((a, b) => a - b);
-    const m = median(deltas);
-    return Math.max(1, Math.round(m || fallbackSeconds));
+    return getBarIntervalSeconds(arr, fallbackSeconds);
 }
 
 function findVisibleIndexRange(arr: Interval[], vrange: TimeRange, intervalSeconds: number): [number, number] {
@@ -155,7 +141,7 @@ export interface TickUpStageProps {
     onSymbolChange?: (symbol: string) => void;
     onSymbolSearch?: (symbol: string) => void | boolean | Promise<void | boolean>;
     /** Sync with app chart theme for fullscreen modals */
-    themeVariant?: 'light' | 'dark';
+    themeVariant?: ChartTheme;
     /**
      * Renders the TickUp mark inside the plot/histogram canvases (no extra layout height).
      * When false, no in-chart branding is drawn.
@@ -214,34 +200,34 @@ export interface TickUpStageHandle {
 }
 
 export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
-                                                                              intervalsArray,
-                                                                              numberOfYTicks,
-                                                                              timeDetailLevel,
-                                                                              timeFormat12h, selectedIndex,
-                                                                              setSelectedIndex,
-                                                                              chartOptions,
-                                                                              showTopBar = true,
-                                                                              showLeftBar = true,
-                                                                              handleChartTypeChange,
-                                                                              openSettingsMenu,
-                                                                              showSettingsBar,
-                                                                              onRefreshRequest,
-                                                                              onToggleTheme,
-                                                                              symbol,
-                                                                              defaultSymbol,
-                                                                              onSymbolChange,
-                                                                              onSymbolSearch,
-                                                                              themeVariant = 'dark',
-                                                                              showBrandWatermark = true,
-                                                                          }, ref) => {
-    const {setMode} = useMode();
+    intervalsArray,
+    numberOfYTicks,
+    timeDetailLevel,
+    timeFormat12h, selectedIndex,
+    setSelectedIndex,
+    chartOptions,
+    showTopBar = true,
+    showLeftBar = true,
+    handleChartTypeChange,
+    openSettingsMenu,
+    showSettingsBar,
+    onRefreshRequest,
+    onToggleTheme,
+    symbol,
+    defaultSymbol,
+    onSymbolChange,
+    onSymbolSearch,
+    themeVariant = ChartTheme.dark,
+    showBrandWatermark = true,
+}, ref) => {
+    const { setMode } = useMode();
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const {ref: canvasAreaRef, size: canvasSizes} = useElementSize<HTMLDivElement>();
+    const { ref: canvasAreaRef, size: canvasSizes } = useElementSize<HTMLDivElement>();
     const [intervals, setIntervals] = useState<Interval[]>(intervalsArray);
     const [visibleRange, setVisibleRange] = React.useState<TimeRange & {
         startIndex: number,
         endIndex: number
-    }>({start: 0, end: 0, startIndex: 0, endIndex: 0});
+    }>({ start: 0, end: 0, startIndex: 0, endIndex: 0 });
     const [visiblePriceRange, setVisiblePriceRange] = React.useState<PriceRange>({
         min: Math.min(...intervalsArray.map(inter => inter?.l || 0)),
         max: Math.max(...intervalsArray.map(inter => inter?.h || 0)),
@@ -319,8 +305,8 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
         const end = lastT + intervalSeconds;
         const spanBars = Math.min(100, intervals.length);
         const start = end - spanBars * intervalSeconds;
-        const [startIndex, endIndex] = findVisibleIndexRange(intervals, {start, end}, intervalSeconds);
-        setVisibleRange({start, end, startIndex, endIndex});
+        const [startIndex, endIndex] = findVisibleIndexRange(intervals, { start, end }, intervalSeconds);
+        setVisibleRange({ start, end, startIndex, endIndex });
     }, [intervals]);
 
     const handleExportDataCsv = useCallback(() => {
@@ -329,7 +315,7 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
             return;
         }
         try {
-            const blob = new Blob([intervalsToCsv(intervals)], {type: 'text/csv;charset=utf-8'});
+            const blob = new Blob([intervalsToCsv(intervals)], { type: 'text/csv;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -459,7 +445,7 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
         followLatestRef.current = false;
         const intervalSeconds = getIntervalSeconds(intervals, 60);
         const [startIndex, endIndex] = findVisibleIndexRange(intervals, newRangeTime, intervalSeconds);
-        setVisibleRange({...newRangeTime, startIndex, endIndex});
+        setVisibleRange({ ...newRangeTime, startIndex, endIndex });
     }
 
     useEffect(() => {
@@ -496,8 +482,8 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
             if (!(span > 0)) return prev;
             const newEnd = requiredEnd;
             const newStart = newEnd - span;
-            const [si, ei] = findVisibleIndexRange(intervals, {start: newStart, end: newEnd}, intervalSeconds);
-            return {start: newStart, end: newEnd, startIndex: si, endIndex: ei};
+            const [si, ei] = findVisibleIndexRange(intervals, { start: newStart, end: newEnd }, intervalSeconds);
+            return { start: newStart, end: newEnd, startIndex: si, endIndex: ei };
         });
     }, [intervals]);
 
@@ -615,8 +601,8 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
             const intervalSeconds = getIntervalSeconds(intervals, 60);
             const start = intervals[0].t - pad;
             const end = intervals[intervals.length - 1].t + pad;
-            const [startIndex, endIndex] = findVisibleIndexRange(intervals, {start, end}, intervalSeconds);
-            setVisibleRange({start, end, startIndex, endIndex});
+            const [startIndex, endIndex] = findVisibleIndexRange(intervals, { start, end }, intervalSeconds);
+            setVisibleRange({ start, end, startIndex, endIndex });
         },
         nudgeVisibleTimeRangeToLatest(options?: { trailingPaddingSec?: number }) {
             const leadPad = 60;
@@ -643,10 +629,10 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                 }
                 const [startIndex, endIndex] = findVisibleIndexRange(
                     intervals,
-                    {start: newStart, end: newEnd},
+                    { start: newStart, end: newEnd },
                     intervalSeconds
                 );
-                return {start: newStart, end: newEnd, startIndex, endIndex};
+                return { start: newStart, end: newEnd, startIndex, endIndex };
             });
         },
         getMainCanvasElement() {
@@ -658,7 +644,22 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                 drawings,
                 visibleRange,
                 visiblePriceRange,
-                canvasSize: canvasRef.current?.getCanvasSize() ?? {width: 0, height: 0, dpr: 1},
+                canvasSize: canvasRef.current?.getCanvasSize() ?? { width: 0, height: 0, dpr: 1 },
+            };
+        },
+        getVisibleRanges() {
+            return {
+                time: {
+                    start: visibleRange.start,
+                    end: visibleRange.end,
+                    startIndex: visibleRange.startIndex,
+                    endIndex: visibleRange.endIndex,
+                },
+                price: {
+                    min: visiblePriceRange.min,
+                    max: visiblePriceRange.max,
+                    range: visiblePriceRange.range,
+                },
             };
         },
         getDrawings(query?: DrawingQuery) {
@@ -673,14 +674,14 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
             return filterDrawingInstances(drawings, query);
         },
         getChartContext(): ChartContextInfo {
-            const cs = canvasSizes ?? {width: 0, height: 0};
-            const canvas = canvasRef.current?.getCanvasSize() ?? {width: 0, height: 0, dpr: 1};
+            const cs = canvasSizes ?? { width: 0, height: 0 };
+            const canvas = canvasRef.current?.getCanvasSize() ?? { width: 0, height: 0, dpr: 1 };
             return {
                 symbol: symbol ?? defaultSymbol ?? null,
                 chartType: chartOptions.base.chartType as ChartType,
                 themeVariant,
                 layout: {
-                    canvasContainer: {width: cs.width, height: cs.height},
+                    canvasContainer: { width: cs.width, height: cs.height },
                     yAxisWidthPx: windowSpread.INITIAL_Y_AXIS_WIDTH,
                     xAxisHeightPx: windowSpread.INITIAL_X_AXIS_HEIGHT,
                     yAxisPosition: chartOptions.axes.yAxisPosition as AxesPosition,
@@ -698,15 +699,15 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                     visiblePriceMax: visiblePriceRange.max,
                     visiblePriceRange: visiblePriceRange.range,
                 },
-                drawings: {count: drawings.length},
-                interaction: {selectedShapeIndex: selectedIndex},
+                drawings: { count: drawings.length },
+                interaction: { selectedShapeIndex: selectedIndex },
                 timeDetailLevel,
                 timeFormat12h,
                 numberOfYTicks,
             };
         },
         getCanvasSize() {
-            return canvasRef.current?.getCanvasSize() ?? {width: 0, height: 0, dpr: 1};
+            return canvasRef.current?.getCanvasSize() ?? { width: 0, height: 0, dpr: 1 };
         },
         clearCanvas() {
             canvasRef.current?.clearCanvas();
@@ -745,6 +746,7 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
     }, [symbol, defaultSymbol]);
     const showSymbolStrip = !showTopBar && compactSymbolLabel.length > 0;
     const primeGlass = chartOptions.base.engine === 'prime';
+    const primeGlassLight = primeGlass && chartOptions.base.theme === 'light';
 
     return (
         <TickUpStageContainer
@@ -774,6 +776,7 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                         onRefresh={handleToolbarRefresh}
                         onToggleTheme={onToggleTheme}
                         primeGlass={primeGlass}
+                        primeGlassLight={primeGlassLight}
                     />
                 </TopBar>
             )}
@@ -798,10 +801,11 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
 
             {showLeftBar && (
                 <LeftBar className="side-toolbar-cell">
-                    <Toolbar 
+                    <Toolbar
                         language={chartOptions.base.style.axes.language}
                         locale={chartOptions.base.style.axes.locale}
                         primeGlass={primeGlass}
+                        primeGlassLight={primeGlassLight}
                     />
                 </LeftBar>
             )}
@@ -816,7 +820,7 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                 <YAxisContainer
                     className={chartOptions.axes.yAxisPosition === AxesPosition.left ? "left-y-axis-container" : "right-y-axis-container"}
                     $yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
-                    style={{width: `${windowSpread.INITIAL_Y_AXIS_WIDTH}px`}}
+                    style={{ width: `${windowSpread.INITIAL_Y_AXIS_WIDTH}px` }}
                 >
                     <YAxis
                         yAxisPosition={chartOptions.axes.yAxisPosition as AxesPosition}
@@ -858,13 +862,7 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                                 canvasSizes={canvasSizes}
                                 windowSpread={windowSpread}
                                 showBrandWatermark={showBrandWatermark}
-                                brandTheme={
-                                    chartOptions.base.theme === 'dark'
-                                        ? 'dark'
-                                        : chartOptions.base.theme === 'grey'
-                                          ? 'grey'
-                                          : 'light'
-                                }
+                                brandTheme={chartOptions.base.theme}
                             />
                         )}
                     </CanvasContainer>

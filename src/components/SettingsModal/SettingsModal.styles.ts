@@ -1,7 +1,15 @@
 import styled, { keyframes, css } from 'styled-components';
 
+import { ChartTheme } from '../../types/types';
+
 /** Pass from app theme (e.g. TickUpHost `themeVariant`). */
-export type ModalThemeVariant = 'light' | 'dark';
+export type ModalThemeVariant = ChartTheme;
+
+/** Header icon buttons (back / close). */
+export enum SettingsModalIconRole {
+    back = 'back',
+    close = 'close',
+}
 
 const slideInLeft = keyframes`
     from { transform: translateX(30px); opacity: 0; }
@@ -15,8 +23,8 @@ const slideInRight = keyframes`
 
 
 
-export const ModalOverlay = styled.div<{ $variant?: ModalThemeVariant }>`
-    position: fixed;
+export const ModalOverlay = styled.div<{ $variant?: ModalThemeVariant; $contained?: boolean }>`
+    position: ${({ $contained }) => ($contained ? 'absolute' : 'fixed')};
     inset: 0;
     z-index: 9999;
     display: flex;
@@ -26,7 +34,7 @@ export const ModalOverlay = styled.div<{ $variant?: ModalThemeVariant }>`
     overflow: hidden;
     backdrop-filter: blur(8px);
     background: ${({ $variant }) =>
-        $variant === 'light' ? 'rgba(45, 55, 80, 0.28)' : 'rgba(10, 12, 22, 0.62)'};
+        $variant === ChartTheme.light ? 'rgba(45, 55, 80, 0.28)' : 'rgba(10, 12, 22, 0.62)'};
 `;
 
 /* ─── Panel: full-width, full-height card ────────────────────────────────── */
@@ -36,10 +44,10 @@ export const ModalContainer = styled.div<{ $variant?: ModalThemeVariant }>`
     display: flex;
     flex-direction: column;
     background: ${({ $variant }) =>
-        $variant === 'light'
+        $variant === ChartTheme.light
             ? 'linear-gradient(180deg, #ffffff 0%, #f0f4fc 100%)'
             : 'linear-gradient(180deg, rgba(18, 20, 36, 0.98) 0%, rgba(12, 14, 26, 0.99) 100%)'};
-    color: ${({ $variant }) => ($variant === 'light' ? '#1a2332' : '#e7ebff')};
+    color: ${({ $variant }) => ($variant === ChartTheme.light ? '#1a2332' : '#e7ebff')};
     border-radius: 0; /* Full-cover has no rounding */
     overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -53,16 +61,16 @@ export const ModalHeader = styled.div<{ $variant?: ModalThemeVariant }>`
     justify-content: space-between;
     padding: clamp(8px, 2.5vmin, 16px) clamp(12px, 3vmin, 20px);
     border-bottom: 1px solid
-        ${({ $variant }) => ($variant === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)')};
+        ${({ $variant }) => ($variant === ChartTheme.light ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)')};
     background: ${({ $variant }) =>
-        $variant === 'light' ? 'rgba(0, 0, 0, 0.03)' : 'rgba(255, 255, 255, 0.025)'};
+        $variant === ChartTheme.light ? 'rgba(0, 0, 0, 0.03)' : 'rgba(255, 255, 255, 0.025)'};
 
     h2 {
         margin: 0;
         font-size: clamp(12px, 2.5vmin, 17px);
         font-weight: 600;
         letter-spacing: 0.4px;
-        color: ${({ $variant }) => ($variant === 'light' ? '#111827' : '#fff')};
+        color: ${({ $variant }) => ($variant === ChartTheme.light ? '#111827' : '#fff')};
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -77,7 +85,7 @@ export const HeaderLeft = styled.div`
 `;
 
 /* ─── Icon buttons (close, back) ─────────────────────────────────────────── */
-export const IconButton = styled.button<{ $variant?: 'back' | 'close'; $theme?: ModalThemeVariant }>`
+export const IconButton = styled.button<{ $variant?: SettingsModalIconRole; $theme?: ModalThemeVariant }>`
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
@@ -88,17 +96,17 @@ export const IconButton = styled.button<{ $variant?: 'back' | 'close'; $theme?: 
     border: none;
     background: transparent;
     color: ${({ $variant, $theme }) => {
-        if ($variant === 'back') return '#3EC5FF';
-        return $theme === 'light' ? 'rgba(17, 24, 39, 0.55)' : 'rgba(255, 255, 255, 0.55)';
+        if ($variant === SettingsModalIconRole.back) return '#3EC5FF';
+        return $theme === ChartTheme.light ? 'rgba(17, 24, 39, 0.55)' : 'rgba(255, 255, 255, 0.55)';
     }};
     cursor: pointer;
     transition: background 140ms ease, color 140ms ease;
 
     &:hover {
-        background: ${({ $theme }) => ($theme === 'light' ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.1)')};
+        background: ${({ $theme }) => ($theme === ChartTheme.light ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.1)')};
         color: ${({ $variant, $theme }) => {
-            if ($variant === 'back') return '#60D3FF';
-            return $theme === 'light' ? '#111827' : '#fff';
+            if ($variant === SettingsModalIconRole.back) return '#60D3FF';
+            return $theme === ChartTheme.light ? '#111827' : '#fff';
         }};
     }
 
@@ -153,10 +161,10 @@ export const CategoryTile = styled.button<{ $variant?: ModalThemeVariant }>`
     border-radius: clamp(6px, 1.2vmin, 10px);
     border: 1px solid
         ${({ $variant }) =>
-            $variant === 'light' ? 'rgba(99, 102, 241, 0.25)' : 'rgba(120, 130, 255, 0.15)'};
+            $variant === ChartTheme.light ? 'rgba(99, 102, 241, 0.25)' : 'rgba(120, 130, 255, 0.15)'};
     background: ${({ $variant }) =>
-        $variant === 'light' ? 'rgba(99, 102, 241, 0.06)' : 'rgba(255, 255, 255, 0.04)'};
-    color: ${({ $variant }) => ($variant === 'light' ? '#1e293b' : '#e7ebff')};
+        $variant === ChartTheme.light ? 'rgba(99, 102, 241, 0.06)' : 'rgba(255, 255, 255, 0.04)'};
+    color: ${({ $variant }) => ($variant === ChartTheme.light ? '#1e293b' : '#e7ebff')};
     font-size: clamp(11px, 2vmin, 14px);
     font-weight: 500;
     cursor: pointer;
@@ -165,9 +173,9 @@ export const CategoryTile = styled.button<{ $variant?: ModalThemeVariant }>`
 
     &:hover {
         background: ${({ $variant }) =>
-            $variant === 'light' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(62, 197, 255, 0.08)'};
+            $variant === ChartTheme.light ? 'rgba(59, 130, 246, 0.12)' : 'rgba(62, 197, 255, 0.08)'};
         border-color: ${({ $variant }) =>
-            $variant === 'light' ? 'rgba(59, 130, 246, 0.45)' : 'rgba(62, 197, 255, 0.3)'};
+            $variant === ChartTheme.light ? 'rgba(59, 130, 246, 0.45)' : 'rgba(62, 197, 255, 0.3)'};
         transform: translateX(2px);
     }
 
@@ -182,7 +190,7 @@ export const CategoryTile = styled.button<{ $variant?: ModalThemeVariant }>`
     .tile-arrow {
         font-size: clamp(10px, 1.8vmin, 14px);
         color: ${({ $variant }) =>
-            $variant === 'light' ? 'rgba(15, 23, 42, 0.35)' : 'rgba(255,255,255,0.35)'};
+            $variant === ChartTheme.light ? 'rgba(15, 23, 42, 0.35)' : 'rgba(255,255,255,0.35)'};
         flex-shrink: 0;
     }
 `;
@@ -203,7 +211,7 @@ export const FormRow = styled.div<{ $variant?: ModalThemeVariant }>`
     padding: clamp(6px, 1.5vmin, 12px) clamp(8px, 1.8vmin, 14px);
     border-radius: clamp(6px, 1vmin, 8px);
     background: ${({ $variant }) =>
-        $variant === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.03)'};
+        $variant === ChartTheme.light ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.03)'};
     gap: 8px;
 `;
 
@@ -211,7 +219,7 @@ export const FormLabel = styled.label<{ $variant?: ModalThemeVariant }>`
     font-size: clamp(11px, 2vmin, 13px);
     font-weight: 500;
     color: ${({ $variant }) =>
-        $variant === 'light' ? 'rgba(15, 23, 42, 0.88)' : 'rgba(235, 240, 255, 0.82)'};
+        $variant === ChartTheme.light ? 'rgba(15, 23, 42, 0.88)' : 'rgba(235, 240, 255, 0.82)'};
     flex: 1;
     min-width: 0;
 `;
@@ -225,9 +233,9 @@ export const ModalFooter = styled.div<{ $variant?: ModalThemeVariant }>`
     padding: clamp(6px, 1.5vmin, 12px) clamp(10px, 2.5vmin, 20px);
     gap: clamp(6px, 1.2vmin, 10px);
     border-top: 1px solid
-        ${({ $variant }) => ($variant === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.07)')};
+        ${({ $variant }) => ($variant === ChartTheme.light ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.07)')};
     background: ${({ $variant }) =>
-        $variant === 'light' ? 'rgba(0, 0, 0, 0.03)' : 'rgba(0, 0, 0, 0.12)'};
+        $variant === ChartTheme.light ? 'rgba(0, 0, 0, 0.03)' : 'rgba(0, 0, 0, 0.12)'};
 `;
 
 export const ModalButton = styled.button<{ $primary?: boolean; $variant?: ModalThemeVariant }>`
@@ -255,7 +263,7 @@ export const ModalButton = styled.button<{ $primary?: boolean; $variant?: ModalT
         &:hover { box-shadow: 0 6px 16px rgba(90,72,222,0.6); transform: translateY(-1px); }
         &:active { transform: translateY(0); }
     `
-            : $variant === 'light'
+            : $variant === ChartTheme.light
               ? `
         background: rgba(0,0,0,0.05);
         border: 1px solid rgba(0,0,0,0.12);
@@ -308,11 +316,11 @@ export const NumberInput = styled.input<{ $variant?: ModalThemeVariant }>`
     width: clamp(44px, 7vmin, 60px);
     height: clamp(24px, 4vmin, 32px);
     background: ${({ $variant }) =>
-        $variant === 'light' ? '#ffffff' : 'rgba(0,0,0,0.25)'};
+        $variant === ChartTheme.light ? '#ffffff' : 'rgba(0,0,0,0.25)'};
     border: 1px solid
-        ${({ $variant }) => ($variant === 'light' ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)')};
+        ${({ $variant }) => ($variant === ChartTheme.light ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)')};
     border-radius: 6px;
-    color: ${({ $variant }) => ($variant === 'light' ? '#111827' : '#fff')};
+    color: ${({ $variant }) => ($variant === ChartTheme.light ? '#111827' : '#fff')};
     padding: 0 6px;
     font-size: clamp(11px, 1.9vmin, 14px);
     text-align: center;
@@ -347,18 +355,18 @@ export const SelectDropdown = styled.select<{ $variant?: ModalThemeVariant }>`
     flex-shrink: 0;
     height: clamp(24px, 4vmin, 32px);
     background: ${({ $variant }) =>
-        $variant === 'light' ? '#ffffff' : 'rgba(0,0,0,0.25)'};
+        $variant === ChartTheme.light ? '#ffffff' : 'rgba(0,0,0,0.25)'};
     border: 1px solid
-        ${({ $variant }) => ($variant === 'light' ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)')};
+        ${({ $variant }) => ($variant === ChartTheme.light ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)')};
     border-radius: 6px;
-    color: ${({ $variant }) => ($variant === 'light' ? '#111827' : '#fff')};
+    color: ${({ $variant }) => ($variant === ChartTheme.light ? '#111827' : '#fff')};
     padding: 0 clamp(4px, 0.8vmin, 8px);
     font-size: clamp(11px, 1.9vmin, 14px);
     outline: none;
     cursor: pointer;
     option {
-        background: ${({ $variant }) => ($variant === 'light' ? '#ffffff' : '#1a1c29')};
-        color: ${({ $variant }) => ($variant === 'light' ? '#111827' : '#fff')};
+        background: ${({ $variant }) => ($variant === ChartTheme.light ? '#ffffff' : '#1a1c29')};
+        color: ${({ $variant }) => ($variant === ChartTheme.light ? '#111827' : '#fff')};
     }
     &:focus {
         border-color: rgba(62, 197, 255, 0.8);
@@ -373,7 +381,7 @@ export const SectionTitle = styled.p<{ $variant?: ModalThemeVariant }>`
     letter-spacing: 0.8px;
     text-transform: uppercase;
     color: ${({ $variant }) =>
-        $variant === 'light' ? 'rgba(79, 70, 229, 0.85)' : 'rgba(120, 150, 255, 0.7)'};
+        $variant === ChartTheme.light ? 'rgba(79, 70, 229, 0.85)' : 'rgba(120, 150, 255, 0.7)'};
     padding-left: clamp(6px, 1.2vmin, 10px);
 `;
 
@@ -385,9 +393,9 @@ export const ModalTextInput = styled.input<{ $variant?: ModalThemeVariant }>`
     padding: 0 10px;
     border-radius: 6px;
     border: 1px solid
-        ${({ $variant }) => ($variant === 'light' ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)')};
-    background: ${({ $variant }) => ($variant === 'light' ? '#ffffff' : 'rgba(0,0,0,0.25)')};
-    color: ${({ $variant }) => ($variant === 'light' ? '#111827' : '#fff')};
+        ${({ $variant }) => ($variant === ChartTheme.light ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)')};
+    background: ${({ $variant }) => ($variant === ChartTheme.light ? '#ffffff' : 'rgba(0,0,0,0.25)')};
+    color: ${({ $variant }) => ($variant === ChartTheme.light ? '#111827' : '#fff')};
     font-size: clamp(11px, 1.9vmin, 14px);
     outline: none;
     box-sizing: border-box;
@@ -397,6 +405,6 @@ export const ModalTextInput = styled.input<{ $variant?: ModalThemeVariant }>`
     }
     &::placeholder {
         color: ${({ $variant }) =>
-            $variant === 'light' ? 'rgba(15,23,42,0.4)' : 'rgba(255,255,255,0.35)'};
+            $variant === ChartTheme.light ? 'rgba(15,23,42,0.4)' : 'rgba(255,255,255,0.35)'};
     }
 `;

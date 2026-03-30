@@ -1,5 +1,5 @@
 import type { Interval } from '../types/Interval';
-import type { LiveDataApplyResult, LiveDataPlacement } from '../types/liveData';
+import { LiveDataPlacement, type LiveDataApplyResult } from '../types/liveData';
 
 function clamp(n: number, lo: number, hi: number): number {
     return Math.min(hi, Math.max(lo, n));
@@ -153,7 +153,7 @@ export function applyLiveDataMerge(
     const errors: string[] = [...inc.errors];
     const warnings: string[] = [...inc.warnings];
 
-    if (placement === 'replace') {
+    if (placement === LiveDataPlacement.replace) {
         const sorted = dedupeByTimePreferLast(sortByT(inc.intervals));
         if (!incomingArr.length) {
             errors.push('replace: no incoming data');
@@ -176,7 +176,7 @@ export function applyLiveDataMerge(
         return { ok: false, intervals: base, errors, warnings };
     }
 
-    if (placement === 'mergeByTime') {
+    if (placement === LiveDataPlacement.mergeByTime) {
         const merged = dedupeByTimePreferLast(sortByT([...base, ...inc.intervals]));
         return {
             ok: inc.errors.length === 0 && ex.errors.length === 0,
@@ -186,7 +186,7 @@ export function applyLiveDataMerge(
         };
     }
 
-    if (placement === 'append') {
+    if (placement === LiveDataPlacement.append) {
         const { data, warnings: w } = mergeAppend(base, inc.intervals);
         warnings.push(...w);
         return {
@@ -197,7 +197,7 @@ export function applyLiveDataMerge(
         };
     }
 
-    if (placement === 'prepend') {
+    if (placement === LiveDataPlacement.prepend) {
         const { data, warnings: w } = mergePrepend(base, inc.intervals);
         warnings.push(...w);
         return {

@@ -14,6 +14,15 @@ export interface PriceRange {
     range: number;
 }
 
+/**
+ * Visible time window (unix **seconds**) with bar index span, plus the price band used for Y scaling.
+ * Use `ref.getVisibleRanges()` on the stage or product host (same numbers as `getViewInfo()` / `getChartContext().data`).
+ */
+export type VisibleViewRanges = {
+    time: TimeRange & { startIndex: number; endIndex: number };
+    price: PriceRange;
+};
+
 export interface DrawTicksOptions {
     tickHeight: number;
     tickColor: string;

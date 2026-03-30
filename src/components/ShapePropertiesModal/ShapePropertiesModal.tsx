@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {createPortal} from 'react-dom';
+import { ChartTheme } from '../../types/types';
 import {
     FormLabel,
     FormRow,
@@ -41,7 +41,7 @@ export const ShapePropertiesModal: React.FC<ShapePropertiesModalProps> = ({
     onClose,
     shape,
     onApply,
-    themeVariant = 'dark',
+    themeVariant = ChartTheme.dark,
 }) => {
     const tv = themeVariant;
     const [form, setForm] = useState<ShapePropertiesFormState | null>(null);
@@ -68,7 +68,7 @@ export const ShapePropertiesModal: React.FC<ShapePropertiesModalProps> = ({
     };
 
     const node = (
-        <ModalOverlay $variant={tv} onClick={onClose} className="shape-props-modal-overlay">
+        <ModalOverlay $variant={tv} $contained onClick={onClose} className="shape-props-modal-overlay">
             <ModalContainer
                 $variant={tv}
                 onClick={(e) => e.stopPropagation()}
@@ -216,5 +216,5 @@ export const ShapePropertiesModal: React.FC<ShapePropertiesModalProps> = ({
         </ModalOverlay>
     );
 
-    return createPortal(node, document.body);
+    return node;
 };

@@ -6,6 +6,7 @@ export const TickUpStageContainer = styled.div<{
     $showLeftBar: boolean;
     $showSymbolStrip: boolean;
 }>`
+    position: relative;
     display: grid;
     flex: 1 1 auto;
     height: 100%;

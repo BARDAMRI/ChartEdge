@@ -9,8 +9,11 @@ export enum AlignOptions {
     right = 'right',
 }
 
-export type ChartTheme = 'light' | 'dark' | 'grey' | string;
-
+export enum ChartTheme {
+    light = 'light',
+    dark = 'dark',
+    grey = 'grey',
+}
 
 export type AxesOptions = {
     yAxisPosition: AxesPosition;

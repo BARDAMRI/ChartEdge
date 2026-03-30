@@ -10,8 +10,10 @@ import {
     Mode,
     OverlayKind,
     TickUpHost,
-    TickUpPrime,
     TimeDetailLevel,
+    createTickUpPrimeEngine,
+    getTickUpPrimeThemePatch,
+    ChartTheme
 } from 'tickup/full';
 import {
     AreaChart,
@@ -30,7 +32,7 @@ import {
     Zap,
 } from 'lucide-react';
 import logoWordmarkLightSurfacesUrl from '@brand/logos/tickup-logo-full-light-transparent.png';
-import logoWordmarkDarkSurfacesUrl from '@brand/logos/tickup-logo-full-dark-transparent.png';
+import logoWordmarkGradientTransparentUrl from '@brand/logos/tickup-logo-full-brand-gradient-transparent.png';
 import iconForLightPlotUrl from '@brand/icons/tickup-icon-transparent.png';
 import iconForDarkPlotUrl from '@brand/icons/tickup-icon-dark-transparent.png';
 import {
@@ -41,9 +43,13 @@ import {
     type LiveTickCounter,
 } from '../data-generator';
 
+/** Documentation hub — table of contents for all guides. */
+const DOCS_HUB_URL =
+    'https://github.com/BARDAMRI/tickup-charts/blob/main/documentation/README.md';
+/** Browse the `documentation/` directory on GitHub. */
 const DOCS_TREE_URL = 'https://github.com/BARDAMRI/tickup-charts/tree/main/documentation';
 
-type ThemePreference = 'system' | 'light' | 'dark';
+type ThemePreference = 'system' | ChartTheme;
 
 function usePrefersColorSchemeDark(): boolean {
     const [dark, setDark] = useState(() =>
@@ -84,7 +90,7 @@ const demoStandardLightEngine: TickUpChartEngine = {
     getChartOptionsPatch: () => ({
         base: {
             engine: 'standard',
-            theme: 'light',
+            theme: ChartTheme.light,
             style: {
                 backgroundColor: '#ffffff',
                 showGrid: true,
@@ -138,7 +144,7 @@ const demoStandardDarkEngine: TickUpChartEngine = {
     getChartOptionsPatch: () => ({
         base: {
             engine: 'standard',
-            theme: 'dark',
+            theme: ChartTheme.dark,
             style: {
                 backgroundColor: '#0b0e14',
                 showGrid: true,
@@ -195,11 +201,11 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
     /** Follow OS vs forced appearance; resolved into `shellTheme` below. */
     const [themePreference, setThemePreference] = useState<ThemePreference>('system');
     const systemPrefersDark = usePrefersColorSchemeDark();
-    const shellTheme = useMemo<'light' | 'dark'>(() => {
+    const shellTheme = useMemo<ChartTheme>(() => {
         if (themePreference === 'system') {
-            return systemPrefersDark ? 'dark' : 'light';
+            return systemPrefersDark ? ChartTheme.dark : ChartTheme.light;
         }
-        return themePreference;
+        return themePreference as ChartTheme;
     }, [themePreference, systemPrefersDark]);
     const [timeframe, setTimeframe] = useState<TimeframeKey>('5m');
     const [chartKind, setChartKind] = useState<ChartKind>('candle');
@@ -281,37 +287,13 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
      * Keep props in lockstep with {@link useLayoutEffect} `setEngine` so grid/candles/theme never disagree
      * (avoids light grid on dark plots when `chartOptions` merges before the engine patch applies).
      */
+    const primeChartTheme = shellTheme === ChartTheme.dark ? ChartTheme.dark : ChartTheme.light;
+    const primeEngineForShell = useMemo(() => createTickUpPrimeEngine(primeChartTheme), [primeChartTheme]);
+
     const chartOptions = useMemo(() => {
-        const primePatch = TickUpPrime.getChartOptionsPatch();
         const patch = primeMode
-            ? {
-                ...primePatch,
-                base: {
-                    ...primePatch.base,
-                    // In light mode, override Prime's default dark colours so the
-                    // toolbar chrome, grid, and axis text all read correctly.
-                    theme: shellTheme,
-                    style: {
-                        ...primePatch.base?.style,
-                        ...(shellTheme === 'light' ? {
-                            backgroundColor: '#ffffff',
-                            grid: {
-                                lineColor: 'rgba(15, 23, 42, 0.09)',
-                                lineWidth: 1,
-                                gridSpacing: 56,
-                                lineDash: [],
-                                color: 'rgba(15, 23, 42, 0.09)',
-                            },
-                            axes: {
-                                ...primePatch.base?.style?.axes,
-                                textColor: '#1e293b',
-                                lineColor: 'rgba(15, 23, 42, 0.14)',
-                            },
-                        } : {}),
-                    },
-                },
-              }
-            : (shellTheme === 'dark' ? demoStandardDarkEngine : demoStandardLightEngine).getChartOptionsPatch();
+            ? getTickUpPrimeThemePatch(primeChartTheme)
+            : (shellTheme === ChartTheme.dark ? demoStandardDarkEngine : demoStandardLightEngine).getChartOptionsPatch();
         const b = patch.base ?? {};
         const st = b.style ?? {};
         const ax = st.axes ?? {};
@@ -341,7 +323,7 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                 numberOfYTicks: 8,
             },
         };
-    }, [overlayKinds, chartKind, shellTheme, primeMode]);
+    }, [overlayKinds, chartKind, shellTheme, primeMode, primeChartTheme]);
 
     useLayoutEffect(() => {
         let raf = 0;
@@ -351,7 +333,7 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                 return;
             }
             if (primeMode) {
-                r.setEngine(TickUpPrime);
+                r.setEngine(primeEngineForShell);
             } else if (shellTheme === 'dark') {
                 r.setEngine(demoStandardDarkEngine);
             } else {
@@ -359,7 +341,7 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
             }
         });
         return () => cancelAnimationFrame(raf);
-    }, [primeMode, hostKey, shellTheme]);
+    }, [primeMode, hostKey, shellTheme, primeEngineForShell]);
 
     /** Full fit when dataset / layout changes; gentle pan on live ticks only when the last bar leaves the window. */
     useEffect(() => {
@@ -427,12 +409,12 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
         { key: 'heikin', label: 'Heikin', Icon: Flame },
     ];
 
-    const isPageDark = shellTheme === 'dark';
+    const isPageDark = shellTheme === ChartTheme.dark;
     const panelGlass = isPageDark ? 'glass-panel' : 'glass-panel-light';
-    // On a dark header background we need the LIGHT-coloured wordmark, and vice-versa.
-    const headerLogoSrc = isPageDark ? logoWordmarkLightSurfacesUrl : logoWordmarkDarkSurfacesUrl;
+    /** Dark header: gradient wordmark reads clearly on #0B0E14; light header: dark glyphs (light-surfaces asset). */
+    const headerLogoSrc = isPageDark ? logoWordmarkGradientTransparentUrl : logoWordmarkLightSurfacesUrl;
     const chartDecorationIconSrc = isPageDark ? iconForDarkPlotUrl : iconForLightPlotUrl;
-    const themeAfterQuickClick: 'light' | 'dark' = shellTheme === 'light' ? 'dark' : 'light';
+    const themeAfterQuickClick: ChartTheme = shellTheme === ChartTheme.light ? ChartTheme.dark : ChartTheme.light;
 
     return (
         <div
@@ -441,16 +423,16 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
             style={{ colorScheme: isPageDark ? 'dark' : 'light' }}
         >
             <header
-                className={`sticky top-0 z-40 flex h-[72px] shrink-0 items-center justify-between gap-3 border-b px-4 backdrop-blur-md md:px-6 ${isPageDark
+                className={`sticky top-0 z-40 flex min-h-[5.5rem] shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5 backdrop-blur-md md:min-h-[5.75rem] md:px-6 md:py-3 ${isPageDark
                     ? 'border-white/10 bg-[#0B0E14]/92'
                     : 'border-slate-200/90 bg-[#f8fafc]/95'
                     }`}
             >
-                <a href={DOCS_TREE_URL} className="flex min-w-0 items-center gap-2" target="_blank" rel="noreferrer">
+                <a href={DOCS_HUB_URL} className="flex min-w-0 items-center gap-2 py-0.5" target="_blank" rel="noreferrer">
                     <img
                         src={headerLogoSrc}
                         alt="TickUp Charts"
-                        className="h-10 w-auto object-contain object-left md:h-12"
+                        className="h-[3rem] w-auto max-w-[min(340px,58vw)] object-contain object-left md:h-[3.5rem]"
                     />
                 </a>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
@@ -460,7 +442,7 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                         role="group"
                         aria-label="Page and chart theme"
                     >
-                        {(['system', 'light', 'dark'] as const).map((pref) => (
+                        {(['system', ChartTheme.light, ChartTheme.dark] as const).map((pref) => (
                             <button
                                 key={pref}
                                 type="button"
@@ -496,16 +478,18 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                         )}
                     </button>
                     <a
-                        href={DOCS_TREE_URL}
+                        href={DOCS_HUB_URL}
                         target="_blank"
                         rel="noreferrer"
-                        className={`hidden items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition-colors sm:inline-flex ${isPageDark
+                        className={`inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors sm:px-2.5 sm:text-xs ${isPageDark
                             ? 'border-white/10 text-slate-200 hover:border-[#3EC5FF]/45'
                             : 'border-slate-300 text-slate-700 hover:border-[#3EC5FF]/50'
                             }`}
+                        title="TickUp Charts documentation (quick start, API, Prime, live data)"
                     >
-                        <BookOpen className="h-3.5 w-3.5 text-[#3EC5FF]" />
-                        Docs
+                        <BookOpen className="h-3.5 w-3.5 shrink-0 text-[#3EC5FF]" aria-hidden />
+                        <span className="sm:hidden">Docs</span>
+                        <span className="hidden sm:inline">Documentation</span>
                     </a>
                     <button
                         type="button"
@@ -551,6 +535,29 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                     </code>{' '}
                     when you want Pulse, Flow, Command, Desk, drawing tools, settings, CSV/PNG export, and product-ready
                     chrome.
+                </p>
+                <p>
+                    <a
+                        href={DOCS_HUB_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`inline-flex items-center gap-1 font-medium underline decoration-[#3EC5FF]/50 underline-offset-2 transition-colors hover:decoration-[#3EC5FF] ${isPageDark ? 'text-[#7dd3fc]' : 'text-[#0369a1]'
+                            }`}
+                    >
+                        <BookOpen className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                        Full documentation
+                    </a>{' '}
+                    — quick start, props, imperative API, Prime engine, live data, and more. Browse the{' '}
+                    <a
+                        href={DOCS_TREE_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`font-medium underline decoration-slate-400/40 underline-offset-2 hover:decoration-[#3EC5FF] ${isPageDark ? 'text-slate-300' : 'text-slate-700'
+                            }`}
+                    >
+                        documentation folder
+                    </a>{' '}
+                    on GitHub for individual guides.
                 </p>
                 <p>
                     The renderer is{' '}

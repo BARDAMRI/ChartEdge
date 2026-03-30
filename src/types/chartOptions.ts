@@ -26,6 +26,39 @@ export enum ChartType {
     Bar = 'Bar',
 }
 
+export enum TickUpRenderEngine {
+    standard = 'standard',
+    prime = 'prime',
+}
+
+export enum NumberNotation {
+    standard = 'standard',
+    scientific = 'scientific',
+    /** Compact form (short scale) */
+    compact = 'compact',
+}
+
+export enum CurrencyDisplay {
+    symbol = 'symbol',
+    narrowSymbol = 'narrowSymbol',
+    code = 'code',
+    name = 'name',
+}
+
+export enum AxesUnitPlacement {
+    prefix = 'prefix',
+    suffix = 'suffix',
+}
+
+/** Axis / tooltip price display mode (basis points, P&L, yields, vol). */
+export enum PriceMetricKind {
+    basisPoints = 'basisPoints',
+    pnl = 'pnl',
+    /** Yield as a rate (value matches API string `yield`). */
+    Yield = 'yield',
+    volatility = 'volatility',
+}
+
 
 export interface ChartRenderContext {
     allIntervals: Interval[];
@@ -80,9 +113,6 @@ export interface GridStyleOptions {
     lineDash: number[];
 }
 
-export type NumberNotation = 'standard' | 'scientific' | 'compact';
-export type CurrencyDisplay = 'symbol' | 'narrowSymbol' | 'code' | 'name';
-
 export interface AxesStyleOptions {
     axisPosition: AxesPosition;
     textColor: string;
@@ -105,7 +135,7 @@ export interface AxesStyleOptions {
     tickSize?: number;
     autoPrecision?: boolean;
     unit?: string;
-    unitPlacement?: 'prefix' | 'suffix';
+    unitPlacement?: AxesUnitPlacement;
     timezone?: string; // e.g., 'America/New_York', 'Asia/Jerusalem'
     exchange?: string; // e.g., 'NYSE', 'TASE'
     tradingSessions?: TradingSession[];
@@ -127,8 +157,6 @@ export type StyleOptions = {
     showGrid: boolean;
     backgroundColor: string;
 }
-
-export type TickUpRenderEngine = 'standard' | 'prime';
 
 interface BaseChartOptions {
     chartType?: ChartType;

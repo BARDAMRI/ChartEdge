@@ -9,4 +9,10 @@
  *
  * Product components omit `showSidebar` / `showTopBar` / `showSettingsBar` from their props; use `TickUpHost` without `productId` for a custom layout.
  */
-export type TickUpProductId = 'pulse' | 'flow' | 'command' | 'desk' | 'prime';
+export enum TickUpProductId {
+    pulse = 'pulse',
+    flow = 'flow',
+    command = 'command',
+    desk = 'desk',
+    prime = 'prime',
+}

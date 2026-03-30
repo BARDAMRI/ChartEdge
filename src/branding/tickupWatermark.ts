@@ -4,7 +4,17 @@ import {
     TICKUP_WATERMARK_URL_LIGHT,
 } from './tickupBrandAssets';
 
-export type TickUpWatermarkTheme = 'light' | 'dark' | 'grey';
+import { ChartTheme } from '../types/types';
+
+export type TickUpWatermarkTheme = ChartTheme;
+
+export enum TickUpWatermarkPlacement {
+    center = 'center',
+    bottomRight = 'bottom-right',
+    bottomLeft = 'bottom-left',
+    topRight = 'top-right',
+    topLeft = 'top-left',
+}
 
 export type TickUpWatermarkImages = {
     light: HTMLImageElement;
@@ -58,7 +68,7 @@ export type DrawWatermarkOptions = {
     maxWidthFrac?: number;
     opacity?: number;
     padding?: number;
-    placement?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center';
+    placement?: TickUpWatermarkPlacement;
 };
 
 /**
@@ -75,8 +85,8 @@ export function drawTickUpWatermark(
     if (!images || cssWidth < 40 || cssHeight < 24) {
         return;
     }
-    const img =
-        theme === 'dark' ? images.dark : theme === 'grey' ? images.grey : images.light;
+    const img = 
+        theme === ChartTheme.dark ? images.dark : theme === ChartTheme.grey ? images.grey : images.light;
     if (!img.complete || img.naturalWidth === 0) {
         return;
     }
@@ -96,16 +106,20 @@ export function drawTickUpWatermark(
     const w = maxW;
     const h = img.naturalHeight * scale;
 
-    const placement = options?.placement ?? 'center';
+    const placement = options?.placement ?? TickUpWatermarkPlacement.center;
     let x: number;
     let y: number;
-    if (placement === 'center') {
+    if (placement === TickUpWatermarkPlacement.center) {
         x = (cssWidth - w) / 2;
         y = (cssHeight - h) / 2;
     } else {
-        const isLeft = placement === 'bottom-left' || placement === 'top-left';
+        const isLeft =
+            placement === TickUpWatermarkPlacement.bottomLeft ||
+            placement === TickUpWatermarkPlacement.topLeft;
         x = isLeft ? pad : Math.max(pad, cssWidth - w - pad);
-        const isTop = placement === 'top-left' || placement === 'top-right';
+        const isTop =
+            placement === TickUpWatermarkPlacement.topLeft ||
+            placement === TickUpWatermarkPlacement.topRight;
         y = isTop ? pad : Math.max(pad, cssHeight - h - pad);
     }
 

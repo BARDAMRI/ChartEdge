@@ -4,7 +4,6 @@ import {DeepRequired} from "../../../types/types";
 import {OverlayWithCalc, OverlayKind} from "../../../types/overlay";
 import {interpolatedCloseAtTime, lerp, priceToY, timeToX, xFromCenter, xFromStart} from "./GraphHelpers";
 import {drawOverlay, overlay as buildOverlay} from "./drawOverlay";
-import {isPrimeEngine} from "../../../engines/prime/PrimeRenderer";
 
 // =================================================================================
 // == CHART DRAWING FUNCTIONS (Corrected)
@@ -102,14 +101,8 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         const isBullish = candle.c >= candle.o;
         const color = isBullish ? (options?.base?.style?.candles?.bullColor || 'green') : (options?.base?.style?.candles?.bearColor || 'red');
         const crisp = (v: number) => Math.floor(v) + 0.5;
-        const prime = isPrimeEngine(options);
 
         const candleMidX = xLeft + candleWidth / 2;
-        if (prime) {
-            ctx.save();
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = color;
-        }
         ctx.beginPath();
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
@@ -122,7 +115,6 @@ export function drawCandlestickChart(ctx: CanvasRenderingContext2D, context: Cha
         ctx.fillStyle = color;
         const bodyLeft = Math.floor(xLeft + (candleWidth - bodyWidth) / 2);
         ctx.fillRect(bodyLeft, Math.floor(bodyTop), Math.ceil(bodyWidth), Math.ceil(bodyHeight) || 1);
-        if (prime) ctx.restore();
     }
 
     if (options.base.showOverlayLine) {
@@ -333,12 +325,6 @@ export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRender
         ctx.strokeStyle = strokeCol;
         ctx.globalAlpha = baseAlpha;
         const tickLen = Math.max(3, Math.min(candleWidth * 0.5, 16));
-        const prime = isPrimeEngine(options);
-        if (prime) {
-            ctx.save();
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = strokeCol;
-        }
 
         ctx.beginPath();
         ctx.moveTo(crisp(xMid), crisp(yHigh));
@@ -348,7 +334,6 @@ export function drawBarChart(ctx: CanvasRenderingContext2D, context: ChartRender
         ctx.moveTo(crisp(xMid), crisp(yClose));
         ctx.lineTo(crisp(xMid + tickLen), crisp(yClose));
         ctx.stroke();
-        if (prime) ctx.restore();
     }
     ctx.restore();
 

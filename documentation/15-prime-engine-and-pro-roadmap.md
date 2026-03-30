@@ -2,12 +2,31 @@
 
 ## Prime vs standard
 
-- **`chartOptions.base.engine`** — `'standard'` (default) or **`'prime'`**. Prime applies a neon-oriented dark palette, subtle candle glow, gradient crosshair with a target ring, bottom-right watermark at ~15% opacity, and glass-style toolbars (`rgba(15, 18, 25, 0.7)` + `backdrop-filter: blur(12px)`).
-- **`TickUpPrime` / `TickUpStandardEngine`** — exported from **`tickup`** and **`tickup/full`**. Merge via `chartOptions` or at runtime with **`ref.setEngine(TickUpPrime)`** on **`TickUpHostHandle`** (deep-merges the engine patch into live options).
+- **`chartOptions.base.engine`** — `'standard'` (default) or **`'prime'`**. Prime enables neon-oriented styling, gradient crosshair / target ring (standard canvas path), and **glass** drawing and settings toolbars when the engine is prime.
+- **Dark Prime (default patch)** — **`TickUpPrime`**: dark plot (`base.theme: 'dark'`), cyan grid tint, light axis labels, **`rgba(15, 18, 25, 0.7)`** toolbars + `backdrop-filter`, in-plot watermark **bottom-right** on the main canvas (opacity scales with theme; higher on dark backgrounds). **Standard** engine uses **top-right** for the same mark — implementation detail in the renderer.
+- **Light Prime** — **`getTickUpPrimeThemePatch('light')`** or **`createTickUpPrimeEngine('light')`**: `base.theme: 'light'`, white plot background, cyan-tinted grid, dark axis text, same bull/bear accent vocabulary; toolbars use **light frosted glass** (white/translucent surfaces, violet borders) instead of the dark glass sheet.
+
+Exports ( **`tickup`** and **`tickup/full`** ):
+
+| Symbol | Role |
+|--------|------|
+| **`TickUpPrime`** | `TickUpChartEngine` — **`getChartOptionsPatch()`** returns the **dark** Prime profile. |
+| **`getTickUpPrimeThemePatch(theme)`** | `'light' \| 'dark'` → **`DeepPartial<ChartOptions>`** for merging into **`chartOptions`**. |
+| **`createTickUpPrimeEngine(theme)`** | `TickUpChartEngine` factory for **`ref.setEngine(...)`** with the same light/dark patch. |
+| **`TickUpStandardEngine`** | Resets toward library default **standard** light styling. |
+
+**Important:** If you call **`ref.setEngine(TickUpPrime)`** while the host is **light**, the dark Prime patch will overwrite light chart styling until the next **`chartOptions`** merge. For theme switching, use **`createTickUpPrimeEngine('light' | 'dark')`** and/or merge **`getTickUpPrimeThemePatch(theme)`** into **`chartOptions`** so props and **`setEngine`** agree.
+
+## Toolbar chrome with Prime
+
+- When **`base.engine === 'prime'`** and **`base.theme === 'dark'`**, drawing and settings toolbars use **dark** glass (existing behavior).
+- When **`base.engine === 'prime'`** and **`base.theme === 'light'`**, they use **light** glass so controls remain readable on light shells.
+
+Implementation note: canvas watermarks use **`chartOptions.base.theme`** (via stage **`brandTheme`**) to pick **light** vs **dark** transparent mark assets; opacity is slightly higher on dark plots so the mark stays visible.
 
 ## Prime **tier** (`TickUpPrimeTier`)
 
-**`TickUpPrimeTier`** (`productId: 'prime'`) is the same chrome as **Command**. Without **`licenseKey`**, an evaluation strip is shown. This is separate from the **Prime engine** profile above—you can use Command + `setEngine(TickUpPrime)` or Prime tier + standard engine if you choose.
+**`TickUpPrimeTier`** (`productId: 'prime'`) is the same chrome as **Command**. Without **`licenseKey`**, an evaluation strip is shown. This is separate from the **Prime engine** profile — you may combine **Command + `setEngine(TickUpPrime)`**, **Prime tier + standard engine**, or **Prime tier + `createTickUpPrimeEngine('light')`**, etc.
 
 ## Pro features (planned / partial)
 

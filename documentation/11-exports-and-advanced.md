@@ -7,12 +7,12 @@ Published API is split across **`tickup`** (default) and **`tickup/full`**. Symb
 | Export | Role |
 |--------|------|
 | `TickUpStage` | Chart + axes + toolbars (when enabled via props) + optional **compact symbol strip** when `showTopBar` is false and `symbol` / `defaultSymbol` is set + imperative handle. |
-| `TickUpMark` | DOM wordmark. |
-| `TickUpAttribution` | DOM attribution strip. |
+| `TickUpMark` | DOM wordmark; **`TickUpThemeVariant`**: `light` \| `dark` \| `grey` — uses bundled **transparent** PNGs per variant. |
+| `TickUpAttribution` | DOM attribution strip (wordmark + legal line); theme follows props. |
 | `GlobalStyle` | Styled global CSS fragment (optional for hosts). |
 | `ModeProvider`, `useMode` | Drawing mode context. |
 | `ChartOptions`, `DeepRequired` | Configuration typing helpers. |
-| Plus | Intervals, live-data utils, overlays builders, drawing specs/factories/query helpers, snapshot helpers, graph math (`timeToX`, …), `ShapeType` & shape arg types, `IDrawingShape`, enums (`ChartType`, `AxesPosition`, overlay keys), branding types. |
+| Plus | Intervals, live-data utils, overlays builders, drawing specs/factories/query helpers, snapshot helpers, graph math (`timeToX`, …), `ShapeType` & shape arg types, `IDrawingShape`, enums (`ChartType`, `AxesPosition`, overlay keys), branding types, **`TickUpPrime`** / **`TickUpStandardEngine`** / **`createTickUpPrimeEngine`** / **`getTickUpPrimeThemePatch`** / **`TickUpChartEngine`**, Prime palette constants. |
 
 ## `tickup/full` (product shells + extended)
 
@@ -29,13 +29,16 @@ Everything in **`tickup`**, **plus**:
 | `TickUpCommand` | Full trader UI. |
 | `TickUpDesk` | Same as Command; watermark on. |
 | `TickUpPrimeTier` | Licensed/eval shell: same chrome as Command; `productId: 'prime'`. |
-| `TickUpPrime`, `TickUpStandardEngine` | Engine profiles for `setEngine` / `chartOptions.base.engine`. |
+| `TickUpPrime`, `TickUpStandardEngine` | Engine profiles for **`setEngine`** / **`chartOptions.base.engine`**. **`TickUpPrime`** = dark Prime plot. |
+| `createTickUpPrimeEngine`, `getTickUpPrimeThemePatch` | **`'light' \| 'dark'`** Prime patches so the plot (and Prime **light glass** toolbars when `base.theme === 'light'`) match the host. |
+| `TICKUP_PRIME_PRIMARY`, `TICKUP_PRIME_SECONDARY`, `TICKUP_PRIME_TEXT` | Default Prime palette strings (hex / CSS color). |
+| `TickUpChartEngine` | Type for custom engines: `{ id, getChartOptionsPatch(): DeepPartial<ChartOptions> }`. |
 | `ChartStage` | **Deprecated** — use `TickUpStage`. |
 | `ShapePropertiesModal` | Shape property editor UI. |
 
 ### Component prop / handle types (full)
 
-`TickUpHostProps`, `TickUpHostHandle`, `TickUpHostProps`, `TickUpHostHandle`, `TickUpPulseProps`, `TickUpFlowProps`, `TickUpCommandProps`, `TickUpDeskProps`, `TickUpStageProps`, `TickUpStageHandle`, `ChartStageProps`, `ChartStageHandle` (deprecated), `TickUpAttributionProps`, `ShapePropertiesFormState`, `ModalThemeVariant`, `TickUpThemeVariant`, `TickUpProductId`.
+`TickUpHostProps`, `TickUpHostHandle`, `TickUpPulseProps`, `TickUpFlowProps`, `TickUpCommandProps`, `TickUpDeskProps`, `TickUpPrimeTierProps`, `TickUpStageProps`, `TickUpStageHandle`, `ChartStageProps`, `ChartStageHandle` (deprecated), `TickUpAttributionProps`, `ShapePropertiesFormState`, `ModalThemeVariant`, `TickUpThemeVariant`, `TickUpProductId`.
 
 ## Context
 
@@ -44,17 +47,17 @@ Everything in **`tickup`**, **plus**:
 | `ModeProvider` | Wraps tree so drawing toolbar modes work. |
 | `useMode` | Access `{ mode, setMode }` inside provider. |
 
-The **`Mode` enum** is used internally by the toolbar; it is **not** re-exported from the package. Hosts driving drawings programmatically should use **`DrawingSpec`** + ref APIs, not `Mode` values.
+The **`Mode` enum** is exported from **`tickup`** and **`tickup/full`** (used by the drawing toolbar and **`setInteractionMode`**). Hosts can still prefer **`DrawingSpec`** + ref APIs for programmatic shapes.
 
 ## Core data types
 
 | Export | Role |
 |--------|------|
 | `Interval` | OHLCV bar. |
-| `TimeRange`, `ChartDimensionsData` | Time window / layout metrics. |
+| `TimeRange`, `VisibleViewRanges`, `ChartDimensionsData` | Time window; **visible time + price snapshot** (`getVisibleRanges()`); layout metrics. |
 | `LiveDataPlacement`, `LiveDataApplyResult` | Live merge contract. |
 | `ChartContextInfo` | `getChartContext()` snapshot. |
-| `TickUpProductId` | Product id union — **`tickup/full` only**. Public docs use `pulse` \| `flow` \| `command` \| `desk` only. |
+| `TickUpProductId` | Product id union — **`tickup/full` only**: `pulse` \| `flow` \| `command` \| `desk` \| `prime`. |
 
 ## Chart configuration types
 
@@ -132,7 +135,7 @@ Wrap with **`ModeProvider`**. Pass **all** required `TickUpStageProps` from Type
 | Styles | `chartOptions` (deep merge on real changes) or Settings modal |
 | Drawings | Toolbar, or `addShape` / `updateShape` / `patchShape` / `setDrawingsFromSpecs` |
 | View | Pan/zoom, `fitVisibleRangeToData`, `redrawCanvas`, `reloadCanvas` |
-| Theme | Shell toggle + `chartOptions.base.theme` |
+| Theme | **`themeVariant` / `defaultThemeVariant` / `onThemeVariantChange`** on **`TickUpHost`** + `chartOptions.base.theme` (and Prime helpers above). |
 
 ## Deprecated
 

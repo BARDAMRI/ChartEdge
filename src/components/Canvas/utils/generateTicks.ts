@@ -1,15 +1,18 @@
 import {
     addDays,
     addHours,
+    addMinutes,
     addMonths,
     addYears,
     differenceInDays,
     differenceInHours,
+    differenceInMinutes,
     differenceInMonths,
     differenceInYears,
     format,
     startOfDay,
     startOfHour,
+    startOfMinute,
     startOfMonth,
     startOfYear,
 } from 'date-fns';
@@ -43,13 +46,26 @@ function selectTimeDetailLevel(
     const durationHours = differenceInHours(endDate, startDate);
 
     const levels = [
+        /* Same-calendar-hour zoom: hour grid skips the window; use minutes first. */
         {
-            condition: timeDetailLevel === TimeDetailLevel.High || (timeDetailLevel === TimeDetailLevel.Auto && durationHours <= 48),
+            condition: durationHours < 1,
+            intervalFn: addMinutes,
+            startOfFn: startOfMinute,
+            diffFn: differenceInMinutes,
+            formatStr: timeFormat12h ? 'h:mm a' : 'HH:mm',
+            /* Like hours' stepFactor:4, group minutes so density check allows ~1h zoom windows. */
+            stepFactor: 5,
+        },
+        {
+            condition:
+                durationHours >= 1 &&
+                (timeDetailLevel === TimeDetailLevel.High ||
+                    (timeDetailLevel === TimeDetailLevel.Auto && durationHours <= 48)),
             intervalFn: addHours,
             startOfFn: startOfHour,
             diffFn: differenceInHours,
             formatStr: timeFormat12h ? 'h:mm a' : 'HH:mm',
-            stepFactor: 4
+            stepFactor: 4,
         },
         {
             condition: timeDetailLevel === TimeDetailLevel.Medium || (timeDetailLevel === TimeDetailLevel.Auto && durationHours <= 24 * 7),

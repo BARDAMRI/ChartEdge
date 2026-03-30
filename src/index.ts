@@ -16,7 +16,7 @@ export {
     contrastingFooterTextColor,
     captureChartRegionToPngDataUrl,
 } from './utils/captureChartRegion';
-export type {TimeRange} from './types/Graph';
+export type {TimeRange, VisibleViewRanges} from './types/Graph';
 export type {ChartDimensionsData} from './types/Graph';
 export type {OverlayWithCalc, OverlaySeries, OverlayOptions} from './types/overlay';
 export type {ShapeBaseArgs, Drawing} from './components/Drawing/types';
@@ -45,7 +45,7 @@ export type {
     PolylineShapeArgs,
     CustomSymbolShapeArgs,
 } from './types/Drawings';
-export {AxesPosition} from './types/types';
+export {AxesPosition, ChartTheme} from './types/types';
 export {TimeDetailLevel, ChartType} from './types/chartOptions';
 export type {ChartOptions} from './types/chartOptions';
 export type {DeepRequired} from './types/types';
@@ -60,7 +60,12 @@ export {GlobalStyle} from './styles/App.styles';
 export {generateDrawingShapeId} from './components/Drawing/IDrawingShape';
 
 export type {TickUpChartEngine} from './engines/TickUpEngine';
-export {TickUpPrime, TickUpStandardEngine} from './engines/prime/TickUpPrime';
+export {
+    TickUpPrime,
+    TickUpStandardEngine,
+    createTickUpPrimeEngine,
+    getTickUpPrimeThemePatch,
+} from './engines/prime/TickUpPrime';
 export {TICKUP_PRIME_PRIMARY, TICKUP_PRIME_SECONDARY, TICKUP_PRIME_TEXT} from './engines/prime/TickUpPrime';
 export {
     timeToX,

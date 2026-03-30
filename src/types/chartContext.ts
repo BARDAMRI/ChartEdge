@@ -1,16 +1,17 @@
 import type {ChartType, TimeDetailLevel} from './chartOptions';
-import type {AxesPosition} from './types';
+import type {AxesPosition, ChartTheme} from './types';
 
 /**
  * Serializable snapshot of chart layout, data window, and interaction state for host-side analysis
  * (sizing, visible ranges, symbol, selection). Obtain via {@link TickUpHostHandle.getChartContext}
- * or {@link TickUpStageHandle.getChartContext}.
+ * or {@link TickUpStageHandle.getChartContext}. The **`data`** fields for visible time/price match
+ * {@link TickUpHostHandle.getVisibleRanges} / {@link TickUpStageHandle.getVisibleRanges} (`time` ↔ `visibleTime*`, `price` ↔ `visiblePrice*`).
  */
 export type ChartContextInfo = {
     /** Toolbar symbol if controlled/initial value is known */
     symbol: string | null;
     chartType: ChartType;
-    themeVariant: 'light' | 'dark';
+    themeVariant: ChartTheme;
     layout: {
         /** Measured CSS size of the canvas container (the main plot host element). */
         canvasContainer: { width: number; height: number };

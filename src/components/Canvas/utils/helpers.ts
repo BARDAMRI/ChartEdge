@@ -1,6 +1,24 @@
 import {Interval} from "../../../types/Interval";
 import {PriceRange} from "../../../types/Graph";
 
+const medianDeltas = (nums: number[]): number => {
+    if (nums.length === 0) return 0;
+    const mid = Math.floor(nums.length / 2);
+    return nums.length % 2 ? nums[mid]! : (nums[mid - 1]! + nums[mid]!) / 2;
+};
+
+/** Typical bar spacing in seconds (median of successive `t` deltas), aligned with {@link TickUpStage} / pan-zoom. */
+export function getBarIntervalSeconds(arr: Interval[], fallbackSeconds = 60): number {
+    if (!arr || arr.length <= 1) return Math.max(1, fallbackSeconds);
+    const deltas: number[] = [];
+    for (let i = 1; i < arr.length; i++) {
+        deltas.push(Math.max(0, arr[i]!.t - arr[i - 1]!.t));
+    }
+    deltas.sort((a, b) => a - b);
+    const m = medianDeltas(deltas);
+    return Math.max(1, Math.round(m || fallbackSeconds));
+}
+
 export function findPriceRange(allCandles: Interval[], startIndex: number, endIndex: number): PriceRange {
     let maxPrice = -Infinity;
     let minPrice = Infinity;

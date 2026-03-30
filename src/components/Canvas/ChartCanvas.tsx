@@ -39,7 +39,7 @@ import {usePanAndZoom} from '../../hooks/usePanAndZoom';
 import {Interval} from "../../types/Interval";
 import {CanvasPoint, DrawingPoint, DrawingStyleOptions} from "../../types/Drawings";
 import {ChartDimensionsData, PriceRange, TimeRange} from "../../types/Graph";
-import {AxesPosition, CanvasSizes, DeepRequired, WindowSpreadOptions} from "../../types/types";
+import {AxesPosition, CanvasSizes, ChartTheme, DeepRequired, WindowSpreadOptions} from "../../types/types";
 import {xToTime, yToPrice} from "./utils/GraphHelpers";
 import {Drawing} from "../Drawing/types";
 import {IDrawingShape} from "../Drawing/IDrawingShape";
@@ -79,10 +79,10 @@ function minPointsToCommit(mode: Mode): number {
 
 /** Single prominent watermark centered on the main chart area. */
 function tickupWatermarkDrawOpts(
-    brandTheme: 'light' | 'dark' | 'grey',
+    brandTheme: ChartTheme,
     prime: boolean,
 ): DrawWatermarkOptions {
-    const dark = brandTheme === 'dark';
+    const dark = brandTheme === ChartTheme.dark || brandTheme === ChartTheme.grey;
     // maxWidthFrac is intentionally omitted here so the global default in
     // tickupWatermark.ts (currently 0.70) applies.  Edit it there to resize.
     if (prime) {
@@ -114,7 +114,7 @@ interface ChartCanvasProps {
     /** Draw bundled TickUp marks inside plot / histogram (no DOM footer). */
     showBrandWatermark?: boolean;
     /** Matches chart `base.theme` for choosing light / dark / grey mark artwork. */
-    brandTheme?: 'light' | 'dark' | 'grey';
+    brandTheme?: ChartTheme;
 }
 
 export interface ChartCanvasHandle {
@@ -144,7 +144,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
         parentContainerRef,
         windowSpread,
         showBrandWatermark = true,
-        brandTheme = 'light',
+        brandTheme = ChartTheme.light,
     },
     ref
 ) => {
@@ -510,7 +510,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                     const font = axes.font || '12px system-ui, sans-serif';
                     hoverCtx.font = font;
                     const isDarkPanel =
-                        chartOptions.base.theme === 'dark' || chartOptions.base.theme === 'grey';
+                        chartOptions.base.theme === ChartTheme.dark || chartOptions.base.theme === ChartTheme.grey;
                     const bgFill = isDarkPanel ? 'rgba(28, 30, 38, 0.9)' : 'rgba(255, 255, 255, 0.92)';
                     const fg = axes.textColor || (isDarkPanel ? '#e8eaef' : '#1f2328');
                     const pad = 4;
@@ -997,7 +997,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                     className={'intervals-data-tooltip'}
                     $isPositive={hoveredCandle.c > hoveredCandle.o}
                     $isRTL={getLocaleDefaults(chartOptions.base.style.axes.locale).direction === 'rtl'}
-                    $variant={chartOptions.base.theme === 'dark' || chartOptions.base.theme === 'grey' ? 'dark' : 'light'}
+                    $variant={chartOptions.base.theme === ChartTheme.dark || chartOptions.base.theme === ChartTheme.grey ? ChartTheme.dark : ChartTheme.light}
                     $compact={canvasSizes.width < 440 || canvasSizes.height < 280}
                     title={(() => {
                         const axes = chartOptions.base.style.axes;
@@ -1022,7 +1022,7 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                         const axes = chartOptions.base.style.axes;
                         const lang = axes.language || 'en';
                         const chartBaseTheme = chartOptions.base.theme;
-                        const isDarkPanel = chartBaseTheme === 'dark' || chartBaseTheme === 'grey';
+                        const isDarkPanel = chartBaseTheme === ChartTheme.dark || chartBaseTheme === ChartTheme.grey;
                         const change = hoveredCandle.c - hoveredCandle.o;
                         const changePercent = change / hoveredCandle.o;
                         const changeColor = isDarkPanel

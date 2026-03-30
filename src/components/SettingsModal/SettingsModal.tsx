@@ -22,7 +22,7 @@ import {
     type ModalThemeVariant,
 } from './SettingsModal.styles';
 import { IconClose, IconSave } from '../Toolbar/icons';
-import { AxesPosition } from '../../types/types';
+import { AxesPosition, ChartTheme } from '../../types/types';
 import { getLocaleDefaults, SUPPORTED_LANGUAGES, SUPPORTED_LOCALES, SUPPORTED_CURRENCIES } from '../../utils/i18n';
 import { CurrencyDisplay, NumberNotation } from '../../types/chartOptions';
 
@@ -82,6 +82,11 @@ interface SettingsModalProps {
     themeVariant?: ModalThemeVariant;
     /** When true, the Layout category (toolbar toggles) is hidden; toolbar chrome is product-controlled. */
     lockToolbarLayout?: boolean;
+    /**
+     * When true, the overlay is `position: absolute` within the nearest positioned ancestor
+     * (e.g. the chart host wrapper) instead of covering the full viewport.
+     */
+    contained?: boolean;
 }
 
 /* ─── BackArrow logic is now handled via CSS in SettingsModal.styles.ts ─── */
@@ -116,7 +121,8 @@ const CATEGORY_TITLE: Record<Category, string> = {
  *  Component
  * ────────────────────────────────────────────────── */
 export const SettingsModal: React.FC<SettingsModalProps> = ({
-    isOpen, onClose, onSave, initialSettings, themeVariant = 'dark', lockToolbarLayout = false,
+    isOpen, onClose, onSave, initialSettings, themeVariant = ChartTheme.dark, lockToolbarLayout = false,
+    contained = false,
 }) => {
     const tv = themeVariant;
     const [settings, setSettings] = useState<SettingsState>(initialSettings);
@@ -665,7 +671,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     };
 
     return (
-        <ModalOverlay $variant={tv} onClick={onClose} className="settings-modal-overlay">
+        <ModalOverlay $variant={tv} $contained={contained} onClick={onClose} className="settings-modal-overlay">
             <ModalContainer
                 $variant={tv}
                 onClick={(e: any) => e.stopPropagation()}

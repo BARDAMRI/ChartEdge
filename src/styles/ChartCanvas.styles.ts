@@ -1,4 +1,5 @@
 import styled, {css} from 'styled-components';
+import {ChartTheme} from '../types/types';
 
 interface CanvasContainerProps {
     $heightPrecent: number;
@@ -74,7 +75,7 @@ interface HoverTooltipProps {
     $isPositive: boolean;
     $isRTL?: boolean;
     /** Candle tooltip panel: use dark panel + light text when chart theme is dark */
-    $variant?: 'light' | 'dark';
+    $variant?: ChartTheme;
     /** Tighter grid + wrap so OHLC fits on small chart areas */
     $compact?: boolean;
 }
@@ -83,19 +84,19 @@ export const HoverTooltip = styled.div<HoverTooltipProps>`
     position: absolute;
     bottom: 5px;
     ${props => props.$isRTL ? 'left' : 'right'}: 10px;
-    opacity: ${({$variant}) => ($variant === 'dark' ? 1 : 0.8)};
+    opacity: ${({$variant}) => ($variant === ChartTheme.dark ? 1 : 0.8)};
     background-color: ${({$variant}) =>
-        $variant === 'dark' ? 'rgba(28, 30, 38, 0.96)' : 'rgba(255, 255, 255, 0.4)'};
+        $variant === ChartTheme.dark ? 'rgba(28, 30, 38, 0.96)' : 'rgba(255, 255, 255, 0.4)'};
     padding: 6px 10px;
     color: ${({$isPositive, $variant}) =>
-        $variant === 'dark'
+        $variant === ChartTheme.dark
             ? '#e8eaef'
             : $isPositive
                 ? 'rgba(0,128,0,0.85)'
                 : 'rgba(204,0,0,0.85)'};
     border: 1px solid
         ${({$isPositive, $variant}) =>
-            $variant === 'dark'
+            $variant === ChartTheme.dark
                 ? 'rgba(255, 255, 255, 0.14)'
                 : $isPositive
                     ? 'rgba(0,128,0,0.8)'
@@ -109,7 +110,7 @@ export const HoverTooltip = styled.div<HoverTooltipProps>`
     white-space: normal;
     word-break: break-word;
     box-shadow: ${({$variant}) =>
-        $variant === 'dark'
+        $variant === ChartTheme.dark
             ? '0 6px 20px rgba(0, 0, 0, 0.45)'
             : '0 4px 12px rgba(0, 0, 0, 0.15)'};
     pointer-events: none;
@@ -137,6 +138,6 @@ export const HoverTooltip = styled.div<HoverTooltipProps>`
     @media (max-width: 400px), (max-height: 300px) {
         opacity: 0.95;
         background-color: ${({$variant}) =>
-            $variant === 'dark' ? 'rgba(28, 30, 38, 0.98)' : 'rgba(255, 255, 255, 0.95)'};
+            $variant === ChartTheme.dark ? 'rgba(28, 30, 38, 0.98)' : 'rgba(255, 255, 255, 0.95)'};
     }
 `;

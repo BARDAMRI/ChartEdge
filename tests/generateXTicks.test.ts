@@ -132,4 +132,14 @@ describe('generateAndDrawTimeTicks', () => {
         expect(ticks.length).toBeGreaterThan(0);
         expect(ticks.every(t => typeof t.label === 'string')).toBe(true);
     });
+
+    test('sub-hour visible span uses minute grid (zoomed time axis)', () => {
+        const canvas = createMockCanvas(800, 40);
+        const start = 1700000000 + 15 * 60; // +15 min into epoch second bucket
+        const subHour: TimeRange = {start, end: start + 20 * 60};
+        const ticks = timeTicks(canvas, subHour, 12, 'HH:mm', 'en-US', TimeDetailLevel.Auto);
+        expect(ticks.length).toBeGreaterThan(2);
+        expect(ticks.every(t => typeof t.label === 'string')).toBe(true);
+        expect(ticks.every(t => t.position >= 0 && t.position <= 800)).toBe(true);
+    });
 });

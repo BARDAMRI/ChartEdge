@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useCallback, useLayoutEffect, useRef} from 'react';
 import {DrawTicksOptions, TimeRange} from "../../../types/Graph";
 import {AxesStyleOptions, TimeDetailLevel} from "../../../types/chartOptions";
 import {StyledXAxisCanvas} from "../../../styles/XAxis.styles";
@@ -30,16 +30,25 @@ export default function XAxis({
                                   timezone
                               }: XAxisProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const dpr = window.devicePixelRatio || 1;
 
-    useEffect(() => {
+    const draw = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const width = canvas.clientWidth;
-        const height = canvas.clientHeight;
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        if (width <= 0 || height <= 0) return;
+
+        const needResize =
+            canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr);
+        if (needResize) {
+            canvas.width = Math.round(width * dpr);
+            canvas.height = Math.round(height * dpr);
+        }
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
@@ -66,7 +75,33 @@ export default function XAxis({
             locale,
             timezone
         );
-    }, [xAxisHeight, visibleRange, timeDetailLevel, timeFormat12h, canvasSizes, dpr, dateFormat, locale, formatting]);
+    }, [
+        visibleRange.start,
+        visibleRange.end,
+        timeDetailLevel,
+        timeFormat12h,
+        xAxisHeight,
+        canvasSizes.width,
+        canvasSizes.height,
+        dateFormat,
+        locale,
+        timezone,
+        formatting.font,
+        formatting.lineColor,
+        formatting.textColor,
+    ]);
+
+    useLayoutEffect(() => {
+        const el = canvasRef.current;
+        if (!el) return;
+
+        const ro = new ResizeObserver(() => {
+            requestAnimationFrame(() => draw());
+        });
+        ro.observe(el);
+        draw();
+        return () => ro.disconnect();
+    }, [draw]);
 
     return <StyledXAxisCanvas className={'startTime-Axis-Canvas'} ref={canvasRef} $height={xAxisHeight}/>;
 }

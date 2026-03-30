@@ -2,6 +2,8 @@
 
 The gear icon in the top toolbar (when enabled) opens the **Chart Settings** modal. Values apply to the current chart instance and merge into internal `chartOptions` state on **Save**.
 
+**Shell theme:** modal framing and surfaces follow **`TickUpHost`** **`themeVariant`** (controlled) or **`defaultThemeVariant`** (uncontrolled), the same as **`GlobalStyle`** — see [Props & chart options](./05-props-and-chart-options.md). Changing colors inside the modal affects **`chartOptions`**, not the outer app theme unless you also update props.
+
 ## Categories
 
 | Category | What users can change |

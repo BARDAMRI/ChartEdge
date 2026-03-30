@@ -9,8 +9,8 @@
 
 ## Engine (`TickUpPrime`)
 
-- **Patch:** `src/engines/prime/TickUpPrime.ts` — `getChartOptionsPatch()` sets `base.engine: 'prime'` and neon styling.
-- **Runtime:** `ref.setEngine(TickUpPrime)` on `TickUpHostHandle` merges the patch into live options.
+- **Patch:** `src/engines/prime/TickUpPrime.ts` — `TickUpPrime.getChartOptionsPatch()` sets `base.engine: 'prime'` and the **dark** neon plot. **`getTickUpPrimeThemePatch('light' | 'dark')`** and **`createTickUpPrimeEngine(theme)`** align Prime with the host; light Prime uses **`base.theme: 'light'`** and light frosted toolbars in the stage.
+- **Runtime:** `ref.setEngine(TickUpPrime)` or `ref.setEngine(createTickUpPrimeEngine('light'))` on `TickUpHostHandle` merges the patch into live options.
 - **Canvas:** `isPrimeEngine` in `PrimeRenderer.ts` drives glow, crosshair, watermark placement in `GraphDraw` / `ChartCanvas`.
 
 ## Reference example

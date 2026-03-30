@@ -1,4 +1,4 @@
-import React, {useEffect, useLayoutEffect, useRef} from 'react';
+import React, {useCallback, useLayoutEffect, useRef} from 'react';
 import {generateAndDrawYTicks} from '../utils/generateTicks';
 import { AxesStyleOptions } from "../../../types/chartOptions";
 import { AxesPosition } from "../../../types/types";
@@ -22,7 +22,7 @@ export default function YAxis({
                               }: YAxisProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    const draw = () => {
+    const draw = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -56,23 +56,19 @@ export default function YAxis({
             5,
             formatting
         );
-    };
+    }, [minPrice, maxPrice, numberOfYTicks, yAxisPosition, formatting]);
 
     useLayoutEffect(() => {
         const el = canvasRef.current;
         if (!el) return;
 
         const ro = new ResizeObserver(() => {
-            requestAnimationFrame(draw);
+            requestAnimationFrame(() => draw());
         });
         ro.observe(el);
         draw();
         return () => ro.disconnect();
-    }, []);
-
-    useEffect(() => {
-        draw();
-    }, [minPrice, maxPrice, numberOfYTicks, yAxisPosition, formatting]);
+    }, [draw]);
 
     return (
         <StyledYAxisCanvas className={'startPrice-axis-canvas'} ref={canvasRef} $position={yAxisPosition}/>

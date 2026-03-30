@@ -15,19 +15,22 @@ interface ToolbarProps {
     language?: string;
     locale?: string;
     primeGlass?: boolean;
+    /** Light frosted Prime chrome when the plot uses `base.theme: 'light'`. */
+    primeGlassLight?: boolean;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
     language = 'en', 
     locale = 'en-US',
     primeGlass = false,
+    primeGlassLight = false,
 }) => {
     const {mode, setMode} = useMode();
 
     const direction = getLocaleDefaults(locale).direction;
 
     return (
-        <ToolbarContainer $primeGlass={primeGlass}>
+        <ToolbarContainer $primeGlass={primeGlass} $primeGlassLight={primeGlassLight}>
             <ToolbarContent>
                 <Tooltip content={translate('draw_line', language)} tooltipAxis={TooltipAxis.vertical} placement={Placement.auto}
                          axis={TooltipAxis.vertical}

@@ -2,45 +2,58 @@ import {useMemo} from 'react';
 import {IndexRangePair, PriceRange, TimeRange} from "../types/Graph";
 import {Interval} from "../types/Interval";
 import {ChartRenderContext} from "../types/chartOptions";
+import {getBarIntervalSeconds} from "../components/Canvas/utils/helpers";
 
+type VisibleRangeInput = TimeRange & Partial<{startIndex: number; endIndex: number}>;
 
 export function useChartData(
     intervalsArray: Interval[],
-    visibleRange: TimeRange,
+    visibleRange: VisibleRangeInput,
     currentPoint: { x: number; y: number } | null,
     canvasWidth: number,
     canvasHeight: number
 ): { renderContext: ChartRenderContext | null; intervalSeconds: number } {
-    const intervalSeconds = useMemo(() => {
-        if (intervalsArray.length < 2) return 3600;
-        return intervalsArray[1].t - intervalsArray[0].t;
-    }, [
-        intervalsArray.length,
-        intervalsArray[0]?.t,
-        intervalsArray[1]?.t,
-    ]);
+    const intervalSeconds = useMemo(
+        () => getBarIntervalSeconds(intervalsArray, 3600),
+        [intervalsArray]
+    );
 
     const visibleCandles = useMemo<IndexRangePair>(() => {
-        if (!intervalsArray.length || intervalSeconds <= 0 || visibleRange == null) {
-            return { startIndex: 0, endIndex: 0 };
+        const n = intervalsArray.length;
+        if (!n || intervalSeconds <= 0 || visibleRange == null) {
+            return {startIndex: 0, endIndex: 0};
         }
-        const { start, end } = visibleRange as TimeRange;
+        const {start, end} = visibleRange;
         if (start == null || end == null) {
-            return { startIndex: 0, endIndex: 0 };
+            return {startIndex: 0, endIndex: 0};
         }
-        const firstTime = intervalsArray[0].t;
+        const si = visibleRange.startIndex;
+        const ei = visibleRange.endIndex;
+        if (
+            typeof si === 'number' &&
+            typeof ei === 'number' &&
+            si >= 0 &&
+            ei >= 0 &&
+            si <= ei &&
+            si < n &&
+            ei < n
+        ) {
+            return {startIndex: si, endIndex: ei};
+        }
+        const firstTime = intervalsArray[0]!.t;
         const startIndex = Math.floor((start - firstTime) / intervalSeconds);
         const endIndex = Math.ceil((end - firstTime) / intervalSeconds);
         return {
             startIndex: Math.max(0, startIndex),
-            endIndex: Math.min(intervalsArray.length - 1, endIndex),
+            endIndex: Math.min(n - 1, endIndex),
         };
     }, [
-        intervalsArray.length,
-        intervalsArray[0]?.t,
+        intervalsArray,
         intervalSeconds,
-        visibleRange?.start,
-        visibleRange?.end,
+        visibleRange.start,
+        visibleRange.end,
+        visibleRange.startIndex,
+        visibleRange.endIndex,
     ]);
 
     const visiblePriceRange: PriceRange = (() => {

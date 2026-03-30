@@ -130,7 +130,9 @@ export function usePanAndZoom(
                 const minDuration = (intervalsArray[1]?.t - intervalsArray[0]?.t || intervalSeconds) * 5;
                 if (newEnd - newStart < minDuration) return;
 
+                const dataEnd = intervalsArray[intervalsArray.length - 1].t + intervalSeconds * 5; // small padding
                 newStart = Math.max(newStart, intervalsArray[0].t);
+                newEnd = Math.min(newEnd, Math.max(newStart + minDuration, dataEnd));
                 setVisibleRange({start: newStart, end: newEnd});
             } else {
                 const duration = visibleRange.end - visibleRange.start;

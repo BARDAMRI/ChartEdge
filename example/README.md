@@ -1,6 +1,6 @@
 # TickUp Charts — example playground
 
-Local Vite app that exercises **`tickup/full`** (`TickUpHost`, Prime engine, live data helpers in `data-generator.ts`).
+Local Vite app that exercises **`tickup/full`**: interactive **`TickUpDemo`** (theme System/Light/Dark, Prime + standard engines aligned via **`createTickUpPrimeEngine`**, live data from `data-generator.ts`) and a multi-tier showcase in `App.tsx`.
 
 ## Build
 

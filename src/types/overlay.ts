@@ -1,9 +1,14 @@
-export type LinesStyle = 'solid' | 'dashed' | 'dotted';
+/** Stroke pattern for overlay / drawing lines (canvas). */
+export enum StrokeLineStyle {
+    solid = 'solid',
+    dashed = 'dashed',
+    dotted = 'dotted',
+}
 
 export interface OverlayOptions {
     lineColor: string;
     lineWidth: number;
-    lineStyle: LinesStyle;
+    lineStyle: StrokeLineStyle;
 }
 
 export interface OverlayWithCalc extends OverlayOptions {

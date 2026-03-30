@@ -1,6 +1,6 @@
 # Quick start
 
-TickUp Charts is **React-first**: embed **`TickUpHost`**, **`TickUpStage`**, or product components (`TickUpCommand`, …). There is **no** imperative `TickUpCore(container)` class — use props + refs (e.g. **`TickUpHostHandle.setEngine(TickUpPrime)`** for the Prime engine). See [Prime engine & Pro roadmap](./15-prime-engine-and-pro-roadmap.md).
+TickUp Charts is **React-first**: embed **`TickUpHost`**, **`TickUpStage`**, or product components (`TickUpCommand`, …). There is **no** imperative `TickUpCore(container)` class — use props + refs (e.g. **`ref.setEngine(TickUpPrime)`** for **dark** Prime, or **`createTickUpPrimeEngine('light')`** when the shell is light). See [Prime engine & Pro roadmap](./15-prime-engine-and-pro-roadmap.md).
 
 ## 1. Render a product component
 

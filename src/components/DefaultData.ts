@@ -1,4 +1,4 @@
-import {AxesPosition, DeepRequired} from "../types/types";
+import {AxesPosition, DeepRequired, ChartTheme} from "../types/types";
 import {
     AreaStyleOptions, AxesStyleOptions,
     BarStyleOptions,
@@ -110,7 +110,7 @@ export const DEFAULT_GRAPH_OPTIONS: DeepRequired<ChartOptions> = {
     base: {
         chartType: ChartType.Candlestick,
         engine: 'standard',
-        theme: 'light',
+        theme: ChartTheme.light,
         showOverlayLine: false,
         showHistogram: true,
         showCrosshair: true,

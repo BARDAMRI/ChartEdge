@@ -68,6 +68,7 @@ interface SettingToolbarProps {
     onToggleTheme?: () => void;
     /** Prime engine: glass-style toolbar surface */
     primeGlass?: boolean;
+    primeGlassLight?: boolean;
 }
 
 export const SettingsToolbar = ({
@@ -89,6 +90,7 @@ export const SettingsToolbar = ({
     onRefresh,
     onToggleTheme,
     primeGlass = false,
+    primeGlassLight = false,
 }: SettingToolbarProps) => {
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -265,7 +267,11 @@ export const SettingsToolbar = ({
     const handleTheme = () => onToggleTheme?.();
 
     return (
-        <SettingsToolbarContainer $primeGlass={primeGlass} className="settings-toolbar-container">
+        <SettingsToolbarContainer
+            $primeGlass={primeGlass}
+            $primeGlassLight={primeGlassLight}
+            className="settings-toolbar-container"
+        >
             <SettingToolbarContent className="settings-toolbar-content" ref={containerRef} dir={direction}>
                 <SymbolToolbarCluster className="settings-symbol-cluster" dir={direction}>
                     <SymbolInput

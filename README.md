@@ -8,7 +8,7 @@ High-performance **React** financial charts: Canvas 2D OHLCV, pan/zoom, drawings
 
 **[MIT](./LICENSE)** — free for commercial and personal use. The **documented, supported** embeds in this release are **TickUpPulse**, **TickUpFlow**, **TickUpCommand**, **TickUpDesk**, plus **TickUpHost** / **TickUpStage** for custom chrome.
 
-**Prime:** the **`TickUpPrime`** render profile (`chartOptions.base.engine: 'prime'` or `ref.setEngine(TickUpPrime)`) adds the neon canvas look and glass toolbars. **`TickUpPrimeTier`** (`productId: 'prime'`) is the licensed shell (same chrome as Command; optional **`licenseKey`** hides the eval strip). See **[documentation/15-prime-engine-and-pro-roadmap.md](./documentation/15-prime-engine-and-pro-roadmap.md)**.
+**Prime:** the **`TickUpPrime`** render profile (`chartOptions.base.engine: 'prime'` or `ref.setEngine(TickUpPrime)`) adds the neon canvas look and **dark** glass toolbars. For a **light** plot with Prime rendering, use **`getTickUpPrimeThemePatch('light')`** / **`createTickUpPrimeEngine('light')`** (see doc 15). **`TickUpPrimeTier`** (`productId: 'prime'`) is the licensed shell (same chrome as Command; optional **`licenseKey`** hides the eval strip). See **[documentation/15-prime-engine-and-pro-roadmap.md](./documentation/15-prime-engine-and-pro-roadmap.md)**.
 
 **Publishing:** run **`npm run build`** and **`npm pack --dry-run`**, then **`npm publish`** with the intended **`version`** in `package.json`. The npm page shows this README, **LICENSE**, **CHANGELOG**, and bundled **documentation/**.
 
@@ -29,7 +29,7 @@ Developers building trading terminals, analytics dashboards, and embeddable mark
 
 ## API shape (important)
 
-The npm package is **React-based**: you render **`TickUpHost`**, **`TickUpStage`**, or tier components (`TickUpCommand`, …) and pass **`intervalsArray`** / **`chartOptions`**. The **Prime** visual engine is applied with **`ref.setEngine(TickUpPrime)`** (or `chartOptions.base.engine: 'prime'`). There is **no** separate `TickUpCore` DOM constructor in this codebase.
+The npm package is **React-based**: you render **`TickUpHost`**, **`TickUpStage`**, or tier components (`TickUpCommand`, …) and pass **`intervalsArray`** / **`chartOptions`**. The **Prime** visual engine uses **`ref.setEngine(TickUpPrime)`** or **`chartOptions.base.engine: 'prime'`** for the default **dark** Prime look; use **`createTickUpPrimeEngine('light')`** / **`getTickUpPrimeThemePatch('light')`** when the host uses a light plot. There is **no** separate `TickUpCore` DOM constructor in this codebase.
 
 ## Quick setup
 
@@ -98,7 +98,8 @@ Public surfaces (e.g. **`TickUpHostProps`**, **`TickUpHostHandle`**, **`TickUpSt
 | `onSymbolSearch` | Enter / search button; return **`false`** or **reject** `Promise` on failure to **revert** to the last good symbol and sync via `onSymbolChange`. |
 | `onRefreshRequest` | Toolbar refresh. |
 | `productId` | On product components, locks layout (`pulse` \| `flow` \| `command` \| `desk` \| `prime`). |
-| `ref` | **`TickUpHostHandle`**: `applyLiveData`, `addShape`, `patchShape`, `getViewInfo`, `getChartContext`, `fitVisibleRangeToData`, `setEngine`, interval helpers, … |
+| `themeVariant` / `defaultThemeVariant` / `onThemeVariantChange` | Shell light/dark chrome on **`TickUpHost`** (see **documentation/05**). |
+| `ref` | **`TickUpHostHandle`**: `applyLiveData`, `addShape`, `patchShape`, `getViewInfo`, `getChartContext`, `fitVisibleRangeToData`, `nudgeVisibleTimeRangeToLatest`, `setEngine`, interval helpers, … |
 
 Full tables: **[Props & chart options](./documentation/05-props-and-chart-options.md)** · **[Imperative API](./documentation/06-imperative-api.md)**.
 
@@ -130,7 +131,7 @@ See [`docs/Project_Roadmap/`](./docs/Project_Roadmap/) or project issues for upc
 | Import | What you get |
 |--------|----------------|
 | **`tickup`** (default) | **Basic charts:** `TickUpStage`, types, live-data helpers, overlays, drawing specs/factories, snapshots, branding, `GlobalStyle`, `ModeProvider`. Build your own layout and chrome. |
-| **`tickup/full`** | **Full UI:** `TickUpHost`, `TickUpPulse` / `Flow` / `Command` / `Desk` / **`TickUpPrimeTier`**, shape component classes, `ShapePropertiesModal`, engines (`TickUpPrime`), deprecated `ChartStage` aliases. |
+| **`tickup/full`** | **Full UI:** `TickUpHost`, `TickUpPulse` / `Flow` / `Command` / `Desk` / **`TickUpPrimeTier`**, shape component classes, `ShapePropertiesModal`, engines (`TickUpPrime`, `TickUpStandardEngine`, `createTickUpPrimeEngine`, `getTickUpPrimeThemePatch`), deprecated `ChartStage` aliases. |
 
 Docs that show `TickUpCommand` or `TickUpHost` assume `import … from 'tickup/full'`.
 

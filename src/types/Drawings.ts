@@ -1,4 +1,5 @@
 import {ShapeBaseArgs} from "../components/Drawing/types";
+import {StrokeLineStyle} from "./overlay";
 
 export interface DrawingPoint {
     time: number;
@@ -14,13 +15,13 @@ export interface CanvasPoint {
 export interface DrawingStyleOptions {
     lineColor: string;
     lineWidth: number;
-    lineStyle: 'solid' | 'dashed' | 'dotted';
+    lineStyle: StrokeLineStyle;
     fillColor: string; // such as 'rgba(255, 0, 0, 0.2)'
 
     selected: {
         lineColor: string;
         lineWidthAdd?: number;
-        lineStyle?: 'solid' | 'dashed' | 'dotted';
+        lineStyle?: StrokeLineStyle;
         fillColor?: string;
     }
 }
@@ -28,7 +29,7 @@ export interface DrawingStyleOptions {
 export type FinalDrawingStyle = {
     lineColor: string;
     lineWidth: number;
-    lineStyle: 'solid' | 'dashed' | 'dotted';
+    lineStyle: StrokeLineStyle;
     fillColor: string | 'transparent';
 };
 

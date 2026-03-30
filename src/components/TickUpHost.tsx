@@ -4,8 +4,8 @@ import {Toolbar} from './Toolbar/Toolbar';
 import {SettingsToolbar} from './Toolbar/SettingsToolbar';
 import {SettingsModal, SettingsState} from './SettingsModal/SettingsModal';
 import {Interval} from '../types/Interval';
-import {PriceRange, TimeRange} from '../types/Graph';
-import {AxesPosition, DeepPartial, DeepRequired} from '../types/types';
+import {PriceRange, TimeRange, VisibleViewRanges} from '../types/Graph';
+import {AxesPosition, DeepPartial, DeepRequired, ChartTheme} from '../types/types';
 import {
     ChartOptions,
     ChartType,
@@ -67,6 +67,8 @@ export interface TickUpHostHandle {
     getDrawingById: (id: string) => DrawingSnapshot | null;
     getDrawingInstances: (query?: DrawingQuery) => IDrawingShape[];
     getChartContext: () => ChartContextInfo | null;
+    /** Visible time (unix seconds + bar indices) and price band — counterpart to {@link getCanvasSize}. */
+    getVisibleRanges: () => VisibleViewRanges | null;
     getCanvasSize: () => { width: number; height: number; dpr: number } | null;
     clearCanvas: () => void;
     redrawCanvas: () => void;
@@ -130,13 +132,13 @@ export type TickUpHostProps = {
      * When set, the host is **controlled**: update this prop when {@link onThemeVariantChange} fires
      * (e.g. from the settings toolbar sun/moon control).
      */
-    themeVariant?: 'light' | 'dark';
+    themeVariant?: ChartTheme;
     /**
      * Initial shell theme when {@link themeVariant} is omitted (uncontrolled). Defaults to **`light`**.
      */
-    defaultThemeVariant?: 'light' | 'dark';
+    defaultThemeVariant?: ChartTheme;
     /** Notified when the user toggles shell theme from the toolbar. */
-    onThemeVariantChange?: (variant: 'light' | 'dark') => void;
+    onThemeVariantChange?: (variant: ChartTheme) => void;
 };
 
 function tickupProductLayoutDefaults(id: TickUpProductId | undefined): {
@@ -176,7 +178,7 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
         licenseKey,
         showAttribution = true,
         themeVariant: themeVariantProp,
-        defaultThemeVariant = 'light',
+        defaultThemeVariant = ChartTheme.light,
         onThemeVariantChange,
     } = props;
 
@@ -190,12 +192,12 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
     const [finalStyleOptions, setStyleOptions] = useState<DeepRequired<ChartOptions>>(() =>
         deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions)
     );
-    const [internalThemeVariant, setInternalThemeVariant] = useState<'light' | 'dark'>(defaultThemeVariant);
+    const [internalThemeVariant, setInternalThemeVariant] = useState<ChartTheme>(defaultThemeVariant);
     const isThemeControlled = themeVariantProp !== undefined;
     const themeVariant = isThemeControlled ? themeVariantProp! : internalThemeVariant;
 
     const handleThemeToggle = () => {
-        const next = themeVariant === 'light' ? 'dark' : 'light';
+        const next = themeVariant === ChartTheme.light ? ChartTheme.dark : ChartTheme.light;
         if (!isThemeControlled) {
             setInternalThemeVariant(next);
         }
@@ -342,6 +344,12 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
         getCanvasSize: () => {
             if (stageRef.current && stageRef.current.getCanvasSize) {
                 return stageRef.current.getCanvasSize();
+            }
+            return null;
+        },
+        getVisibleRanges: () => {
+            if (stageRef.current?.getVisibleRanges) {
+                return stageRef.current.getVisibleRanges();
             }
             return null;
         },
@@ -553,10 +561,10 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
     ]) as SettingsState;
 
     const chartOptionsForStage = useMemo((): DeepRequired<ChartOptions> => {
-        if (themeVariant === 'light') return finalStyleOptions;
+        if (themeVariant === ChartTheme.light) return finalStyleOptions;
         return deepMerge(finalStyleOptions, {
             base: {
-                theme: 'dark',
+                theme: ChartTheme.dark,
                 style: {
                     backgroundColor: '#121212',
                     axes: {
@@ -605,7 +613,15 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
                         TickUp Prime tier — evaluation mode. Provide <code>licenseKey</code> when your license is active.
                     </div>
                 ) : null}
-                <div style={{flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column'}}>
+                <div
+                    style={{
+                        flex: '1 1 auto',
+                        minHeight: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        position: 'relative',
+                    }}
+                >
                     <TickUpStage
                         ref={stageRef}
                         intervalsArray={intervalsArray}
@@ -629,16 +645,17 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
                         themeVariant={themeVariant}
                         showBrandWatermark={attributionOn}
                     />
-                </div>
 
-                <SettingsModal
-                    isOpen={isSettingsOpen}
-                    onClose={() => setIsSettingsOpen(false)}
-                    onSave={handleSaveSettings}
-                    initialSettings={currentSettingsData}
-                    themeVariant={themeVariant}
-                    lockToolbarLayout={hasLockedChrome}
-                />
+                    <SettingsModal
+                        isOpen={isSettingsOpen}
+                        onClose={() => setIsSettingsOpen(false)}
+                        onSave={handleSaveSettings}
+                        initialSettings={currentSettingsData}
+                        themeVariant={themeVariant}
+                        lockToolbarLayout={hasLockedChrome}
+                        contained
+                    />
+                </div>
             </MainAppWindow>
         </ModeProvider>
     );

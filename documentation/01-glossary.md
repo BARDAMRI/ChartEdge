@@ -10,7 +10,7 @@
 ## Chart presentation
 
 - **Chart type** — `ChartType`: Candlestick, Line, Area, Bar (OHLCV rendering mode).
-- **Theme** — `base.theme` on the chart (e.g. light, dark, grey) plus app-level light/dark toggle in the shell.
+- **Theme** — `base.theme` on the chart (`light`, `dark`, `grey`) plus **`TickUpHost`** shell theme: **`themeVariant`** (controlled), **`defaultThemeVariant`**, **`onThemeVariantChange`** (**`GlobalStyle`** / modal chrome). Align chart and shell for readable grid and watermarks.
 - **Axes** — Time (X) and price (Y) scales, tick formatting, locale, timezone options under `chartOptions.base.style.axes` and `chartOptions.axes`.
 - **Histogram** — Volume bars below (or proportionally to) the main plot when `showHistogram` is true.
 - **Overlay** — Additional computed or static series drawn on top of price (see overlay types in code).
@@ -26,7 +26,7 @@ TickUp ships **named product components** that fix toolbar layout:
 | **Command** | Full UI: side drawing bar + top bar |
 | **Desk**  | Same as Command; in-chart branding watermark required |
 
-Use **`TickUpHost`** (`TickUpHost`) **without** `productId` to control `showSidebar` / `showTopBar` / `showSettingsBar` yourself.
+Use **`TickUpHost`** **without** `productId` to control `showSidebar` / `showTopBar` / `showSettingsBar` yourself.
 
 **Prime** may refer to **`productId: 'prime'`** (**`TickUpPrimeTier`**) or the **`prime`** render engine (**`chartOptions.base.engine`** / **`TickUpPrime`**). See [Prime engine & Pro roadmap](./15-prime-engine-and-pro-roadmap.md).
 

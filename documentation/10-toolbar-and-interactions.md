@@ -27,7 +27,7 @@ Typical controls (some may hide on very narrow widths):
 | **Range** | `fitVisibleRangeToData`. |
 | **Export** | CSV download of series. |
 | **Refresh** | `onRefreshRequest` callback. |
-| **Theme** | Toggles shell light/dark (merges dark-friendly colors into chart). |
+| **Theme** | Toggles **shell** light/dark (**`GlobalStyle`**, settings modal chrome). Notify the app via **`onThemeVariantChange`** on **`TickUpHost`**; keep **`themeVariant`** controlled in sync. Plot styling still follows **`chartOptions`** — align **`base.theme`** (and use **`getTickUpPrimeThemePatch`** / **`createTickUpPrimeEngine`** for Prime) so grid, axes, and watermarks match. See [Props & chart options](./05-props-and-chart-options.md) and [Prime engine](./15-prime-engine-and-pro-roadmap.md). |
 
 ## Pan & zoom
 
@@ -41,7 +41,7 @@ When enabled in options or settings:
 - **Crosshair values** — Time label near the bottom track, price label near the Y-axis side.  
 - **Candle tooltip** — Compact OHLC / change / volume panel (grid layout on small charts; scrollable cap).
 
-Branding: low-opacity **TickUp watermark** is drawn inside the plot/histogram buffers (not a separate footer), unless disabled via `showAttribution` (Desk forces on).
+Branding: low-opacity **TickUp watermark** (bundled **transparent** PNGs; strength depends on plot **`base.theme`**) is drawn inside the plot/histogram buffers (not a separate footer), unless disabled via **`showAttribution`** (**Desk** forces on).
 
 ## Keyboard
 

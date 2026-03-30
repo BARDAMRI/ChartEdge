@@ -49,6 +49,15 @@ import type { ChartOptions, DeepRequired } from 'tickup';
 
 Prefer the ref API **`applyLiveData(updates, placement)`** with **`mergeByTime`**, **`append`**, etc. See **[`../../documentation/07-data-and-live-updates.md`](../../documentation/07-data-and-live-updates.md)**.
 
+## Visible time and price (ref API)
+
+After pan/zoom, read the same windows the chart uses for mapping:
+
+- **`getVisibleRanges()`** → **`VisibleViewRanges`**: `time.start` / `time.end` (unix **seconds**), `time.startIndex` / `time.endIndex` in the sorted series, and `price.min` / `price.max` / `price.range` for the Y scale.
+- **`getCanvasSize()`** → main plot backing-store size + DPR.
+
+From a product shell, the ref may be **`null`** until the stage mounts — use optional chaining. Full detail and examples: **[`../../documentation/06-imperative-api.md`](../../documentation/06-imperative-api.md)**.
+
 ## Further reading
 
 - **[Quick start](../../documentation/03-quick-start.md)**
