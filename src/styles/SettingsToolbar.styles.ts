@@ -178,6 +178,7 @@ export const ToolbarHorizontalButtons = styled.button.attrs({className: 'setting
     border: 1px solid rgba(120, 100, 255, 0.5);
     background-color: rgba(255, 255, 255, 0.06);
     background-clip: border-box, padding-box;
+    padding: 7px;
 
     &::after {
         content: '';

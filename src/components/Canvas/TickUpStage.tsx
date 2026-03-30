@@ -25,7 +25,7 @@ import {
 } from '../../styles/TickUpStage.styles';
 import { PriceRange, TimeRange } from "../../types/Graph";
 import { Interval } from "../../types/Interval";
-import { ChartOptions, ChartType, TimeDetailLevel } from "../../types/chartOptions";
+import { ChartOptions, ChartType, TickUpRenderEngine, TimeDetailLevel } from "../../types/chartOptions";
 import { AxesPosition, DeepRequired, windowSpread, ChartTheme } from "../../types/types";
 import { useElementSize } from '../../hooks/useElementSize';
 import { findPriceRange, getBarIntervalSeconds } from "./utils/helpers";
@@ -439,13 +439,30 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
         });
     }, [intervalsArray]);
 
-    function updateVisibleRange(newRangeTime: TimeRange) {
+    function updateVisibleRange(rangeOrUpdate: TimeRange | ((prev: TimeRange) => TimeRange)) {
         if (!intervals || intervals.length === 0) return;
-        // User is manually scrolling/panning — exit follow-latest mode
-        followLatestRef.current = false;
         const intervalSeconds = getIntervalSeconds(intervals, 60);
-        const [startIndex, endIndex] = findVisibleIndexRange(intervals, newRangeTime, intervalSeconds);
-        setVisibleRange({ ...newRangeTime, startIndex, endIndex });
+        const lastT = intervals[intervals.length - 1]?.t ?? 0;
+        const latestEnd = lastT ? (lastT + intervalSeconds) : 0;
+        const followPadding = Math.max(intervalSeconds, 1) * 2;
+
+        setVisibleRange((prev) => {
+            const currentRange = {start: prev.start, end: prev.end};
+            const nextRange = typeof rangeOrUpdate === 'function' ? rangeOrUpdate(currentRange) : rangeOrUpdate;
+
+            // Follow-latest mode: re-enable automatically when the user scrolls back to the end/future.
+            // Disable immediately if they scroll back into history (hidden the newest bars).
+            if (latestEnd > 0) {
+                // If we're at or beyond the latest bar (future margin), we're in "follow" mode.
+                // If we scroll even slightly back into history, we unlock.
+                const isAtOrPastEnd = nextRange.end >= latestEnd - 0.001;
+                followLatestRef.current = isAtOrPastEnd;
+            } else {
+                followLatestRef.current = false;
+            }
+            const [startIndex, endIndex] = findVisibleIndexRange(intervals, nextRange, intervalSeconds);
+            return { ...nextRange, startIndex, endIndex };
+        });
     }
 
     useEffect(() => {
@@ -597,6 +614,7 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                 console.warn('[TickUp] fitVisibleRangeToData: no data');
                 return;
             }
+            followLatestRef.current = true;
             const pad = 60;
             const intervalSeconds = getIntervalSeconds(intervals, 60);
             const start = intervals[0].t - pad;
@@ -606,6 +624,9 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
         },
         nudgeVisibleTimeRangeToLatest(options?: { trailingPaddingSec?: number }) {
             const leadPad = 60;
+            if (intervals.length > 0) {
+                followLatestRef.current = true;
+            }
             setVisibleRange((prev) => {
                 if (!intervals.length) return prev;
                 const lastT = intervals[intervals.length - 1]!.t;
@@ -745,8 +766,8 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
         return fromControlled || fromDefault;
     }, [symbol, defaultSymbol]);
     const showSymbolStrip = !showTopBar && compactSymbolLabel.length > 0;
-    const primeGlass = chartOptions.base.engine === 'prime';
-    const primeGlassLight = primeGlass && chartOptions.base.theme === 'light';
+    const primeGlass = chartOptions.base.engine === TickUpRenderEngine.prime;
+    const primeGlassLight = primeGlass && chartOptions.base.theme === ChartTheme.light;
 
     return (
         <TickUpStageContainer
@@ -775,6 +796,7 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                         onSnapshotPng={handleSnapshotPng}
                         onRefresh={handleToolbarRefresh}
                         onToggleTheme={onToggleTheme}
+                        themeVariant={themeVariant}
                         primeGlass={primeGlass}
                         primeGlassLight={primeGlassLight}
                     />

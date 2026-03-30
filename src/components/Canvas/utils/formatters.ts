@@ -1,4 +1,9 @@
-import { NumberNotation, CurrencyDisplay } from '../../../types/chartOptions';
+import {
+    AxesUnitPlacement,
+    CurrencyDisplay,
+    NumberNotation,
+    PriceMetricKind,
+} from '../../../types/chartOptions';
 
 export interface FormatNumberOptions {
     fractionDigits?: number;
@@ -14,10 +19,10 @@ export interface FormatNumberOptions {
     notation?: NumberNotation;
     tickSize?: number;
     unit?: string;
-    unitPlacement?: 'prefix' | 'suffix';
+    unitPlacement?: AxesUnitPlacement;
     conversionRate?: number;
     displayCurrency?: string;
-    metricType?: 'basisPoints' | 'pnl' | 'yield' | 'volatility';
+    metricType?: PriceMetricKind;
     showSign?: boolean;
 }
 
@@ -35,30 +40,37 @@ export function formatNumber(
         locale = 'en-US',
         style = 'decimal',
         currency,
-        currencyDisplay = 'symbol',
+        currencyDisplay = CurrencyDisplay.symbol,
         minimumFractionDigits,
         maximumFractionDigits,
         maximumSignificantDigits,
-        notation = 'standard',
+        notation = NumberNotation.standard,
         decimalSeparator,
         thousandsSeparator,
         fractionDigits,
         tickSize,
         unit,
-        unitPlacement = 'suffix'
+        unitPlacement = AxesUnitPlacement.suffix
     } = options;
 
     let valToFormat = value;
     let customUnit = unit;
 
-    if (options.metricType === 'basisPoints') {
+    if (options.metricType === PriceMetricKind.basisPoints) {
         valToFormat = value * 10000;
         customUnit = 'bps';
-    } else if (options.metricType === 'yield' || options.metricType === 'volatility') {
+    } else if (
+        options.metricType === PriceMetricKind.Yield ||
+        options.metricType === PriceMetricKind.volatility
+    ) {
         customUnit = '%';
     }
 
-    if (options.conversionRate && options.conversionRate !== 1 && options.metricType !== 'basisPoints') {
+    if (
+        options.conversionRate &&
+        options.conversionRate !== 1 &&
+        options.metricType !== PriceMetricKind.basisPoints
+    ) {
         valToFormat = valToFormat * options.conversionRate;
     }
 
@@ -81,7 +93,8 @@ export function formatNumber(
         currency,
         currencyDisplay: currency ? (currencyDisplay as 'symbol' | 'narrowSymbol' | 'code' | 'name') : undefined,
         notation: notation as 'standard' | 'scientific' | 'compact',
-        signDisplay: (options.showSign || options.metricType === 'pnl') ? 'always' : 'auto',
+        signDisplay:
+            options.showSign || options.metricType === PriceMetricKind.pnl ? 'always' : 'auto',
     };
 
     if (maximumSignificantDigits !== undefined && maximumSignificantDigits < 21) {
@@ -111,7 +124,7 @@ export function formatNumber(
     }
 
     if (customUnit && customUnit !== '%') {
-        if (unitPlacement === 'prefix') {
+        if (unitPlacement === AxesUnitPlacement.prefix) {
             result = `${customUnit}${result}`;
         } else {
             result = `${result}${customUnit}`;

@@ -8,7 +8,8 @@ import {
     OverlayOptions,
     OverlayPriceKey,
     OverlaySeries,
-    OverlayWithCalc
+    OverlayWithCalc,
+    StrokeLineStyle,
 } from "../../../types/overlay";
 import type {Interval} from "../../../types/Interval";
 import type {ChartRenderContext} from "../../../types/chartOptions";
@@ -74,7 +75,7 @@ export function withOverlayStyle(style?: DeepPartial<OverlayOptions>) {
     let defaultStyle: DeepRequired<OverlayOptions> = {
         lineColor: '#2962ff',
         lineWidth: 2,
-        lineStyle: 'solid',
+        lineStyle: StrokeLineStyle.solid,
     }
     defaultStyle = {...defaultStyle, ...style};
     return (calc: OverlayCalcSpec = OverlaySpecs.close(), extras?: Pick<OverlayWithCalc, 'connectNulls' | 'useCenterX'>): OverlayWithCalc =>
@@ -268,11 +269,11 @@ function applyStrokeStyle(ctx: CanvasRenderingContext2D, opt: OverlayOptions) {
     ctx.strokeStyle = opt?.lineColor ?? '#2a7fff';
     ctx.lineWidth = Math.max(0.5, opt?.lineWidth ?? 1.5);
     switch (opt?.lineStyle) {
-        case 'dashed':
+        case StrokeLineStyle.dashed:
             ctx.setLineDash([6, 4]);
             ctx.lineCap = 'butt';
             break;
-        case 'dotted':
+        case StrokeLineStyle.dotted:
             ctx.setLineDash([2, 3]);
             ctx.lineCap = 'round';
             break;
@@ -466,7 +467,7 @@ export function overlay(
     let defaultStyle: DeepRequired<OverlayOptions> = {
         lineColor: '#2962ff',
         lineWidth: 2,
-        lineStyle: 'solid',
+        lineStyle: StrokeLineStyle.solid,
     };
     defaultStyle = {...defaultStyle, ...style};
     return makeOverlay(defaultStyle, calc, extras);

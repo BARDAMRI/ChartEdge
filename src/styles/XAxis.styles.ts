@@ -5,7 +5,7 @@ interface StyledXAxisCanvasProps {
 }
 
 export const StyledXAxisCanvas = styled.canvas<StyledXAxisCanvasProps>`
-    display: flex;
+    display: block;
     width: 100%;
     height: 100%;
     box-sizing: border-box;

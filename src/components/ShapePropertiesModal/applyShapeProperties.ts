@@ -1,15 +1,16 @@
 import {CustomSymbolShape} from '../Drawing/CustomSymbolShape';
 import {IDrawingShape} from '../Drawing/IDrawingShape';
 import {DrawingStyleOptions} from '../../types/Drawings';
+import {StrokeLineStyle} from '../../types/overlay';
 
 export type ShapePropertiesFormState = {
     lineColor: string;
     lineWidth: number;
-    lineStyle: 'solid' | 'dashed' | 'dotted';
+    lineStyle: StrokeLineStyle;
     fillColor: string;
     selectedLineColor: string;
     selectedLineWidthAdd: number;
-    selectedLineStyle: 'solid' | 'dashed' | 'dotted';
+    selectedLineStyle: StrokeLineStyle;
     selectedFillColor: string;
     symbolText: string;
     symbolSize: number;

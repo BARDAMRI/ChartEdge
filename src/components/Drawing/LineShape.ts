@@ -6,6 +6,7 @@ import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle, LineShapeArgs} fro
 import {isPointNearLine} from "../Canvas/utils/helpers";
 import {pointerTolerance} from "./drawHelper";
 import {ShapeType} from "./types";
+import {StrokeLineStyle} from "../../types/overlay";
 
 export class LineShape implements IDrawingShape {
     public id: string;
@@ -45,9 +46,9 @@ export class LineShape implements IDrawingShape {
         ctx.strokeStyle = style.lineColor;
         ctx.lineWidth = style.lineWidth;
 
-        if (style.lineStyle === 'dashed') {
+        if (style.lineStyle === StrokeLineStyle.dashed) {
             ctx.setLineDash([5, 5]);
-        } else if (style.lineStyle === 'dotted') {
+        } else if (style.lineStyle === StrokeLineStyle.dotted) {
             ctx.setLineDash([1, 2]);
         } else {
             ctx.setLineDash([]);

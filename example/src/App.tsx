@@ -2,19 +2,22 @@ import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from
 import type {Interval, TickUpHostHandle} from 'tickup/full';
 import {
     AxesPosition,
-    TickUpPulse,
-    TickUpFlow,
+    ChartTheme,
+    LiveDataPlacement,
+    ShapeType,
+    StrokeLineStyle,
     TickUpCommand,
     TickUpDesk,
-    TickUpPrimeTier,
+    TickUpFlow,
     TickUpPrime,
-    ShapeType,
+    TickUpPrimeTier,
+    TickUpPulse,
     TimeDetailLevel,
-    ChartTheme,
 } from 'tickup/full';
 import {Zap, Play, Pause, RefreshCw, Sun, Moon} from 'lucide-react';
 import logoLightTransparentUrl from '@brand/logos/tickup-logo-full-light-transparent.png';
 import logoDarkTransparentUrl from '@brand/logos/tickup-logo-full-dark-transparent.png';
+import TickUpDemo from './TickUpDemo';
 import './index.css';
 
 // ----------------------------------------------------------------------------
@@ -189,7 +192,7 @@ function seedDemoShapes(api: TickUpHostHandle | null, series: Interval[]) {
         style: {
             lineColor: '#e040fb',
             lineWidth: 2,
-            lineStyle: 'dashed',
+            lineStyle: StrokeLineStyle.dashed,
         },
     });
     api.addShape({
@@ -201,7 +204,7 @@ function seedDemoShapes(api: TickUpHostHandle | null, series: Interval[]) {
         style: {
             lineColor: '#26c6da',
             lineWidth: 1,
-            lineStyle: 'solid',
+            lineStyle: StrokeLineStyle.solid,
             fillColor: 'rgba(38, 198, 218, 0.18)',
         },
     });
@@ -214,7 +217,7 @@ function seedDemoShapes(api: TickUpHostHandle | null, series: Interval[]) {
         style: {
             lineColor: '#ffca28',
             lineWidth: 2,
-            lineStyle: 'solid',
+            lineStyle: StrokeLineStyle.solid,
             fillColor: 'rgba(255, 202, 40, 0.14)',
         },
     });
@@ -259,6 +262,7 @@ export default function App() {
         }
         return ChartTheme.dark;
     });
+    const [page, setPage] = useState<'tiers' | 'ticks'>('tiers');
 
     useEffect(() => {
         const mqLight = window.matchMedia('(prefers-color-scheme: light)');
@@ -332,8 +336,8 @@ export default function App() {
         const n = tickCountRef.current;
         const result =
             n % 5 !== 0
-                ? api.applyLiveData(jitterLastBar(last), 'mergeByTime')
-                : api.applyLiveData(makeNextBar(last, INTERVAL_SEC), 'append');
+                ? api.applyLiveData(jitterLastBar(last), LiveDataPlacement.mergeByTime)
+                : api.applyLiveData(makeNextBar(last, INTERVAL_SEC), LiveDataPlacement.append);
         if (result.intervals.length) {
             setSeries(result.intervals);
         }
@@ -434,7 +438,36 @@ export default function App() {
                     />
                 </div>
 
-                <div className={`flex items-center gap-3 rounded-full border p-1.5 pl-4 pr-1.5 shadow-xl ${
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                    <a
+                        href="https://github.com/BARDAMRI/tickup-charts/blob/main/documentation/README.md"
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                            theme === ChartTheme.dark
+                                ? 'border-white/10 bg-black/30 text-slate-300 hover:border-[#3EC5FF]/45 hover:text-white'
+                                : 'border-slate-200 bg-white/70 text-slate-700 hover:border-[#3EC5FF]/60 hover:text-slate-900'
+                        }`}
+                        title="Open documentation (GitHub)"
+                    >
+                        Docs
+                    </a>
+                    <button
+                        type="button"
+                        onClick={() => setPage((p) => (p === 'tiers' ? 'ticks' : 'tiers'))}
+                        className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                            page === 'ticks'
+                                ? 'border-[#3EC5FF]/60 bg-[#3EC5FF]/10 text-[#3EC5FF]'
+                                : theme === ChartTheme.dark
+                                    ? 'border-white/10 bg-black/30 text-slate-300 hover:border-white/20 hover:text-white'
+                                    : 'border-slate-200 bg-white/70 text-slate-700 hover:border-slate-300 hover:text-slate-900'
+                        }`}
+                        aria-pressed={page === 'ticks'}
+                        title={page === 'ticks' ? 'Back to tier showcase' : 'Open tick/axis demo page'}
+                    >
+                        {page === 'ticks' ? 'Back' : 'Tick demo'}
+                    </button>
+                    <div className={`flex items-center gap-3 rounded-full border p-1.5 pl-4 pr-1.5 shadow-xl ${
                     theme === ChartTheme.dark ? 'border-white/10 bg-black/40' : 'border-slate-200 bg-white/60'
                 }`}>
                     <div className="flex items-center gap-2 pr-2">
@@ -478,10 +511,14 @@ export default function App() {
                     >
                         {theme === ChartTheme.dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                     </button>
+                    </div>
                 </div>
             </header>
 
-            <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-12 p-6 lg:gap-16 lg:p-12 mb-20">
+            {page === 'ticks' ? (
+                <TickUpDemo />
+            ) : (
+                <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-12 p-6 lg:gap-16 lg:p-12 mb-20">
                 <div className="text-center pt-8 pb-4">
                     <h1 className="mb-6 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-7xl">
                         <span className={`text-transparent bg-clip-text bg-gradient-to-b ${theme === ChartTheme.dark ? 'from-white to-slate-400' : 'from-slate-800 to-slate-500'}`}>Next-Gen</span>
@@ -550,7 +587,8 @@ export default function App() {
                         </section>
                     ))}
                 </div>
-            </main>
+                </main>
+            )}
         </div>
     );
 }

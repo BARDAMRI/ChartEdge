@@ -73,7 +73,8 @@ export default function XAxis({
                 axisY: 0
             } as DrawTicksOptions,
             locale,
-            timezone
+            timezone,
+            width
         );
     }, [
         visibleRange.start,

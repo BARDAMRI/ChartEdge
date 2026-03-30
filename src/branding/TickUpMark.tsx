@@ -1,14 +1,16 @@
 import React from 'react';
+import {ChartTheme} from '../types/types';
 import {
     TICKUP_WORDMARK_URL_DARK,
     TICKUP_WORDMARK_URL_GREY,
     TICKUP_WORDMARK_URL_LIGHT,
 } from './tickupBrandAssets';
 
-export type TickUpThemeVariant = 'light' | 'dark' | 'grey';
+/** @deprecated Use {@link ChartTheme} */
+export type TickUpThemeVariant = ChartTheme;
 
 type TickUpMarkProps = {
-    variant: TickUpThemeVariant;
+    variant: ChartTheme;
     /** Total height in px */
     height?: number;
     className?: string;
@@ -25,9 +27,9 @@ export function TickUpMark({
     'aria-hidden': ariaHidden = true,
 }: TickUpMarkProps) {
     const src =
-        variant === 'dark'
+        variant === ChartTheme.dark
             ? TICKUP_WORDMARK_URL_DARK
-            : variant === 'grey'
+            : variant === ChartTheme.grey
               ? TICKUP_WORDMARK_URL_GREY
               : TICKUP_WORDMARK_URL_LIGHT;
 

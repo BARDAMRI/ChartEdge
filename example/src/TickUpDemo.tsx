@@ -6,14 +6,15 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { Interval, TickUpChartEngine, TickUpHostHandle } from 'tickup/full';
 import {
     AxesPosition,
+    ChartTheme,
     ChartType,
     Mode,
     OverlayKind,
     TickUpHost,
+    TickUpRenderEngine,
     TimeDetailLevel,
     createTickUpPrimeEngine,
     getTickUpPrimeThemePatch,
-    ChartTheme
 } from 'tickup/full';
 import {
     AreaChart,
@@ -89,7 +90,7 @@ const demoStandardLightEngine: TickUpChartEngine = {
     id: 'demo-standard-light',
     getChartOptionsPatch: () => ({
         base: {
-            engine: 'standard',
+            engine: TickUpRenderEngine.standard,
             theme: ChartTheme.light,
             style: {
                 backgroundColor: '#ffffff',
@@ -143,7 +144,7 @@ const demoStandardDarkEngine: TickUpChartEngine = {
     id: 'demo-standard-dark',
     getChartOptionsPatch: () => ({
         base: {
-            engine: 'standard',
+            engine: TickUpRenderEngine.standard,
             theme: ChartTheme.dark,
             style: {
                 backgroundColor: '#0b0e14',
@@ -210,6 +211,7 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
     const [timeframe, setTimeframe] = useState<TimeframeKey>('5m');
     const [chartKind, setChartKind] = useState<ChartKind>('candle');
     const [primeMode, setPrimeMode] = useState(false);
+    const [showTickPreviews, setShowTickPreviews] = useState(true);
     const [symbol, setSymbol] = useState('TICKUP');
     const [symbolDraft, setSymbolDraft] = useState('TICKUP');
     const [emaOn, setEmaOn] = useState(true);
@@ -287,20 +289,24 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
      * Keep props in lockstep with {@link useLayoutEffect} `setEngine` so grid/candles/theme never disagree
      * (avoids light grid on dark plots when `chartOptions` merges before the engine patch applies).
      */
-    const primeChartTheme = shellTheme === ChartTheme.dark ? ChartTheme.dark : ChartTheme.light;
-    const primeEngineForShell = useMemo(() => createTickUpPrimeEngine(primeChartTheme), [primeChartTheme]);
+    const primeEngineForShell = useMemo(() => createTickUpPrimeEngine(shellTheme), [shellTheme]);
 
     const chartOptions = useMemo(() => {
         const patch = primeMode
-            ? getTickUpPrimeThemePatch(primeChartTheme)
+            ? getTickUpPrimeThemePatch(shellTheme)
             : (shellTheme === ChartTheme.dark ? demoStandardDarkEngine : demoStandardLightEngine).getChartOptionsPatch();
         const b = patch.base ?? {};
         const st = b.style ?? {};
         const ax = st.axes ?? {};
+        const effectiveLocale = navigator?.language || 'en-US';
+        const locale = typeof effectiveLocale === 'string' ? effectiveLocale : 'en-US';
+        const language = locale.split('-')[0] || 'en';
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         return {
             base: {
                 ...b,
-                engine: primeMode ? ('prime' as const) : ('standard' as const),
+                engine: primeMode ? TickUpRenderEngine.prime : TickUpRenderEngine.standard,
+                theme: shellTheme,
                 chartType: CHART_KIND_TO_TYPE[chartKind],
                 showHistogram: true,
                 showOverlayLine: overlayKinds.length > 0,
@@ -312,9 +318,10 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                     ...st,
                     axes: {
                         ...ax,
-                        timezone: 'UTC' as const,
-                        locale: 'en-US',
-                        language: 'en',
+                        timezone,
+                        locale,
+                        language,
+                        dateFormat: ax.dateFormat ?? 'MMM d',
                     },
                 },
             },
@@ -323,7 +330,7 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                 numberOfYTicks: 8,
             },
         };
-    }, [overlayKinds, chartKind, shellTheme, primeMode, primeChartTheme]);
+    }, [overlayKinds, chartKind, shellTheme, primeMode]);
 
     useLayoutEffect(() => {
         let raf = 0;
@@ -343,7 +350,7 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
         return () => cancelAnimationFrame(raf);
     }, [primeMode, hostKey, shellTheme, primeEngineForShell]);
 
-    /** Full fit when dataset / layout changes; gentle pan on live ticks only when the last bar leaves the window. */
+    /** Full fit when dataset / layout changes (e.g. timeframe toggle). */
     useEffect(() => {
         const id = requestAnimationFrame(() => {
             const ref = chartRef.current;
@@ -351,15 +358,41 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
             if (lastLayoutKeyRef.current !== layoutResetKey) {
                 lastLayoutKeyRef.current = layoutResetKey;
                 ref.fitVisibleRangeToData?.();
-                return;
             }
-            if (!liveTrading) return;
-            ref.nudgeVisibleTimeRangeToLatest?.({
-                trailingPaddingSec: Math.max(intervalSec * 2, 120),
-            });
         });
         return () => cancelAnimationFrame(id);
-    }, [baseIntervals, layoutResetKey, liveTrading, intervalSec]);
+    }, [layoutResetKey]);
+
+    const tickPreviewCards = useMemo(() => {
+        const now = 1_700_000_000;
+        const makeCard = (label: string, intervalSec: number, count: number, visibleBars: number) => {
+            const intervals = buildMockIntervals({
+                startTime: now - intervalSec * count,
+                startPrice: 128.5,
+                intervalSec,
+                count,
+                seed: (intervalSec % 997) * 31 + count,
+                driftPerBar: 0.01,
+                vol: 0.25,
+            });
+            const end = intervals[intervals.length - 1]?.t ?? now;
+            const start = end - Math.max(intervalSec, 1) * visibleBars;
+            return {
+                label,
+                intervalSec,
+                intervals,
+                visible: { start, end: end + intervalSec },
+            };
+        };
+
+        return [
+            makeCard('20m window · 1m bars', 60, 800, 20),
+            makeCard('6h window · 5m bars', 300, 1200, 72),
+            makeCard('7d window · 1h bars', 3600, 1200, 7 * 24),
+            makeCard('6mo window · 1d bars', 86400, 600, 180),
+            makeCard('2y window · 1w bars', 7 * 86400, 520, 104),
+        ];
+    }, []);
 
     const showFibComingSoon = useCallback(() => {
         setToast('Fibonacci retracement is on the Pro roadmap — see documentation/15.');
@@ -471,10 +504,10 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                             : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-900'
                             }`}
                     >
-                        {shellTheme === 'light' ? (
-                            <Sun className="h-4 w-4" aria-hidden />
-                        ) : (
+                        {shellTheme === ChartTheme.light ? (
                             <Moon className="h-4 w-4" aria-hidden />
+                        ) : (
+                            <Sun className="h-4 w-4" aria-hidden />
                         )}
                     </button>
                     <a
@@ -503,6 +536,21 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                     >
                         <Zap className="h-3.5 w-3.5" fill={primeMode ? 'currentColor' : 'none'} />
                         Prime
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setShowTickPreviews((v) => !v)}
+                        className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-all md:text-xs ${showTickPreviews
+                            ? 'border-[#3EC5FF]/60 bg-[#3EC5FF]/10 text-[#3EC5FF]'
+                            : isPageDark
+                                ? 'border-white/15 text-slate-300 hover:border-white/25'
+                                : 'border-slate-300 text-slate-700 hover:border-slate-400'
+                            }`}
+                        aria-pressed={showTickPreviews}
+                        title={showTickPreviews ? 'Hide tick preview charts' : 'Show tick preview charts'}
+                    >
+                        <Layers className="h-3.5 w-3.5" aria-hidden />
+                        Ticks
                     </button>
                 </div>
             </header>
@@ -695,6 +743,64 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                             <div className="pointer-events-none absolute bottom-5 left-4 z-20 md:bottom-6 md:left-5">
                                 <ChartHud isDark={isPageDark} primeMode={primeMode} barCount={displayIntervals.length} />
                             </div>
+
+                            {showTickPreviews && (
+                                <section className="mt-3">
+                                    <div
+                                        className={`mb-2 flex flex-wrap items-baseline justify-between gap-2 px-1 text-[11px] font-semibold ${isPageDark ? 'text-slate-300' : 'text-slate-700'}`}
+                                    >
+                                        <span>Tick previews (different intervals / visible ranges)</span>
+                                        <span className={`${isPageDark ? 'text-slate-500' : 'text-slate-500'} font-normal`}>
+                                            Toggle from the header “Ticks” button
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-5">
+                                        {tickPreviewCards.map((card) => (
+                                            <div
+                                                key={card.label}
+                                                className={`overflow-hidden rounded-xl border ${isPageDark ? 'border-white/10 bg-[#06080d]' : 'border-slate-200 bg-white'}`}
+                                            >
+                                                <div
+                                                    className={`flex items-center justify-between gap-2 border-b px-3 py-2 text-[11px] font-semibold ${isPageDark ? 'border-white/10 text-slate-200' : 'border-slate-200 text-slate-700'}`}
+                                                >
+                                                    <span className="truncate">{card.label}</span>
+                                                    <span className={`${isPageDark ? 'text-slate-400' : 'text-slate-500'} font-mono`}>
+                                                        {card.intervalSec}s
+                                                    </span>
+                                                </div>
+                                                <div className="h-[200px] w-full">
+                                                    <TickUpHost
+                                                        key={`${card.label}-${shellTheme}-${primeMode ? 'prime' : 'std'}`}
+                                                        themeVariant={shellTheme}
+                                                        onThemeVariantChange={setThemePreference}
+                                                        intervalsArray={card.intervals}
+                                                        chartOptions={{
+                                                            ...chartOptions,
+                                                            base: {
+                                                                ...chartOptions.base,
+                                                                chartType: ChartType.Line,
+                                                                showHistogram: false,
+                                                                showOverlayLine: false,
+                                                                overlays: [],
+                                                                overlayKinds: [],
+                                                            },
+                                                        }}
+                                                        showSidebar={false}
+                                                        showTopBar={false}
+                                                        showSettingsBar={false}
+                                                        showAttribution={false}
+                                                        symbol={symbol}
+                                                        onSymbolChange={setSymbol}
+                                                        initialTimeDetailLevel={TimeDetailLevel.Auto}
+                                                        initialNumberOfYTicks={6}
+                                                        initialVisibleTimeRange={card.visible}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
                         </main>
 
                         <aside

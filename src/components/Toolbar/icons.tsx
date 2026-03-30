@@ -188,6 +188,21 @@ export const IconTheme: React.FC<{ active?: boolean }> = ({active}) => (
     </IconBase>
 );
 
+/** Sun — paired with {@link IconTheme} (moon) for light/dark toggle affordance. */
+export const IconSun: React.FC<{ active?: boolean }> = ({active}) => (
+    <IconBase active={active} name="sun">
+        <circle cx="12" cy="12" r="3.6" strokeWidth={SW.thick}/>
+        <line x1="12" y1="2.2" x2="12" y2="5.2" strokeWidth={SW.medium}/>
+        <line x1="12" y1="18.8" x2="12" y2="21.8" strokeWidth={SW.medium}/>
+        <line x1="3.5" y1="12" x2="6.5" y2="12" strokeWidth={SW.medium}/>
+        <line x1="17.5" y1="12" x2="20.5" y2="12" strokeWidth={SW.medium}/>
+        <line x1="5.6" y1="5.6" x2="7.7" y2="7.7" strokeWidth={SW.medium}/>
+        <line x1="16.3" y1="16.3" x2="18.4" y2="18.4" strokeWidth={SW.medium}/>
+        <line x1="5.6" y1="18.4" x2="7.7" y2="16.3" strokeWidth={SW.medium}/>
+        <line x1="16.3" y1="7.7" x2="18.4" y2="5.6" strokeWidth={SW.medium}/>
+    </IconBase>
+);
+
 /* =========================
  *  CHART TYPE ICONS
  * ========================= */

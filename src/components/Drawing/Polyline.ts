@@ -5,6 +5,7 @@ import {PriceRange} from "../../types/Graph";
 import {isPointNearLine} from "../Canvas/utils/helpers";
 import {DrawingPoint, DrawingStyleOptions, FinalDrawingStyle, PolylineShapeArgs} from "../../types/Drawings";
 import {ShapeType} from "./types";
+import {StrokeLineStyle} from "../../types/overlay";
 
 
 export class Polyline implements IDrawingShape {
@@ -48,8 +49,8 @@ export class Polyline implements IDrawingShape {
         ctx.strokeStyle = style.lineColor;
         ctx.lineWidth = style.lineWidth;
         ctx.fillStyle = style.fillColor;
-        if (style.lineStyle === 'dashed') ctx.setLineDash([5, 5]);
-        else if (style.lineStyle === 'dotted') ctx.setLineDash([1, 2]);
+        if (style.lineStyle === StrokeLineStyle.dashed) ctx.setLineDash([5, 5]);
+        else if (style.lineStyle === StrokeLineStyle.dotted) ctx.setLineDash([1, 2]);
         else ctx.setLineDash([]);
 
         const pixelPoints = points.map(p => ({

@@ -7,9 +7,10 @@
 
 export type {TickUpHostProps, TickUpHostHandle} from './components/TickUpHost';
 export {TickUpHost} from './components/TickUpHost';
-export type {TickUpProductId} from './types/tickupProducts';
+export {TickUpProductId} from './types/tickupProducts';
 export type {Interval} from './types/Interval';
-export type {LiveDataPlacement, LiveDataApplyResult} from './types/liveData';
+export {LiveDataPlacement} from './types/liveData';
+export type {LiveDataApplyResult} from './types/liveData';
 export {applyLiveDataMerge, normalizeInterval, normalizeIntervals, dedupeByTimePreferLast} from './utils/liveDataMerge';
 export type {ChartSnapshotMeta} from './utils/captureChartRegion';
 export {
@@ -53,7 +54,19 @@ export type {
     CustomSymbolShapeArgs,
 } from './types/Drawings';
 export {AxesPosition} from './types/types';
-export {TimeDetailLevel, ChartType} from './types/chartOptions';
+export {
+    AxesUnitPlacement,
+    ChartType,
+    CurrencyDisplay,
+    NumberNotation,
+    PriceMetricKind,
+    TickUpRenderEngine,
+    TimeDetailLevel,
+} from './types/chartOptions';
+export {StrokeLineStyle} from './types/overlay';
+export {TickUpWatermarkPlacement} from './branding/tickupWatermark';
+export {SettingsCategoryId} from './components/SettingsModal/SettingsModal';
+export {SettingsModalIconRole} from './components/SettingsModal/SettingsModal.styles';
 export {OverlayPriceKey, OverlayKind} from './types/overlay';
 
 export {

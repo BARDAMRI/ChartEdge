@@ -1,12 +1,16 @@
 import {AxesPosition, DeepRequired, ChartTheme} from "../types/types";
 import {
     AreaStyleOptions, AxesStyleOptions,
+    AxesUnitPlacement,
     BarStyleOptions,
-    CandleStyleOptions, ChartOptions, ChartType, GridStyleOptions,
+    CandleStyleOptions, ChartOptions, ChartType, CurrencyDisplay, GridStyleOptions,
     HistogramStyleOptions,
-    LineStyleOptions, StyleOptions
+    LineStyleOptions,
+    NumberNotation,
+    StyleOptions,
+    TickUpRenderEngine,
 } from "../types/chartOptions";
-import {OverlayOptions} from "../types/overlay";
+import {OverlayOptions, StrokeLineStyle} from "../types/overlay";
 import {DrawingStyleOptions} from "../types/Drawings";
 
 const CANDLES_DEFAULT_STYLE: DeepRequired<CandleStyleOptions> = {
@@ -49,7 +53,7 @@ const GRID_DEFAULT_STYLE: DeepRequired<GridStyleOptions> = {
 const OVERLAY_DEFAULT_STYLE: DeepRequired<OverlayOptions> = {
     lineColor: "#ff9800", // Orange
     lineWidth: 1,
-    lineStyle: "solid",
+    lineStyle: StrokeLineStyle.solid,
 }
 const AXES_DEFAULT_STYLE: DeepRequired<AxesStyleOptions> = {
     axisPosition: AxesPosition.left,
@@ -65,15 +69,15 @@ const AXES_DEFAULT_STYLE: DeepRequired<AxesStyleOptions> = {
     dateFormat: "MMM d",
     currency: "USD",
     useCurrency: false,
-    currencyDisplay: "symbol",
-    numberNotation: "standard",
+    currencyDisplay: CurrencyDisplay.symbol,
+    numberNotation: NumberNotation.standard,
     tickSize: 0.01,
     minimumFractionDigits: 2,
     maximumFractionDigits: 8,
     maximumSignificantDigits: 21,
     autoPrecision: false,
     unit: '',
-    unitPlacement: 'suffix',
+    unitPlacement: AxesUnitPlacement.suffix,
     timezone: 'UTC',
     exchange: '',
     tradingSessions: [],
@@ -84,12 +88,12 @@ const AXES_DEFAULT_STYLE: DeepRequired<AxesStyleOptions> = {
 const DRAWINGS_DEFAULT_STYLE: DeepRequired<DrawingStyleOptions> = {
     lineColor: "#2196f3", // A nice blue
     lineWidth: 2,
-    lineStyle: "solid",
+    lineStyle: StrokeLineStyle.solid,
     fillColor: "rgba(33, 150, 243, 0.2)", // Semi-transparent version of the line color
     selected: {
         lineColor: "#ff9800", // Orange for highlight, consistent with overlays
         lineWidthAdd: 1, // Make the line thicker when selected
-        lineStyle: "dashed", // Make the line dashed to indicate selection
+        lineStyle: StrokeLineStyle.dashed, // Make the line dashed to indicate selection
         fillColor: "rgba(255, 152, 0, 0.3)", // Semi-transparent orange fill
     },
 }
@@ -109,7 +113,7 @@ const DEFAULT_STYLES: DeepRequired<StyleOptions> = {
 export const DEFAULT_GRAPH_OPTIONS: DeepRequired<ChartOptions> = {
     base: {
         chartType: ChartType.Candlestick,
-        engine: 'standard',
+        engine: TickUpRenderEngine.standard,
         theme: ChartTheme.light,
         showOverlayLine: false,
         showHistogram: true,

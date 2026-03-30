@@ -5,6 +5,7 @@ import {timeToX, priceToY} from '../Canvas/utils/GraphHelpers';
 import {AngleShapeArgs, CanvasPoint, DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from '../../types/Drawings';
 import {pointerTolerance} from './drawHelper';
 import {ShapeType} from './types';
+import {StrokeLineStyle} from '../../types/overlay';
 
 /** Screen-space helpers for vertex V and ray endpoints A, B (angle ∠AVB). */
 function toPixel(
@@ -48,8 +49,8 @@ export class AngleShape implements IDrawingShape {
         ctx.save();
         ctx.strokeStyle = style.lineColor;
         ctx.lineWidth = style.lineWidth;
-        if (style.lineStyle === 'dashed') ctx.setLineDash([5, 5]);
-        else if (style.lineStyle === 'dotted') ctx.setLineDash([1, 2]);
+        if (style.lineStyle === StrokeLineStyle.dashed) ctx.setLineDash([5, 5]);
+        else if (style.lineStyle === StrokeLineStyle.dotted) ctx.setLineDash([1, 2]);
         else ctx.setLineDash([]);
 
         if (this.points.length === 2) {

@@ -15,7 +15,7 @@ interface ToolbarProps {
     language?: string;
     locale?: string;
     primeGlass?: boolean;
-    /** Light frosted Prime chrome when the plot uses `base.theme: 'light'`. */
+    /** Light frosted Prime chrome when the plot uses `base.theme: ChartTheme.light`. */
     primeGlassLight?: boolean;
 }
 

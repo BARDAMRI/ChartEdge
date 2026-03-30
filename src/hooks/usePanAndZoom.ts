@@ -2,8 +2,8 @@ import React, {useEffect, useRef} from 'react';
 import {Interval} from "../types/Interval";
 import {TimeRange} from "../types/Graph";
 
-const PAN_SENSITIVITY = 1.0;
-const ZOOM_SENSITIVITY = 0.1;
+const PAN_SENSITIVITY = 1.5;
+const ZOOM_SENSITIVITY = 0.4;
 const WHEEL_END_DEBOUNCE = 150;
 
 interface PanAndZoomHandlers {
@@ -19,7 +19,7 @@ export function usePanAndZoom(
     isEnabled: boolean,
     intervalsArray: Interval[],
     visibleRange: TimeRange,
-    setVisibleRange: (range: TimeRange) => void,
+    setVisibleRange: (range: TimeRange | ((prev: TimeRange) => TimeRange)) => void,
     intervalSeconds: number,
     handlers: PanAndZoomHandlers,
     getCssWidth?: () => number,
@@ -79,15 +79,23 @@ export function usePanAndZoom(
             }
 
             const timeOffset = -delta * timePerPixel * PAN_SENSITIVITY;
-            let newStart = visibleRange.start + timeOffset;
 
             const dataStart = intervalsArray[0].t;
             const dataEnd = intervalsArray[intervalsArray.length - 1].t + intervalSeconds;
-            const minStart = dataStart - (duration - intervalSeconds);
-            const maxStart = dataEnd - intervalSeconds;
+            const pad = Math.max(intervalSeconds, 1) * 2;
 
-            newStart = Math.max(minStart, Math.min(newStart, maxStart));
-            setVisibleRange({start: newStart, end: newStart + duration});
+            setVisibleRange((prev: TimeRange) => {
+                const duration = prev.end - prev.start;
+                let newStart = prev.start + timeOffset;
+                
+                const minStart = dataStart - duration + Math.min(duration, pad * 20);
+                const maxStart = dataEnd - Math.min(duration, pad * 2);
+                const actualMin = Math.min(minStart, maxStart);
+                const actualMax = Math.max(minStart, maxStart);
+
+                newStart = Math.max(actualMin, Math.min(newStart, actualMax));
+                return {start: newStart, end: newStart + duration};
+            });
 
             lastPosRef.x = e.clientX;
             lastPosRef.y = e.clientY;
@@ -130,26 +138,37 @@ export function usePanAndZoom(
                 const minDuration = (intervalsArray[1]?.t - intervalsArray[0]?.t || intervalSeconds) * 5;
                 if (newEnd - newStart < minDuration) return;
 
-                const dataEnd = intervalsArray[intervalsArray.length - 1].t + intervalSeconds * 5; // small padding
-                newStart = Math.max(newStart, intervalsArray[0].t);
-                newEnd = Math.min(newEnd, Math.max(newStart + minDuration, dataEnd));
+                const dataEnd = intervalsArray[intervalsArray.length - 1].t;
+                const pad = Math.max(intervalSeconds, 1) * 2;
+                const dataEndExtended = dataEnd + Math.max(duration, pad * 20);
+                newStart = Math.max(newStart, intervalsArray[0].t - duration);
+                newEnd = Math.min(newEnd, Math.max(newStart + minDuration, dataEndExtended));
                 setVisibleRange({start: newStart, end: newEnd});
             } else {
-                const duration = visibleRange.end - visibleRange.start;
-                const cssWidth = latestPropsRef.current.getCssWidth?.() ?? canvas.getBoundingClientRect().width;
-                const timePerPixel = cssWidth > 0 ? (duration / cssWidth) : 0;
-                if (!isFinite(timePerPixel) || timePerPixel === 0) return;
-
                 const delta = Math.abs(e.deltaX) >= Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-                const timeOffset = delta * timePerPixel * PAN_SENSITIVITY;
-                let newStart = visibleRange.start + timeOffset;
+                
                 const dataStart = intervalsArray[0].t;
                 const dataEnd = intervalsArray[intervalsArray.length - 1].t + intervalSeconds;
-                const minStart = dataStart - (duration - intervalSeconds);
-                const maxStart = dataEnd - intervalSeconds;
+                const pad = Math.max(intervalSeconds, 1) * 2;
 
-                newStart = Math.max(minStart, Math.min(newStart, maxStart));
-                setVisibleRange({start: newStart, end: newStart + duration});
+                setVisibleRange((prev: TimeRange) => {
+                    const duration = prev.end - prev.start;
+                    const canvas = canvasRef.current!;
+                    const cssWidth = latestPropsRef.current.getCssWidth?.() ?? canvas.getBoundingClientRect().width;
+                    const timePerPixel = cssWidth > 0 ? (duration / cssWidth) : 0;
+                    if (!isFinite(timePerPixel) || timePerPixel === 0) return prev;
+
+                    const timeOffset = delta * timePerPixel * PAN_SENSITIVITY;
+                    let newStart = prev.start + timeOffset;
+                    
+                    const minStart = dataStart - duration + Math.min(duration, pad * 20);
+                    const maxStart = dataEnd - Math.min(duration, pad * 2);
+                    const actualMin = Math.min(minStart, maxStart);
+                    const actualMax = Math.max(minStart, maxStart);
+
+                    newStart = Math.max(actualMin, Math.min(newStart, actualMax));
+                    return {start: newStart, end: newStart + duration};
+                });
             }
         };
 

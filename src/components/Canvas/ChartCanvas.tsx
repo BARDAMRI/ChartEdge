@@ -24,7 +24,13 @@ import {
     StyledCanvasNonResponsive,
     StyledCanvasResponsive,
 } from '../../styles/ChartCanvas.styles';
-import {ChartOptions, ChartRenderContext, ChartType} from "../../types/chartOptions";
+import {
+    ChartOptions,
+    ChartRenderContext,
+    ChartType,
+    NumberNotation,
+    PriceMetricKind,
+} from "../../types/chartOptions";
 import {
     drawAreaChart,
     drawBarChart,
@@ -53,6 +59,7 @@ import {isWithinTradingSession} from '../../utils/timeUtils';
 import {
     drawTickUpWatermark,
     loadTickUpWatermarkImages,
+    TickUpWatermarkPlacement,
     type DrawWatermarkOptions,
     type TickUpWatermarkImages,
 } from '../../branding/tickupWatermark';
@@ -86,11 +93,15 @@ function tickupWatermarkDrawOpts(
     // maxWidthFrac is intentionally omitted here so the global default in
     // tickupWatermark.ts (currently 0.70) applies.  Edit it there to resize.
     if (prime) {
-        return {opacity: dark ? 0.18 : 0.13, placement: 'center', padding: 0};
+        return {
+            opacity: dark ? 0.18 : 0.13,
+            placement: TickUpWatermarkPlacement.center,
+            padding: 0,
+        };
     }
     return {
         opacity: dark ? 0.32 : 0.20,
-        placement: 'center',
+        placement: TickUpWatermarkPlacement.center,
         padding: 0,
     };
 }
@@ -105,7 +116,7 @@ interface ChartCanvasProps {
     /** Double-click shape, or context-menu on selected shape — opens properties UI. */
     onRequestShapeProperties?: (drawingIndex: number) => void;
     visibleRange: TimeRange;
-    setVisibleRange: (range: TimeRange) => void;
+    setVisibleRange: (range: TimeRange | ((prev: TimeRange) => TimeRange)) => void;
     visiblePriceRange: PriceRange;
     chartOptions: DeepRequired<ChartOptions>;
     canvasSizes: CanvasSizes;
@@ -1012,7 +1023,10 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                         ];
                         if (c.v !== undefined) {
                             parts.push(
-                                `${translate('volume', lang)} ${FormattingService.formatPrice(c.v, { ...axes, numberNotation: 'compact' } as any)}`
+                                `${translate('volume', lang)} ${FormattingService.formatPrice(c.v, {
+                                    ...axes,
+                                    numberNotation: NumberNotation.compact,
+                                } as any)}`
                             );
                         }
                         return parts.join(' · ');
@@ -1076,7 +1090,11 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                                 <div style={{marginTop: compact ? 2 : 4}}>
                                     {translate('change', lang)}:{' '}
                                     <span style={{color: changeColor, fontWeight: 'bold'}}>
-                                        {FormattingService.formatPrice(change, { ...axes, metricType: 'pnl', showSign: true } as any)}{' '}
+                                        {FormattingService.formatPrice(change, {
+                                            ...axes,
+                                            metricType: PriceMetricKind.pnl,
+                                            showSign: true,
+                                        } as any)}{' '}
                                         (
                                         {FormattingService.formatPrice(changePercent, {
                                             ...axes,
@@ -1097,7 +1115,10 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                                         }}
                                     >
                                         {translate('volume', lang)}:{' '}
-                                        {FormattingService.formatPrice(hoveredCandle.v, { ...axes, numberNotation: 'compact' } as any)}
+                                        {FormattingService.formatPrice(hoveredCandle.v, {
+                                            ...axes,
+                                            numberNotation: NumberNotation.compact,
+                                        } as any)}
                                     </div>
                                 )}
                             </>

@@ -119,7 +119,7 @@ export const CanvasContainer = styled.div`
 
 `;
 
-export const FloatingSettingsButton = styled.div<{ $yAxisPosition?: AxesPosition }>`
+export const FloatingSettingsButton = styled.button<{ $yAxisPosition?: AxesPosition }>`
     position: absolute;
     top: 8px;
     ${({ $yAxisPosition }) => ($yAxisPosition === AxesPosition.left ? 'right: 8px;' : 'left: 8px;')}
@@ -128,12 +128,23 @@ export const FloatingSettingsButton = styled.div<{ $yAxisPosition?: AxesPosition
     background-color: var(--widget-bg-color, rgba(255, 255, 255, 0.8));
     border-radius: 4px;
     padding: 6px;
+    width: 34px;
+    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     opacity: 0.6;
     transition: opacity 0.2s ease, background-color 0.2s ease;
+    border: 0;
+
+    & svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+        flex: 0 0 auto;
+        opacity: 0.85;
+    }
 
     &:hover {
         opacity: 1;

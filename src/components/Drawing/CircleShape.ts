@@ -5,6 +5,7 @@ import {PriceRange} from "../../types/Graph";
 import {CircleShapeArgs, DrawingPoint, DrawingStyleOptions, FinalDrawingStyle} from "../../types/Drawings";
 import {pointerTolerance} from "./drawHelper";
 import {ShapeType} from "./types";
+import {StrokeLineStyle} from "../../types/overlay";
 
 
 export class CircleShape implements IDrawingShape {
@@ -51,9 +52,9 @@ export class CircleShape implements IDrawingShape {
         ctx.lineWidth = style.lineWidth;
         ctx.fillStyle = style.fillColor;
 
-        if (style.lineStyle === 'dashed') {
+        if (style.lineStyle === StrokeLineStyle.dashed) {
             ctx.setLineDash([5, 5]);
-        } else if (style.lineStyle === 'dotted') {
+        } else if (style.lineStyle === StrokeLineStyle.dotted) {
             ctx.setLineDash([1, 2]);
         } else {
             ctx.setLineDash([]);

@@ -7,7 +7,8 @@
  */
 
 export type {Interval} from './types/Interval';
-export type {LiveDataPlacement, LiveDataApplyResult} from './types/liveData';
+export {LiveDataPlacement} from './types/liveData';
+export type {LiveDataApplyResult} from './types/liveData';
 export {applyLiveDataMerge, normalizeInterval, normalizeIntervals, dedupeByTimePreferLast} from './utils/liveDataMerge';
 export type {ChartSnapshotMeta} from './utils/captureChartRegion';
 export {
@@ -46,8 +47,18 @@ export type {
     CustomSymbolShapeArgs,
 } from './types/Drawings';
 export {AxesPosition, ChartTheme} from './types/types';
-export {TimeDetailLevel, ChartType} from './types/chartOptions';
+export {
+    AxesUnitPlacement,
+    ChartType,
+    CurrencyDisplay,
+    NumberNotation,
+    PriceMetricKind,
+    TickUpRenderEngine,
+    TimeDetailLevel,
+} from './types/chartOptions';
 export type {ChartOptions} from './types/chartOptions';
+export {StrokeLineStyle} from './types/overlay';
+export {TickUpWatermarkPlacement} from './branding/tickupWatermark';
 export type {DeepRequired} from './types/types';
 export {OverlayPriceKey, OverlayKind} from './types/overlay';
 export {TickUpMark} from './branding/TickUpMark';

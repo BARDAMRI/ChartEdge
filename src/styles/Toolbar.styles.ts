@@ -2,7 +2,7 @@ import styled, {css} from 'styled-components';
 
 interface PrimeGlassProps {
     $primeGlass?: boolean;
-    /** When true with `$primeGlass`, use frosted **light** glass for `base.theme === 'light'` Prime plots. */
+    /** When true with `$primeGlass`, use frosted **light** glass for `base.theme === ChartTheme.light` Prime plots. */
     $primeGlassLight?: boolean;
 }
 

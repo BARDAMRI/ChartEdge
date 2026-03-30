@@ -1,8 +1,9 @@
 import React from 'react';
 import styled from 'styled-components';
-import {TickUpMark, type TickUpThemeVariant} from './TickUpMark';
+import {ChartTheme} from '../types/types';
+import {TickUpMark} from './TickUpMark';
 
-const Bar = styled.div<{$variant: TickUpThemeVariant}>`
+const Bar = styled.div<{$variant: ChartTheme}>`
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -12,33 +13,33 @@ const Bar = styled.div<{$variant: TickUpThemeVariant}>`
     min-height: 0;
     border-top: 1px solid
         ${({$variant}) =>
-            $variant === 'dark'
+            $variant === ChartTheme.dark
                 ? 'rgba(240, 246, 252, 0.12)'
-                : $variant === 'grey'
+                : $variant === ChartTheme.grey
                   ? 'rgba(110, 118, 129, 0.4)'
                   : 'rgba(31, 35, 38, 0.12)'};
     background: ${({$variant}) =>
-        $variant === 'dark'
+        $variant === ChartTheme.dark
             ? 'rgba(1, 4, 9, 0.35)'
-            : $variant === 'grey'
+            : $variant === ChartTheme.grey
               ? 'rgba(34, 39, 46, 0.55)'
               : 'rgba(255, 255, 255, 0.65)'};
     backdrop-filter: blur(6px);
     box-sizing: border-box;
 `;
 
-const Meta = styled.span<{$variant: TickUpThemeVariant}>`
+const Meta = styled.span<{$variant: ChartTheme}>`
     font-size: 10px;
     line-height: 1.2;
     color: ${({$variant}) =>
-        $variant === 'dark' || $variant === 'grey' ? '#8b949e' : '#656d76'};
+        $variant === ChartTheme.dark || $variant === ChartTheme.grey ? '#8b949e' : '#656d76'};
     font-family: system-ui, -apple-system, Segoe UI, sans-serif;
     max-width: 200px;
     text-align: right;
 `;
 
 export type TickUpAttributionProps = {
-    themeVariant: TickUpThemeVariant;
+    themeVariant: ChartTheme;
     /** e.g. product label shown next to the mark */
     productLabel?: string;
     className?: string;

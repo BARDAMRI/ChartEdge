@@ -19,16 +19,33 @@ import {
     SubMenuPane,
     SwitchToggle,
     BackArrowIcon,
+    SettingsModalIconRole,
     type ModalThemeVariant,
 } from './SettingsModal.styles';
 import { IconClose, IconSave } from '../Toolbar/icons';
 import { AxesPosition, ChartTheme } from '../../types/types';
 import { getLocaleDefaults, SUPPORTED_LANGUAGES, SUPPORTED_LOCALES, SUPPORTED_CURRENCIES } from '../../utils/i18n';
-import { CurrencyDisplay, NumberNotation } from '../../types/chartOptions';
+import {
+    AxesUnitPlacement,
+    CurrencyDisplay,
+    NumberNotation,
+} from '../../types/chartOptions';
+import { StrokeLineStyle } from '../../types/overlay';
 
 /* ──────────────────────────────────────────────────
  *  Types
  * ────────────────────────────────────────────────── */
+export enum SettingsCategoryId {
+    chart = 'chart',
+    axes = 'axes',
+    time = 'time',
+    layout = 'layout',
+    colors = 'colors',
+    drawings = 'drawings',
+    globalization = 'globalization',
+    financial = 'financial',
+}
+
 export interface SettingsState {
     showSidebar: boolean;
     showTopBar: boolean;
@@ -58,20 +75,18 @@ export interface SettingsState {
     tickSize: number;
     autoPrecision: boolean;
     unit: string;
-    unitPlacement: 'prefix' | 'suffix';
+    unitPlacement: AxesUnitPlacement;
     drawingLineColor: string;
     drawingLineWidth: number;
-    drawingLineStyle: 'solid' | 'dashed' | 'dotted';
+    drawingLineStyle: StrokeLineStyle;
     drawingFillColor: string;
     drawingSelectedLineColor: string;
-    drawingSelectedLineStyle: 'solid' | 'dashed' | 'dotted';
+    drawingSelectedLineStyle: StrokeLineStyle;
     drawingSelectedLineWidthAdd: number;
     showCandleTooltip: boolean;
     showCrosshair: boolean;
     showCrosshairValues: boolean;
 }
-
-type Category = 'chart' | 'axes' | 'time' | 'layout' | 'colors' | 'drawings' | 'globalization' | 'financial';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -94,26 +109,26 @@ interface SettingsModalProps {
 /* ──────────────────────────────────────────────────
  *  Category metadata
  * ────────────────────────────────────────────────── */
-const CATEGORIES: { id: Category; icon: string; label: string }[] = [
-    { id: 'chart',         icon: '📊', label: 'Chart Style'   },
-    { id: 'axes',          icon: '📐', label: 'Axes'          },
-    { id: 'time',          icon: '⏱',  label: 'Time'          },
-    { id: 'layout',        icon: '🖥',  label: 'Layout'        },
-    { id: 'colors',        icon: '🎨', label: 'Colors'        },
-    { id: 'drawings',      icon: '✏️', label: 'Drawing shapes' },
-    { id: 'globalization', icon: '🌐', label: 'Regional'      },
-    { id: 'financial',     icon: '💰', label: 'Financials'    },
+const CATEGORIES: { id: SettingsCategoryId; icon: string; label: string }[] = [
+    { id: SettingsCategoryId.chart, icon: '📊', label: 'Chart Style' },
+    { id: SettingsCategoryId.axes, icon: '📐', label: 'Axes' },
+    { id: SettingsCategoryId.time, icon: '⏱', label: 'Time' },
+    { id: SettingsCategoryId.layout, icon: '🖥', label: 'Layout' },
+    { id: SettingsCategoryId.colors, icon: '🎨', label: 'Colors' },
+    { id: SettingsCategoryId.drawings, icon: '✏️', label: 'Drawing shapes' },
+    { id: SettingsCategoryId.globalization, icon: '🌐', label: 'Regional' },
+    { id: SettingsCategoryId.financial, icon: '💰', label: 'Financials' },
 ];
 
-const CATEGORY_TITLE: Record<Category, string> = {
-    chart:          'Chart Style',
-    axes:           'Axes',
-    time:           'Time',
-    layout:         'Layout',
-    colors:         'Colors',
-    drawings:       'Drawing shapes',
-    globalization:  'Regional & Format',
-    financial:      'Currency & Price',
+const CATEGORY_TITLE: Record<SettingsCategoryId, string> = {
+    [SettingsCategoryId.chart]: 'Chart Style',
+    [SettingsCategoryId.axes]: 'Axes',
+    [SettingsCategoryId.time]: 'Time',
+    [SettingsCategoryId.layout]: 'Layout',
+    [SettingsCategoryId.colors]: 'Colors',
+    [SettingsCategoryId.drawings]: 'Drawing shapes',
+    [SettingsCategoryId.globalization]: 'Regional & Format',
+    [SettingsCategoryId.financial]: 'Currency & Price',
 };
 
 
@@ -126,7 +141,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
     const tv = themeVariant;
     const [settings, setSettings] = useState<SettingsState>(initialSettings);
-    const [active, setActive] = useState<Category | null>(null);
+    const [active, setActive] = useState<SettingsCategoryId | null>(null);
     const [goingBack, setGoingBack] = useState(false);
 
     const initialSettingsRef = useRef(initialSettings);
@@ -139,7 +154,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }
     }, [isOpen]);
 
-    const visibleCategories = lockToolbarLayout ? CATEGORIES.filter((c) => c.id !== 'layout') : CATEGORIES;
+    const visibleCategories = lockToolbarLayout
+        ? CATEGORIES.filter((c) => c.id !== SettingsCategoryId.layout)
+        : CATEGORIES;
 
     const handleLanguageChange = (newLang: string) => {
         let newLocale = settings.locale;
@@ -183,7 +200,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const handleSave = () => { onSave(settings); onClose(); };
 
-    const drillIn = (cat: Category) => {
+    const drillIn = (cat: SettingsCategoryId) => {
         setGoingBack(false);
         setActive(cat);
     };
@@ -200,7 +217,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     /* ── sub-menu content ── */
     const renderSubMenu = () => {
         switch (active) {
-            case 'chart':
+            case SettingsCategoryId.chart:
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
                         <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Display</SectionTitle>
@@ -261,7 +278,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </FormRow>
                     </SubMenuPane>
                 );
-            case 'axes':
+            case SettingsCategoryId.axes:
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
                         <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Y-Axis</SectionTitle>
@@ -289,7 +306,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </FormRow>
                     </SubMenuPane>
                 );
-            case 'time':
+            case SettingsCategoryId.time:
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
                         <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Format</SectionTitle>
@@ -301,7 +318,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </FormRow>
                     </SubMenuPane>
                 );
-            case 'layout':
+            case SettingsCategoryId.layout:
                 if (lockToolbarLayout) {
                     return (
                         <SubMenuPane $back={goingBack} className="settings-submenu-pane">
@@ -329,7 +346,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </FormRow>
                     </SubMenuPane>
                 );
-            case 'colors':
+            case SettingsCategoryId.colors:
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
                         <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Theme Colors</SectionTitle>
@@ -376,7 +393,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </FormRow>
                     </SubMenuPane>
                 );
-            case 'drawings':
+            case SettingsCategoryId.drawings:
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
                         <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>New shapes</SectionTitle>
@@ -406,11 +423,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 $variant={tv}
                                 className="settings-select-dropdown"
                                 value={settings.drawingLineStyle}
-                                onChange={(e: any) => change('drawingLineStyle', e.target.value)}
+                                onChange={(e: any) => change('drawingLineStyle', e.target.value as StrokeLineStyle)}
                             >
-                                <option value="solid">Solid</option>
-                                <option value="dashed">Dashed</option>
-                                <option value="dotted">Dotted</option>
+                                <option value={StrokeLineStyle.solid}>Solid</option>
+                                <option value={StrokeLineStyle.dashed}>Dashed</option>
+                                <option value={StrokeLineStyle.dotted}>Dotted</option>
                             </SelectDropdown>
                         </FormRow>
                         <FormRow $variant={tv} className="settings-form-row">
@@ -454,16 +471,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 $variant={tv}
                                 className="settings-select-dropdown"
                                 value={settings.drawingSelectedLineStyle}
-                                onChange={(e: any) => change('drawingSelectedLineStyle', e.target.value)}
+                                onChange={(e: any) =>
+                                    change('drawingSelectedLineStyle', e.target.value as StrokeLineStyle)}
                             >
-                                <option value="solid">Solid</option>
-                                <option value="dashed">Dashed</option>
-                                <option value="dotted">Dotted</option>
+                                <option value={StrokeLineStyle.solid}>Solid</option>
+                                <option value={StrokeLineStyle.dashed}>Dashed</option>
+                                <option value={StrokeLineStyle.dotted}>Dotted</option>
                             </SelectDropdown>
                         </FormRow>
                     </SubMenuPane>
                 );
-            case 'globalization':
+            case SettingsCategoryId.globalization:
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
                         <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Language & Locale</SectionTitle>
@@ -515,7 +533,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </FormRow>
                     </SubMenuPane>
                 );
-            case 'financial':
+            case SettingsCategoryId.financial:
                 return (
                     <SubMenuPane $back={goingBack} className="settings-submenu-pane">
                         <SectionTitle $variant={tv} className="settings-section-title" dir={direction}>Currency</SectionTitle>
@@ -543,12 +561,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     <SelectDropdown
                                         $variant={tv}
                                         value={settings.currencyDisplay}
-                                        onChange={(e: any) => change('currencyDisplay', e.target.value)}
+                                        onChange={(e: any) =>
+                                            change('currencyDisplay', e.target.value as CurrencyDisplay)}
                                     >
-                                        <option value="symbol">Symbol ($)</option>
-                                        <option value="narrowSymbol">Narrow ($)</option>
-                                        <option value="code">Code (USD)</option>
-                                        <option value="name">Name (dollars)</option>
+                                        <option value={CurrencyDisplay.symbol}>Symbol ($)</option>
+                                        <option value={CurrencyDisplay.narrowSymbol}>Narrow ($)</option>
+                                        <option value={CurrencyDisplay.code}>Code (USD)</option>
+                                        <option value={CurrencyDisplay.name}>Name (dollars)</option>
                                     </SelectDropdown>
                                 </FormRow>
                             </>
@@ -560,11 +579,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <SelectDropdown
                                 $variant={tv}
                                 value={settings.numberNotation}
-                                onChange={(e: any) => change('numberNotation', e.target.value)}
+                                onChange={(e: any) => change('numberNotation', e.target.value as NumberNotation)}
                             >
-                                <option value="standard">Standard</option>
-                                <option value="scientific">Scientific</option>
-                                <option value="compact">Compact</option>
+                                <option value={NumberNotation.standard}>Standard</option>
+                                <option value={NumberNotation.scientific}>Scientific</option>
+                                <option value={NumberNotation.compact}>Compact</option>
                             </SelectDropdown>
                         </FormRow>
                         <FormRow $variant={tv} className="settings-form-row">
@@ -615,10 +634,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <SelectDropdown
                                 $variant={tv}
                                 value={settings.unitPlacement}
-                                onChange={(e: any) => change('unitPlacement', e.target.value)}
+                                onChange={(e: any) => change('unitPlacement', e.target.value as AxesUnitPlacement)}
                             >
-                                <option value="suffix">Suffix (100 BTC)</option>
-                                <option value="prefix">Prefix (BTC 100)</option>
+                                <option value={AxesUnitPlacement.suffix}>Suffix (100 BTC)</option>
+                                <option value={AxesUnitPlacement.prefix}>Prefix (BTC 100)</option>
                             </SelectDropdown>
                         </FormRow>
                         <FormRow $variant={tv} className="settings-form-row">
@@ -682,13 +701,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <ModalHeader $variant={tv} className="settings-header">
                     <HeaderLeft className="settings-header-left">
                         {active && (
-                            <IconButton $theme={tv} $variant="back" className="settings-back-button" onClick={goBack} aria-label="Back">
+                            <IconButton
+                                $theme={tv}
+                                $variant={SettingsModalIconRole.back}
+                                className="settings-back-button"
+                                onClick={goBack}
+                                aria-label="Back"
+                            >
                                 <BackArrowIcon />
                             </IconButton>
                         )}
                         <h2 className="settings-header-title" dir={direction}>{headerTitle}</h2>
                     </HeaderLeft>
-                    <IconButton $theme={tv} $variant="close" className="settings-close-button" onClick={onClose} aria-label="Close settings">
+                    <IconButton
+                        $theme={tv}
+                        $variant={SettingsModalIconRole.close}
+                        className="settings-close-button"
+                        onClick={onClose}
+                        aria-label="Close settings"
+                    >
                         <IconClose />
                     </IconButton>
                 </ModalHeader>

@@ -16,8 +16,10 @@ import {
     ColorInput,
     SectionTitle,
     SelectDropdown,
+    SettingsModalIconRole,
     type ModalThemeVariant,
 } from '../SettingsModal/SettingsModal.styles';
+import {StrokeLineStyle} from '../../types/overlay';
 import {IconClose, IconSave} from '../Toolbar/icons';
 import {IDrawingShape} from '../Drawing/IDrawingShape';
 import {CustomSymbolShape} from '../Drawing/CustomSymbolShape';
@@ -78,7 +80,7 @@ export const ShapePropertiesModal: React.FC<ShapePropertiesModalProps> = ({
                     <HeaderLeft>
                         <h2>{title}</h2>
                     </HeaderLeft>
-                    <IconButton $theme={tv} $variant="close" onClick={onClose} aria-label="Close">
+                    <IconButton $theme={tv} $variant={SettingsModalIconRole.close} onClick={onClose} aria-label="Close">
                         <IconClose />
                     </IconButton>
                 </ModalHeader>
@@ -105,11 +107,11 @@ export const ShapePropertiesModal: React.FC<ShapePropertiesModalProps> = ({
                         <SelectDropdown
                             $variant={tv}
                             value={form.lineStyle}
-                            onChange={(e) => patch('lineStyle', e.target.value as ShapePropertiesFormState['lineStyle'])}
+                            onChange={(e) => patch('lineStyle', e.target.value as StrokeLineStyle)}
                         >
-                            <option value="solid">Solid</option>
-                            <option value="dashed">Dashed</option>
-                            <option value="dotted">Dotted</option>
+                            <option value={StrokeLineStyle.solid}>Solid</option>
+                            <option value={StrokeLineStyle.dashed}>Dashed</option>
+                            <option value={StrokeLineStyle.dotted}>Dotted</option>
                         </SelectDropdown>
                     </FormRow>
                     <FormRow $variant={tv}>
@@ -151,13 +153,11 @@ export const ShapePropertiesModal: React.FC<ShapePropertiesModalProps> = ({
                         <SelectDropdown
                             $variant={tv}
                             value={form.selectedLineStyle}
-                            onChange={(e) =>
-                                patch('selectedLineStyle', e.target.value as ShapePropertiesFormState['selectedLineStyle'])
-                            }
+                            onChange={(e) => patch('selectedLineStyle', e.target.value as StrokeLineStyle)}
                         >
-                            <option value="solid">Solid</option>
-                            <option value="dashed">Dashed</option>
-                            <option value="dotted">Dotted</option>
+                            <option value={StrokeLineStyle.solid}>Solid</option>
+                            <option value={StrokeLineStyle.dashed}>Dashed</option>
+                            <option value={StrokeLineStyle.dotted}>Dotted</option>
                         </SelectDropdown>
                     </FormRow>
                     <FormRow $variant={tv}>

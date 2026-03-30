@@ -13,9 +13,11 @@ import {
     IconRange,
     IconRefresh,
     IconSearch,
+    IconSun,
     IconTheme,
 } from './icons';
 import { ChartType } from "../../types/chartOptions";
+import { ChartTheme } from '../../types/types';
 import { Placement, TooltipAlign, TooltipAxis } from "../../types/buttons";
 import { Tooltip } from "../Tooltip";
 import { ChartTypeSelectDropdown } from "./ChartTypeSelectDropdown";
@@ -66,6 +68,8 @@ interface SettingToolbarProps {
     onSnapshotPng?: () => void;
     onRefresh?: () => void | Promise<void>;
     onToggleTheme?: () => void;
+    /** Shell light/dark (and grey) — drives sun vs moon on the theme control. */
+    themeVariant?: ChartTheme;
     /** Prime engine: glass-style toolbar surface */
     primeGlass?: boolean;
     primeGlassLight?: boolean;
@@ -89,6 +93,7 @@ export const SettingsToolbar = ({
     onSnapshotPng,
     onRefresh,
     onToggleTheme,
+    themeVariant = ChartTheme.light,
     primeGlass = false,
     primeGlassLight = false,
 }: SettingToolbarProps) => {
@@ -346,11 +351,17 @@ export const SettingsToolbar = ({
                         <IconRefresh />
                     </Button>
                 </Tooltip>
-                <Tooltip content={translate('toggle_theme', language)} tooltipAxis={TooltipAxis.horizontal} placement={Placement.bottom}
-                    axis={TooltipAxis.vertical} align={TooltipAlign.center} className="settings-tooltip-theme" 
-                    dir={direction}>
+                <Tooltip
+                    content={translate('toggle_theme', language)}
+                    tooltipAxis={TooltipAxis.horizontal}
+                    placement={Placement.bottom}
+                    axis={TooltipAxis.vertical}
+                    align={TooltipAlign.center}
+                    className="settings-tooltip-theme"
+                    dir={direction}
+                >
                     <Button className="settings-theme-button" onClickHandler={handleTheme}>
-                        <IconTheme />
+                        {themeVariant === ChartTheme.light ? <IconTheme /> : <IconSun />}
                     </Button>
                 </Tooltip>
                 <Spacer className="settings-toolbar-spacer" />

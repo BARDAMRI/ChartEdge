@@ -7,10 +7,14 @@ import {Interval} from '../types/Interval';
 import {PriceRange, TimeRange, VisibleViewRanges} from '../types/Graph';
 import {AxesPosition, DeepPartial, DeepRequired, ChartTheme} from '../types/types';
 import {
+    AxesUnitPlacement,
     ChartOptions,
     ChartType,
-    TimeDetailLevel
+    CurrencyDisplay,
+    NumberNotation,
+    TimeDetailLevel,
 } from '../types/chartOptions';
+import {StrokeLineStyle} from '../types/overlay';
 import {Mode, ModeProvider} from '../contexts/ModeContext';
 import {deepMerge} from "../utils/deepMerge";
 import {deepEqual} from "../utils/deepEqual";
@@ -29,7 +33,7 @@ import type {DrawingInput, DrawingPatch, DrawingSpec} from './Drawing/drawHelper
 import type {DrawingQuery, DrawingSnapshot} from './Drawing/drawingQuery';
 import type {ChartContextInfo} from '../types/chartContext';
 import type {IDrawingShape} from './Drawing/IDrawingShape';
-import type {TickUpProductId} from '../types/tickupProducts';
+import {TickUpProductId} from '../types/tickupProducts';
 import type {TickUpChartEngine} from '../engines/TickUpEngine';
 
 /** Stable reference when `chartOptions` prop is omitted so sync effect is not fooled by a fresh `{}` each render. */
@@ -146,14 +150,14 @@ function tickupProductLayoutDefaults(id: TickUpProductId | undefined): {
     showTopBar: boolean;
     showSettingsBar: boolean;
 } {
-    switch (id ?? 'command') {
-        case 'pulse':
+    switch (id ?? TickUpProductId.command) {
+        case TickUpProductId.pulse:
             return {showSidebar: false, showTopBar: false, showSettingsBar: false};
-        case 'flow':
+        case TickUpProductId.flow:
             return {showSidebar: false, showTopBar: true, showSettingsBar: true};
-        case 'command':
-        case 'desk':
-        case 'prime':
+        case TickUpProductId.command:
+        case TickUpProductId.desk:
+        case TickUpProductId.prime:
         default:
             return {showSidebar: true, showTopBar: true, showSettingsBar: true};
     }
@@ -187,7 +191,7 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
     const showSidebar = hasLockedChrome ? tierLayout.showSidebar : (showSidebarProp ?? tierLayout.showSidebar);
     const showTopBar = hasLockedChrome ? tierLayout.showTopBar : (showTopBarProp ?? tierLayout.showTopBar);
     const showSettingsBar = hasLockedChrome ? tierLayout.showSettingsBar : (showSettingsBarProp ?? tierLayout.showSettingsBar);
-    const attributionOn = productId === 'desk' ? true : showAttribution;
+    const attributionOn = productId === TickUpProductId.desk ? true : showAttribution;
 
     const [finalStyleOptions, setStyleOptions] = useState<DeepRequired<ChartOptions>>(() =>
         deepMerge(DEFAULT_GRAPH_OPTIONS, chartOptions)
@@ -525,21 +529,21 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
         language: finalStyleOptions.base.style.axes.language ?? 'en',
         currency: finalStyleOptions.base.style.axes.currency ?? 'USD',
         useCurrency: finalStyleOptions.base.style.axes.useCurrency ?? false,
-        currencyDisplay: finalStyleOptions.base.style.axes.currencyDisplay ?? 'symbol',
-        numberNotation: finalStyleOptions.base.style.axes.numberNotation ?? 'standard',
+        currencyDisplay: finalStyleOptions.base.style.axes.currencyDisplay ?? CurrencyDisplay.symbol,
+        numberNotation: finalStyleOptions.base.style.axes.numberNotation ?? NumberNotation.standard,
         minimumFractionDigits: finalStyleOptions.base.style.axes.minimumFractionDigits ?? 2,
         maximumFractionDigits: finalStyleOptions.base.style.axes.maximumFractionDigits ?? 8,
         maximumSignificantDigits: finalStyleOptions.base.style.axes.maximumSignificantDigits ?? 21,
         tickSize: finalStyleOptions.base.style.axes.tickSize ?? 0.01,
         autoPrecision: finalStyleOptions.base.style.axes.autoPrecision ?? false,
         unit: finalStyleOptions.base.style.axes.unit ?? '',
-        unitPlacement: finalStyleOptions.base.style.axes.unitPlacement ?? 'suffix',
+        unitPlacement: finalStyleOptions.base.style.axes.unitPlacement ?? AxesUnitPlacement.suffix,
         drawingLineColor: finalStyleOptions.base.style.drawings.lineColor,
         drawingLineWidth: finalStyleOptions.base.style.drawings.lineWidth,
         drawingLineStyle: finalStyleOptions.base.style.drawings.lineStyle,
         drawingFillColor: finalStyleOptions.base.style.drawings.fillColor,
         drawingSelectedLineColor: finalStyleOptions.base.style.drawings.selected.lineColor,
-        drawingSelectedLineStyle: finalStyleOptions.base.style.drawings.selected.lineStyle ?? 'dashed',
+        drawingSelectedLineStyle: finalStyleOptions.base.style.drawings.selected.lineStyle ?? StrokeLineStyle.dashed,
         drawingSelectedLineWidthAdd: finalStyleOptions.base.style.drawings.selected.lineWidthAdd ?? 1,
     }), [
         layoutOptions.showSidebar,
@@ -583,11 +587,11 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
         } as DeepPartial<ChartOptions>);
     }, [finalStyleOptions, themeVariant]);
 
-    const primeTierEval = productId === 'prime' && !licenseKey;
+    const primeTierEval = productId === TickUpProductId.prime && !licenseKey;
 
     return (
         <ModeProvider>
-            <GlobalStyle $pageBackground={themeVariant === 'dark' ? '#121212' : '#ffffff'}/>
+            <GlobalStyle $pageBackground={themeVariant === ChartTheme.dark ? '#121212' : '#ffffff'}/>
             <MainAppWindow
                 className={'tickup-root'}
                 style={{
@@ -605,9 +609,9 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
                             fontSize: 11,
                             textAlign: 'center',
                             fontFamily: 'system-ui, sans-serif',
-                            backgroundColor: themeVariant === 'dark' ? '#2d333b' : '#fff8e1',
-                            color: themeVariant === 'dark' ? '#d4d4d8' : '#5c4a00',
-                            borderBottom: `1px solid ${themeVariant === 'dark' ? '#444c56' : '#f0d060'}`,
+                            backgroundColor: themeVariant === ChartTheme.dark ? '#2d333b' : '#fff8e1',
+                            color: themeVariant === ChartTheme.dark ? '#d4d4d8' : '#5c4a00',
+                            borderBottom: `1px solid ${themeVariant === ChartTheme.dark ? '#444c56' : '#f0d060'}`,
                         }}
                     >
                         TickUp Prime tier — evaluation mode. Provide <code>licenseKey</code> when your license is active.
