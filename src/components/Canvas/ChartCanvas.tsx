@@ -516,7 +516,13 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                     const axes = chartOptions.base.style.axes;
                     const mouseTime = xToTime(point.x, renderContext.canvasWidth, renderContext.visibleRange);
                     const mousePrice = yToPrice(point.y, renderContext.canvasHeight, visiblePriceRange);
-                    const timeStr = FormattingService.formatDate(new Date(mouseTime * 1000), axes);
+                    const compactTimeLabel = cssWidth < 540;
+                    const timeStr = FormattingService.formatDateForInterval(
+                        new Date(mouseTime * 1000),
+                        axes,
+                        intervalSeconds,
+                        compactTimeLabel
+                    );
                     const priceStr = FormattingService.formatPrice(mousePrice, axes);
                     const font = axes.font || '12px system-ui, sans-serif';
                     hoverCtx.font = font;
@@ -1014,8 +1020,14 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                         const axes = chartOptions.base.style.axes;
                         const lang = axes.language || 'en';
                         const c = hoveredCandle;
+                        const compact = canvasSizes.width < 440 || canvasSizes.height < 280;
                         const parts = [
-                            FormattingService.formatDate(new Date(c.t * 1000), axes),
+                            FormattingService.formatDateForInterval(
+                                new Date(c.t * 1000),
+                                axes,
+                                intervalSeconds,
+                                compact
+                            ),
                             `${translate('open', lang)} ${FormattingService.formatPrice(c.o, axes)}`,
                             `${translate('high', lang)} ${FormattingService.formatPrice(c.h, axes)}`,
                             `${translate('low', lang)} ${FormattingService.formatPrice(c.l, axes)}`,
@@ -1042,8 +1054,13 @@ const ChartCanvasInner: React.ForwardRefRenderFunction<ChartCanvasHandle, ChartC
                         const changeColor = isDarkPanel
                             ? (change >= 0 ? '#7ee2b8' : '#ff9e9e')
                             : (change >= 0 ? 'green' : 'red');
-                        const dateStr = FormattingService.formatDate(new Date(hoveredCandle.t * 1000), axes);
                         const compact = canvasSizes.width < 440 || canvasSizes.height < 280;
+                        const dateStr = FormattingService.formatDateForInterval(
+                            new Date(hoveredCandle.t * 1000),
+                            axes,
+                            intervalSeconds,
+                            compact
+                        );
                         const divider = isDarkPanel ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(0,0,0,0.1)';
                         const gridStyle: React.CSSProperties = compact
                             ? {

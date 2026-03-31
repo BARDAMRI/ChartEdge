@@ -322,6 +322,8 @@ export default function App() {
                 theme: theme,
                 showOverlayLine: true,
                 showHistogram: true,
+                showCrosshair: true,
+                showCrosshairValues: true,
                 style: {
                     backgroundColor: theme === ChartTheme.dark ? '#0b0e14' : '#ffffff',
                     grid: {

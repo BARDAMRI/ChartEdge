@@ -4,6 +4,7 @@
  */
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Interval, TickUpChartEngine, TickUpHostHandle } from 'tickup/full';
+import type { RangeKey } from 'tickup/full';
 import {
     AxesPosition,
     ChartTheme,
@@ -61,6 +62,9 @@ function usePrefersColorSchemeDark(): boolean {
 }
 
 type ChartKind = 'candle' | 'area' | 'line' | 'heikin';
+type DemoRangeKey = '20m' | '6h' | '7d' | '6mo' | '2y';
+const MAX_DEMO_HISTORY_BARS = 200_000;
+const DEMO_RANGES: readonly DemoRangeKey[] = ['20m', '6h', '7d', '6mo', '2y'] as const;
 
 const TF_SECONDS: Record<string, number> = {
     '1m': 60, '2m': 120, '3m': 180, '5m': 300, '10m': 600, '15m': 900, '30m': 1800, '45m': 2700,
@@ -188,9 +192,55 @@ const demoStandardDarkEngine: TickUpChartEngine = {
 
 type TickUpDemoProps = {
     onOpenCompare?: () => void;
+    /** Optional custom data-feed hook for interval selection from chart UI / imperative API. */
+    onIntervalFeedRequest?: (interval: DemoIntervalKey) => void | boolean | Promise<void | boolean>;
+    /** Optional custom data-feed hook for range selection from chart UI / imperative API. */
+    onRangeFeedRequest?: (range: DemoRangeKey) => void | boolean | Promise<void | boolean>;
 };
 
-export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
+const HOST_TO_DEMO_RANGE: Record<string, DemoRangeKey> = {
+    '1D': '6h',
+    '1W': '7d',
+    '5D': '7d',
+    '1M': '7d',
+    '3M': '6mo',
+    '6M': '6mo',
+    'YTD': '6mo',
+    '1Y': '2y',
+    '5Y': '2y',
+    'All': '2y',
+};
+
+const DEMO_TO_HOST_RANGE: Record<DemoRangeKey, RangeKey> = {
+    '20m': '1D',
+    '6h': '1D',
+    '7d': '5D',
+    '6mo': '6M',
+    '2y': '1Y',
+};
+
+function isThenable(v: unknown): v is Promise<unknown> {
+    return v != null && typeof (v as Promise<unknown>).then === 'function';
+}
+
+function rangeSecondsFor(r: DemoRangeKey): number {
+    switch (r) {
+        case '20m':
+            return 20 * 60;
+        case '6h':
+            return 6 * 3600;
+        case '7d':
+            return 7 * 86400;
+        case '6mo':
+            return 180 * 86400;
+        case '2y':
+            return 2 * 365 * 86400;
+        default:
+            return 7 * 86400;
+    }
+}
+
+export default function TickUpDemo({ onOpenCompare, onIntervalFeedRequest, onRangeFeedRequest }: TickUpDemoProps) {
     const chartRef = useRef<TickUpHostHandle | null>(null);
     /** Follow OS vs forced appearance; resolved into `shellTheme` below. */
     const [themePreference, setThemePreference] = useState<ThemePreference>('system');
@@ -202,7 +252,7 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
         return themePreference as ChartTheme;
     }, [themePreference, systemPrefersDark]);
     const [timeframe, setTimeframe] = useState<DemoIntervalKey>('5m');
-    const [range, setRange] = useState<'20m' | '6h' | '7d' | '6mo' | '2y'>('7d');
+    const [range, setRange] = useState<DemoRangeKey>('7d');
     const [chartKind, setChartKind] = useState<ChartKind>('candle');
     const [primeMode, setPrimeMode] = useState(false);
     const [showTickPreviews, setShowTickPreviews] = useState(true);
@@ -212,6 +262,209 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
     const [toast, setToast] = useState<string | null>(null);
     const [activeTool, setActiveTool] = useState<'cursor' | 'line' | 'ray' | 'fib' | 'pencil'>('cursor');
     const [liveTrading, setLiveTrading] = useState(true);
+    const toastTimerRef = useRef<number | null>(null);
+
+    const showToastNow = useCallback((message: string, timeoutMs = 4200) => {
+        setToast(message);
+        if (toastTimerRef.current != null) {
+            window.clearTimeout(toastTimerRef.current);
+        }
+        toastTimerRef.current = window.setTimeout(() => {
+            setToast(null);
+            toastTimerRef.current = null;
+        }, timeoutMs);
+    }, []);
+
+    useEffect(() => () => {
+        if (toastTimerRef.current != null) {
+            window.clearTimeout(toastTimerRef.current);
+        }
+    }, []);
+
+    const normalizeIntervalKey = useCallback((rawTf: string): DemoIntervalKey | null => {
+        const clean = rawTf.trim();
+        const match = demoMarketData.intervals.find((k) => k.toLowerCase() === clean.toLowerCase());
+        return match ?? null;
+    }, []);
+
+    const intervalRank = useMemo(() => {
+        const out = new Map<DemoIntervalKey, number>();
+        demoMarketData.intervals.forEach((k, i) => out.set(k, i));
+        return out;
+    }, []);
+
+    const estimateRawBarCount = useCallback(
+        (r: DemoRangeKey, tf: DemoIntervalKey) => {
+            if (primeMode) {
+                return 100_000;
+            }
+            const intervalSec = demoMarketData.intervalSecByKey[tf];
+            const barsForRange = Math.max(1, Math.round(rangeSecondsFor(r) / Math.max(intervalSec, 1)));
+            return Math.max(1500, barsForRange * 4);
+        },
+        [primeMode]
+    );
+
+    const isSafeCombo = useCallback(
+        (r: DemoRangeKey, tf: DemoIntervalKey) => estimateRawBarCount(r, tf) <= MAX_DEMO_HISTORY_BARS,
+        [estimateRawBarCount]
+    );
+
+    const findSafeIntervalForRange = useCallback(
+        (r: DemoRangeKey, fromTf: DemoIntervalKey): DemoIntervalKey | null => {
+            const currentIdx = intervalRank.get(fromTf) ?? 0;
+            for (let i = currentIdx; i < demoMarketData.intervals.length; i++) {
+                const candidate = demoMarketData.intervals[i];
+                if (isSafeCombo(r, candidate)) {
+                    return candidate;
+                }
+            }
+            return null;
+        },
+        [intervalRank, isSafeCombo]
+    );
+
+    const findFallbackRangeForInterval = useCallback(
+        (tf: DemoIntervalKey, fromRange: DemoRangeKey): DemoRangeKey | null => {
+            const startIdx = DEMO_RANGES.indexOf(fromRange);
+            for (let i = startIdx; i >= 0; i--) {
+                const candidate = DEMO_RANGES[i];
+                if (isSafeCombo(candidate, tf)) {
+                    return candidate;
+                }
+            }
+            return null;
+        },
+        [isSafeCombo]
+    );
+
+    const requestIntervalSwitch = useCallback(
+        (rawTf: string, source: 'ui' | 'chart' | 'api'): boolean | Promise<boolean> => {
+            const nextTf = normalizeIntervalKey(rawTf);
+            if (!nextTf) {
+                showToastNow(`Unsupported interval "${rawTf}". Available: ${demoMarketData.intervals.join(', ')}.`);
+                return false;
+            }
+            if (nextTf === timeframe) {
+                return true;
+            }
+            if (!primeMode && !isSafeCombo(range, nextTf)) {
+                const fallbackRange = findFallbackRangeForInterval(nextTf, range);
+                if (!fallbackRange) {
+                    showToastNow(`Interval "${nextTf}" is blocked for current safety limits. Choose a coarser interval.`);
+                    return false;
+                }
+                showToastNow(`Interval "${nextTf}" requires a shorter range. Auto-switched range to "${fallbackRange}".`, 3000);
+                setRange(fallbackRange);
+            }
+            const apply = () => {
+                setTimeframe(nextTf);
+                return true;
+            };
+            if (!onIntervalFeedRequest) {
+                if (source !== 'ui') {
+                    showToastNow('No external interval data-feed handler is bound. Using the built-in demo feed.');
+                }
+                return apply();
+            }
+            try {
+                const outcome = onIntervalFeedRequest(nextTf);
+                if (isThenable(outcome)) {
+                    return outcome.then(
+                        (ok) => {
+                            if (ok === false) {
+                                showToastNow(`Interval "${nextTf}" was rejected by the data-feed handler.`);
+                                return false;
+                            }
+                            return apply();
+                        },
+                        (err) => {
+                            const msg = typeof err === 'string' ? err : (err as any)?.message || `Failed to load interval "${nextTf}".`;
+                            showToastNow(msg);
+                            return false;
+                        }
+                    );
+                }
+                if (outcome === false) {
+                    showToastNow(`Interval "${nextTf}" was rejected by the data-feed handler.`);
+                    return false;
+                }
+                return apply();
+            } catch (err) {
+                const msg = typeof err === 'string' ? err : (err as any)?.message || `Failed to load interval "${nextTf}".`;
+                showToastNow(msg);
+                return false;
+            }
+        },
+        [normalizeIntervalKey, onIntervalFeedRequest, showToastNow, timeframe, range, primeMode, isSafeCombo, findFallbackRangeForInterval]
+    );
+
+    const requestRangeSwitch = useCallback(
+        (nextRange: DemoRangeKey, source: 'ui' | 'chart' | 'api') => {
+            if (nextRange === range) {
+                return true;
+            }
+            if (!primeMode && !isSafeCombo(nextRange, timeframe)) {
+                const safeInterval = findSafeIntervalForRange(nextRange, timeframe);
+                if (!safeInterval) {
+                    showToastNow(`Range "${nextRange}" is unavailable for current limits. Pick a shorter range.`, 3200);
+                    return false;
+                }
+                const switched = requestIntervalSwitch(safeInterval, 'api');
+                if (isThenable(switched)) {
+                    return switched.then((ok) => {
+                        if (!ok) return false;
+                        showToastNow(`Auto-switched interval to "${safeInterval}" for "${nextRange}" range.`, 3000);
+                        setRange(nextRange);
+                        return true;
+                    });
+                }
+                if (!switched) return false;
+                showToastNow(`Auto-switched interval to "${safeInterval}" for "${nextRange}" range.`, 3000);
+                setRange(nextRange);
+                return true;
+            }
+            const apply = () => {
+                setRange(nextRange);
+                return true;
+            };
+            if (!onRangeFeedRequest) {
+                if (source !== 'ui') {
+                    showToastNow('No external range data-feed handler is bound. Using the built-in demo feed.');
+                }
+                return apply();
+            }
+            try {
+                const outcome = onRangeFeedRequest(nextRange);
+                if (isThenable(outcome)) {
+                    return outcome.then(
+                        (ok) => {
+                            if (ok === false) {
+                                showToastNow(`Range "${nextRange}" was rejected by the data-feed handler.`);
+                                return false;
+                            }
+                            return apply();
+                        },
+                        (err) => {
+                            const msg = typeof err === 'string' ? err : (err as any)?.message || `Failed to load range "${nextRange}".`;
+                            showToastNow(msg);
+                            return false;
+                        }
+                    );
+                }
+                if (outcome === false) {
+                    showToastNow(`Range "${nextRange}" was rejected by the data-feed handler.`);
+                    return false;
+                }
+                return apply();
+            } catch (err) {
+                const msg = typeof err === 'string' ? err : (err as any)?.message || `Failed to load range "${nextRange}".`;
+                showToastNow(msg);
+                return false;
+            }
+        },
+        [onRangeFeedRequest, showToastNow, range, primeMode, isSafeCombo, timeframe, findSafeIntervalForRange, requestIntervalSwitch]
+    );
 
     const intervalSec = demoMarketData.intervalSecByKey[timeframe];
     const barsForRange = useMemo(() => {
@@ -231,7 +484,8 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
         }
     }, [range, intervalSec]);
 
-    const barCount = primeMode ? 100_000 : Math.max(1500, barsForRange * 20);
+    const rawBarCount = primeMode ? 100_000 : Math.max(1500, barsForRange * 4);
+    const barCount = Math.min(MAX_DEMO_HISTORY_BARS, rawBarCount);
     const layoutResetKey = `${symbol}-${timeframe}-${range}-${primeMode}-${barCount}-${chartKind}`;
     const hostKey = layoutResetKey;
     const lastLayoutKeyRef = useRef<string | null>(null);
@@ -246,6 +500,12 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
         let cancelled = false;
         (async () => {
             try {
+                if (rawBarCount > MAX_DEMO_HISTORY_BARS) {
+                    showToastNow(
+                        `Range ${range} at ${timeframe} is capped to ${MAX_DEMO_HISTORY_BARS.toLocaleString()} bars for stable rendering.`,
+                        2800
+                    );
+                }
                 const res = await demoMarketData.history({
                     symbol,
                     interval: timeframe,
@@ -256,14 +516,13 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                 setBaseIntervals(res.intervals);
             } catch (e) {
                 if (cancelled) return;
-                setToast(String((e as any)?.message ?? e));
-                window.setTimeout(() => setToast(null), 4200);
+                showToastNow(String((e as any)?.message ?? e));
             }
         })();
         return () => {
             cancelled = true;
         };
-    }, [symbol, timeframe, barCount]);
+    }, [symbol, timeframe, range, rawBarCount, barCount, showToastNow]);
 
     useEffect(() => {
         if (!liveTrading) return;
@@ -424,9 +683,8 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
     }, [symbol]);
 
     const showFibComingSoon = useCallback(() => {
-        setToast('Fibonacci retracement is on the Pro roadmap — see documentation/15.');
-        window.setTimeout(() => setToast(null), 4200);
-    }, []);
+        showToastNow('Fibonacci retracement is on the Pro roadmap — see documentation/15.');
+    }, [showToastNow]);
 
     const setModeSafe = useCallback((mode: Mode) => {
         chartRef.current?.setInteractionMode?.(mode);
@@ -460,8 +718,7 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
 
     const onToolEraser = () => {
         chartRef.current?.deleteSelectedDrawing?.();
-        setToast('Eraser: removes the selected drawing (select a shape first).');
-        window.setTimeout(() => setToast(null), 2800);
+        showToastNow('Eraser: removes the selected drawing (select a shape first).', 2800);
     };
 
     const chartTypeButtons: { key: ChartKind; label: string; Icon: typeof CandlestickChart }[] = [
@@ -728,7 +985,9 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                                 <button
                                     key={tf}
                                     type="button"
-                                    onClick={() => setTimeframe(tf)}
+                                    onClick={() => {
+                                        void requestIntervalSwitch(tf, 'ui');
+                                    }}
                                     className={`rounded-md px-2 py-1 font-mono text-[10px] font-medium md:text-xs ${timeframe === tf
                                         ? 'bg-[#5A48DE]/40 text-violet-200 ring-1 ring-[#3EC5FF]/35'
                                         : 'text-slate-500 hover:bg-white/10 hover:text-slate-300'
@@ -762,6 +1021,20 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                                     initialTimeDetailLevel={TimeDetailLevel.Medium}
                                     initialNumberOfYTicks={8}
                                     initialVisibleTimeRange={initialVisibleTimeRange}
+                                    interval={timeframe}
+                                    onIntervalSearch={(tf) => requestIntervalSwitch(tf, 'chart')}
+                                    onIntervalChange={(tf) => {
+                                        void requestIntervalSwitch(tf, 'api');
+                                    }}
+                                    range={DEMO_TO_HOST_RANGE[range]}
+                                    onRangeChange={(rk) => {
+                                        const mapped = HOST_TO_DEMO_RANGE[String(rk)];
+                                        if (!mapped) {
+                                            showToastNow(`Range "${String(rk)}" is not mapped in this demo. Supported demo ranges: 20m, 6h, 7d, 6mo, 2y.`);
+                                            return;
+                                        }
+                                        void requestRangeSwitch(mapped, 'chart');
+                                    }}
                                 />
                                 {/* Optional decoration (brand assets removed for repo portability). */}
                             </div>
@@ -888,7 +1161,9 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                                 Interval
                                 <select
                                     value={timeframe}
-                                    onChange={(e) => setTimeframe(e.target.value as DemoIntervalKey)}
+                                    onChange={(e) => {
+                                        void requestIntervalSwitch(e.target.value, 'ui');
+                                    }}
                                     className={`mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm outline-none ring-[#3EC5FF]/40 focus:ring-2 ${isPageDark
                                         ? 'border-white/10 bg-black/30 text-white'
                                         : 'border-slate-300 bg-white text-slate-900'
@@ -905,21 +1180,28 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                             <label className={`mb-6 block text-xs ${isPageDark ? 'text-slate-400' : 'text-slate-600'}`}>
                                 Range
                                 <div className="mt-1 grid grid-cols-5 gap-1">
-                                    {(['20m', '6h', '7d', '6mo', '2y'] as const).map((r) => (
+                                    {DEMO_RANGES.map((r) => {
+                                        const safeNow = primeMode || isSafeCombo(r, timeframe) || findSafeIntervalForRange(r, timeframe) != null;
+                                        return (
                                         <button
                                             key={r}
                                             type="button"
-                                            onClick={() => setRange(r)}
+                                            onClick={() => {
+                                                void requestRangeSwitch(r, 'ui');
+                                            }}
+                                            disabled={!safeNow}
+                                            title={!safeNow ? 'Blocked by safety limits for current/demo intervals' : undefined}
                                             className={`rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${range === r
                                                 ? 'bg-[#3EC5FF] text-black'
                                                 : isPageDark
                                                     ? 'bg-white/5 text-slate-300 hover:bg-white/10'
                                                     : 'bg-slate-200/60 text-slate-700 hover:bg-slate-200'
-                                                }`}
+                                                } ${!safeNow ? 'cursor-not-allowed opacity-45' : ''}`}
                                         >
                                             {r}
                                         </button>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </label>
 

@@ -102,6 +102,17 @@ function volFor(symbol: DemoSymbol): number {
     }
 }
 
+function isFiniteIntervalBar(it: Interval): boolean {
+    return (
+        Number.isFinite(it.t) &&
+        Number.isFinite(it.o) &&
+        Number.isFinite(it.h) &&
+        Number.isFinite(it.l) &&
+        Number.isFinite(it.c) &&
+        (it.v === undefined || Number.isFinite(it.v))
+    );
+}
+
 export class DemoMarketDataService {
     readonly symbols = SYMBOLS;
     readonly intervals = INTERVALS;
@@ -132,7 +143,12 @@ export class DemoMarketDataService {
             vol: volFor(symbol),
         });
 
-        return {symbol, interval, intervalSec, intervals};
+        const finiteIntervals = intervals.filter(isFiniteIntervalBar);
+        if (!finiteIntervals.length) {
+            throw new Error(`Demo history produced invalid values for ${symbol} ${interval}.`);
+        }
+
+        return {symbol, interval, intervalSec, intervals: finiteIntervals};
     }
 
     /**
