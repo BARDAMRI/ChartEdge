@@ -15,8 +15,6 @@ import {
     TimeDetailLevel,
 } from 'tickup/full';
 import {Zap, Play, Pause, RefreshCw, Sun, Moon} from 'lucide-react';
-import logoLightTransparentUrl from '@brand/logos/tickup-logo-full-light-transparent.png';
-import logoDarkTransparentUrl from '@brand/logos/tickup-logo-full-dark-transparent.png';
 import TickUpDemo from './TickUpDemo';
 import './index.css';
 
@@ -129,7 +127,8 @@ const LIVE_TICK_MS = 900;
 // ----------------------------------------------------------------------------
 type TierKey = 'pulse' | 'flow' | 'command' | 'desk' | 'prime';
 
-const TIERS_WITH_DEMO_SHAPES: TierKey[] = ['pulse', 'flow'];
+// Seed demo drawings on a single chart only (avoid clutter).
+const TIERS_WITH_DEMO_SHAPES: TierKey[] = ['command'];
 
 const TIER_ROWS: {
     key: TierKey;
@@ -219,6 +218,31 @@ function seedDemoShapes(api: TickUpHostHandle | null, series: Interval[]) {
             lineWidth: 2,
             lineStyle: StrokeLineStyle.solid,
             fillColor: 'rgba(255, 202, 40, 0.14)',
+        },
+    });
+    api.addShape({
+        type: ShapeType.Triangle,
+        points: [
+            {time: t0 + span * 0.78, price: pMid + 0.8},
+            {time: t0 + span * 0.86, price: pMid + 0.1},
+        ],
+        style: {
+            lineColor: '#60a5fa',
+            lineWidth: 2,
+            lineStyle: StrokeLineStyle.solid,
+            fillColor: 'rgba(96, 165, 250, 0.14)',
+        },
+    });
+    api.addShape({
+        type: ShapeType.Arrow,
+        points: [
+            {time: t0 + span * 0.18, price: pMid + 0.4},
+            {time: t0 + span * 0.26, price: pMid + 1.0},
+        ],
+        style: {
+            lineColor: '#34d399',
+            lineWidth: 2,
+            lineStyle: StrokeLineStyle.solid,
         },
     });
     api.redrawCanvas?.();
@@ -431,11 +455,14 @@ export default function App() {
                 theme === ChartTheme.dark ? 'border-white/5 bg-[#0f121c]/80 backdrop-blur-md' : 'border-slate-200 bg-white/80 backdrop-blur-md'
             }`}>
                 <div className="flex items-center">
-                    <img
-                        src={theme === ChartTheme.dark ? logoLightTransparentUrl : logoDarkTransparentUrl}
-                        alt="TickUp Charts"
-                        className="h-16 w-auto max-w-[min(360px,70vw)] object-contain object-left"
-                    />
+                    <div className="flex flex-col leading-tight">
+                        <div className="text-lg font-extrabold tracking-tight">
+                            TickUp <span className="text-[#3EC5FF]">Charts</span>
+                        </div>
+                        <div className={`${theme === ChartTheme.dark ? 'text-slate-400' : 'text-slate-500'} text-xs font-semibold uppercase tracking-wider`}>
+                            Demo
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-end gap-3">

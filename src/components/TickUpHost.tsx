@@ -35,6 +35,7 @@ import type {ChartContextInfo} from '../types/chartContext';
 import type {IDrawingShape} from './Drawing/IDrawingShape';
 import {TickUpProductId} from '../types/tickupProducts';
 import type {TickUpChartEngine} from '../engines/TickUpEngine';
+import {AlertModal} from './Common/AlertModal';
 
 /** Stable reference when `chartOptions` prop is omitted so sync effect is not fooled by a fresh `{}` each render. */
 const EMPTY_CHART_OPTIONS: DeepPartial<ChartOptions> = {};
@@ -70,6 +71,16 @@ export interface TickUpHostHandle {
     getDrawings: (query?: DrawingQuery) => DrawingSnapshot[];
     getDrawingById: (id: string) => DrawingSnapshot | null;
     getDrawingInstances: (query?: DrawingQuery) => IDrawingShape[];
+    /** Get the snapshot of the currently selected drawing (if any). */
+    getSelectedDrawing: () => DrawingSnapshot | null;
+    /** Get the ID of the currently selected drawing (if any). */
+    getSelectedDrawingId: () => string | null;
+    /** Select a drawing by its unique ID. */
+    selectShape: (id: string) => void;
+    /** Clear any currently active drawing selection. */
+    unselectShape: () => void;
+    /** Update the properties of the currently selected drawing (shortcut for patchShape + getSelectedDrawingId). */
+    updateSelectedShape: (patch: DrawingPatch) => void;
     getChartContext: () => ChartContextInfo | null;
     /** Visible time (unix seconds + bar indices) and price band — counterpart to {@link getCanvasSize}. */
     getVisibleRanges: () => VisibleViewRanges | null;
@@ -83,6 +94,14 @@ export interface TickUpHostHandle {
     setInteractionMode: (mode: Mode) => void;
     /** Deletes the selected drawing on the stage, if any. */
     deleteSelectedDrawing: () => void;
+    /** Programmatically change the timeframe (e.g. '5m', '1h'). */
+    setInterval: (tf: string) => void;
+    /** Programmatically change the visible span (1D, 1M, All, …). */
+    setRange: (r: any) => void;
+    /** Open the styled alert popup with a custom title and message. */
+    showAlert: (title: string, message: string) => void;
+    /** Close the active alert popup. */
+    closeAlert: () => void;
 }
 
 /**
@@ -143,6 +162,19 @@ export type TickUpHostProps = {
     defaultThemeVariant?: ChartTheme;
     /** Notified when the user toggles shell theme from the toolbar. */
     onThemeVariantChange?: (variant: ChartTheme) => void;
+    /** Current interval (e.g. '5m') */
+    interval?: string;
+    onIntervalChange?: (tf: string) => void;
+    /**
+     * Similar to onSymbolSearch, invoked when the interval is changed.
+     * Use this to replace the data feed for the new interval.
+     */
+    onIntervalSearch?: (tf: string) => void | boolean | Promise<void | boolean>;
+    /** Current range (e.g. '1M') */
+    range?: any;
+    onRangeChange?: (range: any) => void;
+    /** Optional explicit initial range name if any. */
+    initialRange?: any;
 };
 
 function tickupProductLayoutDefaults(id: TickUpProductId | undefined): {
@@ -184,6 +216,12 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
         themeVariant: themeVariantProp,
         defaultThemeVariant = ChartTheme.light,
         onThemeVariantChange,
+        interval,
+        onIntervalChange,
+        range,
+        onRangeChange,
+        initialRange,
+        onIntervalSearch,
     } = props;
 
     const hasLockedChrome = productId != null;
@@ -211,6 +249,11 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
     const stageRef = useRef<any>(null);
 
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({
+        isOpen: false,
+        title: '',
+        message: ''
+    });
     const [layoutOptions, setLayoutOptions] = useState({
         showSidebar,
         showTopBar,
@@ -339,6 +382,21 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
             }
             return [];
         },
+        getSelectedDrawing: () => {
+            return stageRef.current?.getSelectedDrawing?.() ?? null;
+        },
+        getSelectedDrawingId: () => {
+            return stageRef.current?.getSelectedDrawingId?.() ?? null;
+        },
+        selectShape: (id: string) => {
+            stageRef.current?.selectShape?.(id);
+        },
+        unselectShape: () => {
+            stageRef.current?.unselectShape?.();
+        },
+        updateSelectedShape: (patch: DrawingPatch) => {
+            stageRef.current?.updateSelectedShape?.(patch);
+        },
         getChartContext: () => {
             if (stageRef.current?.getChartContext) {
                 return stageRef.current.getChartContext();
@@ -398,6 +456,18 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
         },
         deleteSelectedDrawing: () => {
             stageRef.current?.deleteSelectedDrawing?.();
+        },
+        setInterval: (tf: string) => {
+            stageRef.current?.setInterval(tf);
+        },
+        setRange: (r: any) => {
+            stageRef.current?.setRange(r);
+        },
+        showAlert: (title: string, message: string) => {
+            setAlertState({ isOpen: true, title, message });
+        },
+        closeAlert: () => {
+            setAlertState(prev => ({ ...prev, isOpen: false }));
         },
     }));
 
@@ -646,6 +716,12 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
                         defaultSymbol={defaultSymbol}
                         onSymbolChange={onSymbolChange}
                         onSymbolSearch={onSymbolSearch}
+                        interval={interval}
+                        onIntervalChange={onIntervalChange}
+                        onIntervalSearch={onIntervalSearch}
+                        range={range}
+                        onRangeChange={onRangeChange}
+                        initialRange={initialRange}
                         themeVariant={themeVariant}
                         showBrandWatermark={attributionOn}
                     />
@@ -658,6 +734,14 @@ export const TickUpHost = forwardRef<TickUpHostHandle, TickUpHostProps>((props, 
                         themeVariant={themeVariant}
                         lockToolbarLayout={hasLockedChrome}
                         contained
+                    />
+
+                    <AlertModal
+                        isOpen={alertState.isOpen}
+                        onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+                        title={alertState.title}
+                        message={alertState.message}
+                        themeVariant={themeVariant}
                     />
                 </div>
             </MainAppWindow>

@@ -2,7 +2,7 @@
  * Interactive **TickUp Charts** playground — real `TickUpHost` from `tickup/full` (`ref.setEngine`, live range nudge, `chartOptions`).
  * There is no `TickUpCore` class; embed `TickUpHost` / `TickUpStage` per the package docs.
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Interval, TickUpChartEngine, TickUpHostHandle } from 'tickup/full';
 import {
     AxesPosition,
@@ -32,17 +32,12 @@ import {
     TrendingUp,
     Zap,
 } from 'lucide-react';
-import logoWordmarkLightSurfacesUrl from '@brand/logos/tickup-logo-full-light-transparent.png';
-import logoWordmarkGradientTransparentUrl from '@brand/logos/tickup-logo-full-brand-gradient-transparent.png';
-import iconForLightPlotUrl from '@brand/icons/tickup-icon-transparent.png';
-import iconForDarkPlotUrl from '@brand/icons/tickup-icon-dark-transparent.png';
+// NOTE: Brand assets are optional in this repo checkout; keep the demo resilient without them.
 import {
-    advanceLiveSeries,
-    buildMockIntervals,
     LIVE_TICK_MS,
     toHeikinAshi,
-    type LiveTickCounter,
 } from '../data-generator';
+import {demoMarketData, type DemoIntervalKey, type DemoSymbol} from './demo-data/DemoMarketDataService';
 
 /** Documentation hub — table of contents for all guides. */
 const DOCS_HUB_URL =
@@ -65,16 +60,14 @@ function usePrefersColorSchemeDark(): boolean {
     return dark;
 }
 
-type TimeframeKey = '1m' | '5m' | '15m' | '1h' | '1D' | '1W';
 type ChartKind = 'candle' | 'area' | 'line' | 'heikin';
 
-const TF_SECONDS: Record<TimeframeKey, number> = {
-    '1m': 60,
-    '5m': 300,
-    '15m': 900,
-    '1h': 3600,
+const TF_SECONDS: Record<string, number> = {
+    '1m': 60, '2m': 120, '3m': 180, '5m': 300, '10m': 600, '15m': 900, '30m': 1800, '45m': 2700,
+    '1h': 3600, '2h': 7200, '3h': 10800, '4h': 14400,
     '1D': 86400,
     '1W': 604800,
+    '1M': 2592000,
 };
 
 const CHART_KIND_TO_TYPE: Record<ChartKind, ChartType> = {
@@ -208,60 +201,81 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
         }
         return themePreference as ChartTheme;
     }, [themePreference, systemPrefersDark]);
-    const [timeframe, setTimeframe] = useState<TimeframeKey>('5m');
+    const [timeframe, setTimeframe] = useState<DemoIntervalKey>('5m');
+    const [range, setRange] = useState<'20m' | '6h' | '7d' | '6mo' | '2y'>('7d');
     const [chartKind, setChartKind] = useState<ChartKind>('candle');
     const [primeMode, setPrimeMode] = useState(false);
     const [showTickPreviews, setShowTickPreviews] = useState(true);
-    const [symbol, setSymbol] = useState('TICKUP');
-    const [symbolDraft, setSymbolDraft] = useState('TICKUP');
+    const [symbol, setSymbol] = useState<DemoSymbol>('TICKUP');
+    const [symbolDraft, setSymbolDraft] = useState<string>('TICKUP');
     const [emaOn, setEmaOn] = useState(true);
     const [toast, setToast] = useState<string | null>(null);
     const [activeTool, setActiveTool] = useState<'cursor' | 'line' | 'ray' | 'fib' | 'pencil'>('cursor');
     const [liveTrading, setLiveTrading] = useState(true);
-    const liveTickRef = useRef<LiveTickCounter>({ current: 0 });
 
-    const barCount = primeMode ? 100_000 : 4_000;
-    const intervalSec = TF_SECONDS[timeframe];
-    const layoutResetKey = `${timeframe}-${primeMode}-${barCount}-${chartKind}`;
+    const intervalSec = demoMarketData.intervalSecByKey[timeframe];
+    const barsForRange = useMemo(() => {
+        switch (range) {
+            case '20m':
+                return Math.max(30, Math.round((20 * 60) / intervalSec));
+            case '6h':
+                return Math.max(60, Math.round((6 * 3600) / intervalSec));
+            case '7d':
+                return Math.max(120, Math.round((7 * 86400) / intervalSec));
+            case '6mo':
+                return Math.max(180, Math.round((180 * 86400) / intervalSec));
+            case '2y':
+                return Math.max(260, Math.round((2 * 365 * 86400) / intervalSec));
+            default:
+                return 300;
+        }
+    }, [range, intervalSec]);
+
+    const barCount = primeMode ? 100_000 : Math.max(1500, barsForRange * 20);
+    const layoutResetKey = `${symbol}-${timeframe}-${range}-${primeMode}-${barCount}-${chartKind}`;
     const hostKey = layoutResetKey;
     const lastLayoutKeyRef = useRef<string | null>(null);
 
-    const [baseIntervals, setBaseIntervals] = useState<Interval[]>(() =>
-        buildMockIntervals({
-            startTime: 1_700_000_000,
-            startPrice: 128.5,
-            intervalSec: TF_SECONDS['5m'],
-            count: 4_000,
-            seed: (TF_SECONDS['5m'] % 997) * 17 + 4_000,
-            driftPerBar: 0.015,
-            vol: 0.5,
-        })
-    );
+    const [baseIntervals, setBaseIntervals] = useState<Interval[]>([]);
+    const baseIntervalsRef = useRef<Interval[]>([]);
+    useEffect(() => {
+        baseIntervalsRef.current = baseIntervals;
+    }, [baseIntervals]);
 
     useEffect(() => {
-        liveTickRef.current = { current: 0 };
-        setBaseIntervals(
-            buildMockIntervals({
-                startTime: 1_700_000_000,
-                startPrice: 128.5,
-                intervalSec,
-                count: barCount,
-                seed: (intervalSec % 997) * 17 + barCount,
-                driftPerBar: 0.015,
-                vol: primeMode ? 0.35 : 0.5,
-            })
-        );
-    }, [intervalSec, barCount, primeMode]);
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await demoMarketData.history({
+                    symbol,
+                    interval: timeframe,
+                    count: barCount,
+                    endTimeSec: 1_700_000_000,
+                });
+                if (cancelled) return;
+                setBaseIntervals(res.intervals);
+            } catch (e) {
+                if (cancelled) return;
+                setToast(String((e as any)?.message ?? e));
+                window.setTimeout(() => setToast(null), 4200);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [symbol, timeframe, barCount]);
 
     useEffect(() => {
-        if (!liveTrading) {
-            return;
-        }
-        const id = window.setInterval(() => {
-            setBaseIntervals((prev) => advanceLiveSeries(prev, intervalSec, liveTickRef.current));
-        }, LIVE_TICK_MS);
-        return () => window.clearInterval(id);
-    }, [liveTrading, intervalSec]);
+        if (!liveTrading) return;
+        const sub = demoMarketData.subscribeLive({
+            symbol,
+            interval: timeframe,
+            tickMs: LIVE_TICK_MS,
+            getCurrent: () => baseIntervalsRef.current,
+            onUpdate: (next) => setBaseIntervals(next),
+        });
+        return () => sub.stop();
+    }, [liveTrading, symbol, timeframe]);
 
     const displayIntervals = useMemo(
         () => (chartKind === 'heikin' ? toHeikinAshi(baseIntervals) : baseIntervals),
@@ -363,36 +377,51 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
         return () => cancelAnimationFrame(id);
     }, [layoutResetKey]);
 
-    const tickPreviewCards = useMemo(() => {
-        const now = 1_700_000_000;
-        const makeCard = (label: string, intervalSec: number, count: number, visibleBars: number) => {
-            const intervals = buildMockIntervals({
-                startTime: now - intervalSec * count,
-                startPrice: 128.5,
-                intervalSec,
-                count,
-                seed: (intervalSec % 997) * 31 + count,
-                driftPerBar: 0.01,
-                vol: 0.25,
-            });
-            const end = intervals[intervals.length - 1]?.t ?? now;
-            const start = end - Math.max(intervalSec, 1) * visibleBars;
-            return {
-                label,
-                intervalSec,
-                intervals,
-                visible: { start, end: end + intervalSec },
-            };
+    const [tickPreviewCards, setTickPreviewCards] = useState<
+        { label: string; intervalKey: DemoIntervalKey; intervalSec: number; intervals: Interval[]; visible: { start: number; end: number } }[]
+    >([]);
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const cards: { label: string; intervalKey: DemoIntervalKey; count: number; visibleBars: number }[] = [
+                { label: '20m window · 1m bars', intervalKey: '1m', count: 900, visibleBars: 20 },
+                { label: '6h window · 5m bars', intervalKey: '5m', count: 1400, visibleBars: 72 },
+                { label: '7d window · 1h bars', intervalKey: '1h', count: 1400, visibleBars: 7 * 24 },
+                { label: '6mo window · 1d bars', intervalKey: '1D', count: 800, visibleBars: 180 },
+                { label: '2y window · 1w bars', intervalKey: '1W', count: 520, visibleBars: 104 },
+            ];
+            const out: {
+                label: string;
+                intervalKey: DemoIntervalKey;
+                intervalSec: number;
+                intervals: Interval[];
+                visible: { start: number; end: number };
+            }[] = [];
+            for (const c of cards) {
+                const res = await demoMarketData.history({
+                    symbol,
+                    interval: c.intervalKey,
+                    count: c.count,
+                    endTimeSec: 1_700_000_000,
+                });
+                const s = res.intervals;
+                const end = s[s.length - 1]?.t ?? 1_700_000_000;
+                const start = end - Math.max(res.intervalSec, 1) * c.visibleBars;
+                out.push({
+                    label: c.label,
+                    intervalKey: c.intervalKey,
+                    intervalSec: res.intervalSec,
+                    intervals: s,
+                    visible: { start, end: end + res.intervalSec },
+                });
+            }
+            if (cancelled) return;
+            setTickPreviewCards(out);
+        })();
+        return () => {
+            cancelled = true;
         };
-
-        return [
-            makeCard('20m window · 1m bars', 60, 800, 20),
-            makeCard('6h window · 5m bars', 300, 1200, 72),
-            makeCard('7d window · 1h bars', 3600, 1200, 7 * 24),
-            makeCard('6mo window · 1d bars', 86400, 600, 180),
-            makeCard('2y window · 1w bars', 7 * 86400, 520, 104),
-        ];
-    }, []);
+    }, [symbol]);
 
     const showFibComingSoon = useCallback(() => {
         setToast('Fibonacci retracement is on the Pro roadmap — see documentation/15.');
@@ -444,11 +473,8 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
 
     const isPageDark = shellTheme === ChartTheme.dark;
     const panelGlass = isPageDark ? 'glass-panel' : 'glass-panel-light';
-    /** Dark header: gradient wordmark reads clearly on #0B0E14; light header: dark glyphs (light-surfaces asset). */
-    const headerLogoSrc = isPageDark ? logoWordmarkGradientTransparentUrl : logoWordmarkLightSurfacesUrl;
-    const chartDecorationIconSrc = isPageDark ? iconForDarkPlotUrl : iconForLightPlotUrl;
     const themeAfterQuickClick: ChartTheme = shellTheme === ChartTheme.light ? ChartTheme.dark : ChartTheme.light;
-
+    
     return (
         <div
             className={`min-h-screen overflow-y-auto font-sans ${isPageDark ? 'bg-[#0B0E14] text-[#E7EBFF]' : 'bg-[#f1f5f9] text-slate-800'
@@ -461,12 +487,20 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                     : 'border-slate-200/90 bg-[#f8fafc]/95'
                     }`}
             >
-                <a href={DOCS_HUB_URL} className="flex min-w-0 items-center gap-2 py-0.5" target="_blank" rel="noreferrer">
-                    {/* <img
-                        src={headerLogoSrc}
-                        alt="TickUp Charts"
-                        className="h-[3rem] w-auto max-w-[min(340px,58vw)] object-contain object-left md:h-[3.5rem]"
-                    /> */}
+                <a
+                    href={DOCS_HUB_URL}
+                    className="flex min-w-0 items-center gap-2 py-0.5"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Open documentation"
+                    title="Open docs"
+                >
+                    <span className={`text-base font-extrabold tracking-tight ${isPageDark ? 'text-white' : 'text-slate-900'}`}>
+                        TickUp <span className="text-[#3EC5FF]">Charts</span>
+                    </span>
+                    <span className={`${isPageDark ? 'text-slate-500' : 'text-slate-500'} hidden text-xs font-semibold uppercase tracking-wider sm:inline`}>
+                        Tick demo
+                    </span>
                 </a>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     <div
@@ -690,7 +724,7 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                             ))}
                         </div>
                         <nav className="flex flex-wrap gap-1" aria-label="Timeframe">
-                            {(Object.keys(TF_SECONDS) as TimeframeKey[]).map((tf) => (
+                            {demoMarketData.intervals.map((tf) => (
                                 <button
                                     key={tf}
                                     type="button"
@@ -725,19 +759,11 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                                     showTopBar={false}
                                     showSettingsBar
                                     showAttribution={false}
-                                    symbol={symbol}
-                                    onSymbolChange={setSymbol}
                                     initialTimeDetailLevel={TimeDetailLevel.Medium}
                                     initialNumberOfYTicks={8}
                                     initialVisibleTimeRange={initialVisibleTimeRange}
                                 />
-                                <img
-                                    src={chartDecorationIconSrc}
-                                    alt=""
-                                    className={`pointer-events-none absolute bottom-3 right-3 z-10 h-16 w-auto object-contain md:h-20 ${isPageDark ? 'opacity-[0.36]' : 'opacity-[0.22]'
-                                        }`}
-                                    aria-hidden
-                                />
+                                {/* Optional decoration (brand assets removed for repo portability). */}
                             </div>
 
                             <div className="pointer-events-none absolute bottom-5 left-4 z-20 md:bottom-6 md:left-5">
@@ -778,21 +804,18 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                                                             ...chartOptions,
                                                             base: {
                                                                 ...chartOptions.base,
-                                                                chartType: ChartType.Line,
+                                                                engine: primeMode ? TickUpRenderEngine.prime : TickUpRenderEngine.standard,
+                                                                theme: shellTheme,
+                                                                chartType: ChartType.Area,
                                                                 showHistogram: false,
-                                                                showOverlayLine: false,
-                                                                overlays: [],
-                                                                overlayKinds: [],
+                                                                showCrosshair: false,
+                                                                showCrosshairValues: false,
                                                             },
                                                         }}
                                                         showSidebar={false}
                                                         showTopBar={false}
                                                         showSettingsBar={false}
                                                         showAttribution={false}
-                                                        symbol={symbol}
-                                                        onSymbolChange={setSymbol}
-                                                        initialTimeDetailLevel={TimeDetailLevel.Auto}
-                                                        initialNumberOfYTicks={6}
                                                         initialVisibleTimeRange={card.visible}
                                                     />
                                                 </div>
@@ -804,26 +827,19 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                         </main>
 
                         <aside
-                            className={`${panelGlass} w-full shrink-0 border-t p-4 lg:w-[280px] lg:border-l lg:border-t-0 ${isPageDark ? 'border-white/10' : 'border-slate-200'
+                            className={`${panelGlass} w-full border-t p-4 lg:w-[19rem] lg:border-l lg:border-t-0 md:p-6 ${isPageDark ? 'border-white/10' : 'border-slate-200'
                                 }`}
                         >
-                            <h2 className={`mb-3 text-sm font-semibold ${isPageDark ? 'text-white' : 'text-slate-900'}`}>
-                                Market data
-                            </h2>
-                            <div
-                                className={`mb-4 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${isPageDark
-                                    ? 'border-white/10 bg-black/20'
-                                    : 'border-slate-200 bg-white/90'
-                                    }`}
-                            >
-                                <span className={`text-xs ${isPageDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                                    Live trading
-                                </span>
+                            <div className="mb-6 flex items-center justify-between">
+                                <h3
+                                    className={`text-xs font-semibold uppercase tracking-wider ${isPageDark ? 'text-slate-500' : 'text-slate-500'
+                                        }`}
+                                >
+                                    Real-time Ticks
+                                </h3>
                                 <button
                                     type="button"
-                                    role="switch"
-                                    aria-checked={liveTrading}
-                                    onClick={() => setLiveTrading((v) => !v)}
+                                    onClick={() => setLiveTrading((l) => !l)}
                                     className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${liveTrading ? 'bg-[#34d399]/40' : 'bg-white/10'
                                         }`}
                                 >
@@ -838,27 +854,72 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                             >
                                 Symbol
                                 <div className="mt-1 flex gap-2">
-                                    <input
-                                        value={symbolDraft}
-                                        onChange={(e) => setSymbolDraft(e.target.value.toUpperCase())}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                setSymbol(symbolDraft.trim() || 'TICKUP');
-                                            }
+                                    <select
+                                        value={symbol}
+                                        onChange={(e) => {
+                                            const v = e.target.value as DemoSymbol;
+                                            setSymbol(v);
+                                            setSymbolDraft(v);
                                         }}
                                         className={`w-full rounded-lg border px-3 py-2 font-mono text-sm outline-none ring-[#3EC5FF]/40 focus:ring-2 ${isPageDark
                                             ? 'border-white/10 bg-black/30 text-white'
                                             : 'border-slate-300 bg-white text-slate-900'
                                             }`}
-                                        placeholder="TICKUP"
-                                    />
+                                    >
+                                        {demoMarketData.symbols.map((s) => (
+                                            <option key={s} value={s}>
+                                                {s}
+                                            </option>
+                                        ))}
+                                    </select>
                                     <button
                                         type="button"
-                                        onClick={() => setSymbol(symbolDraft.trim() || 'TICKUP')}
+                                        onClick={() => setSymbol(symbolDraft.trim().toUpperCase() as DemoSymbol)}
                                         className="shrink-0 rounded-lg border border-[#3EC5FF]/40 bg-[#3EC5FF]/10 px-3 py-2 text-sm font-medium text-[#3EC5FF] hover:bg-[#3EC5FF]/20"
                                     >
                                         Go
                                     </button>
+                                </div>
+                            </label>
+
+                            <label
+                                className={`mb-4 block text-xs ${isPageDark ? 'text-slate-400' : 'text-slate-600'}`}
+                            >
+                                Interval
+                                <select
+                                    value={timeframe}
+                                    onChange={(e) => setTimeframe(e.target.value as DemoIntervalKey)}
+                                    className={`mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm outline-none ring-[#3EC5FF]/40 focus:ring-2 ${isPageDark
+                                        ? 'border-white/10 bg-black/30 text-white'
+                                        : 'border-slate-300 bg-white text-slate-900'
+                                        }`}
+                                >
+                                    {demoMarketData.intervals.map((k) => (
+                                        <option key={k} value={k}>
+                                            {k}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label className={`mb-6 block text-xs ${isPageDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                                Range
+                                <div className="mt-1 grid grid-cols-5 gap-1">
+                                    {(['20m', '6h', '7d', '6mo', '2y'] as const).map((r) => (
+                                        <button
+                                            key={r}
+                                            type="button"
+                                            onClick={() => setRange(r)}
+                                            className={`rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${range === r
+                                                ? 'bg-[#3EC5FF] text-black'
+                                                : isPageDark
+                                                    ? 'bg-white/5 text-slate-300 hover:bg-white/10'
+                                                    : 'bg-slate-200/60 text-slate-700 hover:bg-slate-200'
+                                                }`}
+                                        >
+                                            {r}
+                                        </button>
+                                    ))}
                                 </div>
                             </label>
 
@@ -902,6 +963,35 @@ export default function TickUpDemo({ onOpenCompare }: TickUpDemoProps) {
                                     supported={false}
                                 />
                             </ul>
+
+                            <h3
+                                className={`mb-2 mt-6 text-xs font-semibold uppercase tracking-wider ${isPageDark ? 'text-slate-500' : 'text-slate-500'
+                                    }`}
+                            >
+                                Chart Navigation (Imperative)
+                            </h3>
+                            <div className="flex flex-col gap-2">
+                                <DemoSidebarButton
+                                    isDark={isPageDark}
+                                    onClick={() => (chartRef.current as any)?.setInterval('1h')}
+                                    label="Set 1h (by code)"
+                                />
+                                <DemoSidebarButton
+                                    isDark={isPageDark}
+                                    onClick={() => (chartRef.current as any)?.setInterval('1D')}
+                                    label="Set 1D (by code)"
+                                />
+                                <DemoSidebarButton
+                                    isDark={isPageDark}
+                                    onClick={() => (chartRef.current as any)?.setRange('All')}
+                                    label="Fit All (by code)"
+                                />
+                                <DemoSidebarButton
+                                    isDark={isPageDark}
+                                    onClick={() => (chartRef.current as any)?.setRange('1W')}
+                                    label="Show 1W (by code)"
+                                />
+                            </div>
 
                             <div
                                 className={`mt-6 border-t pt-4 text-xs ${isPageDark ? 'border-white/10 text-slate-500' : 'border-slate-200 text-slate-600'
@@ -962,6 +1052,7 @@ function ChartHud({ isDark, primeMode, barCount }: { isDark: boolean; primeMode:
         raf = requestAnimationFrame(loop);
         return () => cancelAnimationFrame(raf);
     }, []);
+
     return (
         <div
             className={`pointer-events-auto rounded-xl border px-3 py-2 font-mono text-[11px] leading-relaxed md:text-xs ${isDark
@@ -1071,5 +1162,28 @@ function IndicatorRow({
                 </div>
             )}
         </li>
+    );
+}
+
+function DemoSidebarButton({
+    label,
+    onClick,
+    isDark = true,
+}: {
+    label: string;
+    onClick: () => void;
+    isDark?: boolean;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`w-full rounded-lg border px-3 py-2 text-left text-xs font-medium transition-all ${isDark
+                ? 'border-white/10 bg-black/30 text-slate-300 hover:border-[#3EC5FF]/40 hover:text-[#3EC5FF]'
+                : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                }`}
+        >
+            {label}
+        </button>
     );
 }

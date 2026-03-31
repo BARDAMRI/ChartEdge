@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Public release scope:** docs and the reference example emphasize **Pulse, Flow, Command, Desk**; Prime engine/tier are documented in **`documentation/15-prime-engine-and-pro-roadmap.md`**.
 - Documentation shipped in the npm package under `documentation/` for offline / IDE browsing.
 - Symbol search: `onSymbolSearch` may return `false` or reject to revert the toolbar to the last good symbol.
+- **Advanced Interval Selection:** Categorized, searchable dropdown in the top bar; supports numerous timeframes (Intraday, Daily, Weekly, Monthly) with Portal-based rendering.
+- **Data-feed handler:** `onIntervalSearch` callback for intercepting timeframe changes; supports asynchronous data replacement with built-in UI revert logic on failure.
+- **Drawing API Extensions:** Added `getSelectedDrawing`, `getSelectedDrawingId`, `selectShape`, `unselectShape`, and `updateSelectedShape` to the imperative handle; `setInteractionMode(Mode)` now fully supports programmatically starting any interactive drawing tool.
 
 ## [0.1.0] - 2026
 

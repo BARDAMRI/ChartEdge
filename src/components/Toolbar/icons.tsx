@@ -37,8 +37,8 @@ export const IconBase: React.FC<{ active?: boolean; name: string; children: Reac
                 </filter>
             </defs>
 
-            {/* Foreground strokes, with inner padding so paths don't hug the edges */}
-            <g stroke={`url(#${gradId})`} filter={`url(#${glowId})`} transform="translate(2,2) scale(0.8333)">
+            {/* Foreground strokes: fill full icon box */}
+            <g stroke={`url(#${gradId})`} filter={`url(#${glowId})`}>
                 {/* Keep strokes readable on small sizes */}
                 <style>{`*{vector-effect:non-scaling-stroke}`}</style>
                 {children}
@@ -259,7 +259,6 @@ export const IconChartArea: React.FC<{ active?: boolean }> = ({active}) => (
  * ========================= */
 
 export const IconArrowDown: React.FC<{ active?: boolean }> = ({active}) => {
-    const gradId = React.useId();
     return (
         <svg
             className="icon-arrow-down"
@@ -268,18 +267,12 @@ export const IconArrowDown: React.FC<{ active?: boolean }> = ({active}) => {
             viewBox="0 0 24 24"
             preserveAspectRatio="xMidYMid meet"
             fill="none"
+            stroke="currentColor"
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden
         >
-            <defs>
-                <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor={active ? '#3EC5FF' : '#2979FF'}/>
-                    <stop offset="60%" stopColor={active ? '#6A5ACD' : '#4B32C3'}/>
-                    <stop offset="100%" stopColor={active ? '#8A2BE2' : '#5B3FFF'}/>
-                </linearGradient>
-            </defs>
-            <polyline points="6,9 12,15 18,9" stroke={`url(#${gradId})`} strokeWidth="2"/>
+            <polyline points="6,9 12,15 18,9" strokeWidth="2.5"/>
         </svg>
     );
 };

@@ -124,8 +124,7 @@ export const SettingToolbarContent = styled.div.attrs({className: 'setting-toolb
     }
 `;
 
-/** Symbol field + search control stay adjacent (not separated by chart type). */
-export const SymbolToolbarCluster = styled.div`
+export const ToolbarCluster = styled.div`
     display: inline-flex;
     flex-direction: row;
     align-items: stretch;
@@ -133,6 +132,46 @@ export const SymbolToolbarCluster = styled.div`
     gap: 2px;
     flex-shrink: 0;
     min-width: 0;
+`;
+
+/** Symbol field + search control stay adjacent. */
+export const SymbolToolbarCluster = styled(ToolbarCluster)``;
+
+/** Timeframe pills (1m, 5m, etc.) cluster. */
+export const IntervalToolbarCluster = styled(ToolbarCluster)`
+    gap: 1px;
+    padding: 2px 0;
+    margin: 0 4px;
+`;
+
+export const TimeframePill = styled.button<{ $active?: boolean; $isDark?: boolean }>`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    padding: 0 8px;
+    height: 100%;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 120ms ease;
+    background: transparent;
+    color: ${props => props.$isDark ? 'rgba(255, 255, 255, 0.65)' : 'rgba(15, 23, 42, 0.7)'};
+    white-space: nowrap;
+
+    &:hover {
+        background: ${props => props.$isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.06)'};
+        color: ${props => props.$isDark ? '#fff' : '#0f172a'};
+    }
+
+    ${props => props.$active && css`
+        background: ${props.$isDark ? 'rgba(62, 197, 255, 0.22)' : 'rgba(62, 197, 255, 0.15)'} !important;
+        border-color: rgba(62, 197, 255, 0.45) !important;
+        color: #3ec5ff !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    `}
 `;
 
 export const SymbolInput = styled(Control).attrs({as: 'input', type: 'text'})`
@@ -156,7 +195,7 @@ export const Spacer = styled.div.attrs({className: 'spacer'})`
     position: relative;
     display: inline-block;
     flex-grow: 1;
-    min-width: 0;
+    min-width: 2px;
 `;
 export const ToolbarHorizontalButtons = styled.button.attrs({className: 'settings-toolbar-button'})`
     position: relative;
@@ -178,7 +217,7 @@ export const ToolbarHorizontalButtons = styled.button.attrs({className: 'setting
     border: 1px solid rgba(120, 100, 255, 0.5);
     background-color: rgba(255, 255, 255, 0.06);
     background-clip: border-box, padding-box;
-    padding: 7px;
+    padding: 0;
 
     &::after {
         content: '';

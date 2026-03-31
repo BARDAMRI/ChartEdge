@@ -48,9 +48,13 @@ From `tickup`:
 
 Use these server-side or before calling `applyLiveData` if you need consistent cleaning.
 
-## Refresh toolbar action
-
 `onRefreshRequest` fires when the user chooses Refresh. Reload your feed, set new `intervalsArray`, or call `reloadCanvas` / `fitVisibleRangeToData` as needed.
+
+## Timeframe / Interval changes
+
+While `intervalsArray` provides the chart with data, the user often initiates a change in the required data set by picking a new interval (e.g. from 1m to 1h).
+
+Use **`onIntervalSearch(tf)`** on the `TickUpHost` to intercept these changes. This is the ideal place to swap your data source or fetch a new historical block for the new timeframe. See [Toolbar & Interactions](./10-toolbar-and-interactions.md) for details on the search and revert flow.
 
 ## Pitfalls
 

@@ -3,6 +3,7 @@ import {
     SettingsToolbarContainer, SettingToolbarContent, Spacer,
     SymbolInput,
     SymbolToolbarCluster,
+    IntervalToolbarCluster
 } from '../../styles/SettingsToolbar.styles';
 
 import { Button } from './Buttons';
@@ -23,6 +24,8 @@ import { Tooltip } from "../Tooltip";
 import { ChartTypeSelectDropdown } from "./ChartTypeSelectDropdown";
 import { translate, getLocaleDefaults } from '../../utils/i18n';
 import { captureChartRegionToPngDataUrl } from '../../utils/captureChartRegion';
+import { IntervalSelect } from './IntervalSelect';
+import { AlertModal } from '../Common/AlertModal';
 
 /* Minimum toolbar width (px) below which the gear/settings icon is hidden */
 const MIN_WIDTH_FOR_SETTINGS_ICON = 260;
@@ -68,12 +71,20 @@ interface SettingToolbarProps {
     onSnapshotPng?: () => void;
     onRefresh?: () => void | Promise<void>;
     onToggleTheme?: () => void;
-    /** Shell light/dark (and grey) — drives sun vs moon on the theme control. */
+    /** shell light/dark (and grey) — drives sun vs moon on the theme control. */
     themeVariant?: ChartTheme;
+    /** Current selected interval tag (e.g. '5m') */
+    interval?: string;
+    /** Fired when user selects a new interval. */
+    onIntervalChange?: (interval: string) => void;
+    /** Optional 'search' handler to replace data feed on interval change. */
+    onIntervalSearch?: (tf: string) => void | boolean | Promise<void | boolean>;
     /** Prime engine: glass-style toolbar surface */
     primeGlass?: boolean;
     primeGlassLight?: boolean;
 }
+
+const DEFAULT_INTERVALS = ['1m', '5m', '15m', '1h', '1D', '1W'];
 
 export const SettingsToolbar = ({
     handleChartTypeChange,
@@ -94,12 +105,27 @@ export const SettingsToolbar = ({
     onRefresh,
     onToggleTheme,
     themeVariant = ChartTheme.light,
+    interval = '5m',
+    onIntervalChange,
+    onIntervalSearch,
     primeGlass = false,
     primeGlassLight = false,
 }: SettingToolbarProps) => {
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [toolbarWidth, setToolbarWidth] = useState<number>(Infinity);
+    const [alert, setAlert] = useState<{ isOpen: boolean; title: string; message: string }>({
+        isOpen: false,
+        title: '',
+        message: ''
+    });
+
+    const showAlert = (title: string, message: string) => {
+        setAlert({ isOpen: true, title, message });
+    };
+
+    const closeAlert = () => setAlert(prev => ({ ...prev, isOpen: false }));
+
     const symbolFieldFocusedRef = useRef(false);
     const committedSymbolRef = useRef(
         symbol !== undefined ? String(symbol ?? '') : String(defaultSymbol ?? '')
@@ -210,6 +236,40 @@ export const SettingsToolbar = ({
         [onSymbolChange]
     );
 
+    const [committedInterval, setCommittedInterval] = useState(interval);
+    useEffect(() => {
+        setCommittedInterval(interval);
+    }, [interval]);
+
+    const handleIntervalSelect = useCallback((newTf: string) => {
+        if (!onIntervalSearch) {
+            showAlert(
+                'No service connected',
+                `Interval selection for "${newTf}" requires a data-feed handler. Wire "onIntervalSearch" to your chart to load data for this timeframe.`
+            );
+            onIntervalChange?.(newTf);
+            return;
+        }
+
+        const outcome = onIntervalSearch(newTf);
+        const applySuccess = () => {
+            setCommittedInterval(newTf);
+            onIntervalChange?.(newTf);
+        };
+
+        if (isThenable(outcome)) {
+            outcome.then(
+                (v) => { if (v !== false) applySuccess(); },
+                (err) => { 
+                    const msg = typeof err === 'string' ? err : (err?.message || 'The data feed failed to load the requested interval.');
+                    showAlert('Interval retrieval failed', msg);
+                }
+            );
+        } else if (outcome !== false) {
+            applySuccess();
+        }
+    }, [onIntervalSearch, onIntervalChange]);
+
     const triggerSymbolSearch = useCallback(() => {
         const el = symbolInputRef?.current;
         const raw = fieldValue.trim();
@@ -225,7 +285,9 @@ export const SettingsToolbar = ({
                             applySearchSuccess(raw);
                         }
                     },
-                    () => {
+                    (err) => {
+                        const msg = typeof err === 'string' ? err : (err?.message || 'Symbol search failed.');
+                        showAlert('Symbol not found', msg);
                         revertSymbolToLastCommitted();
                     }
                 );
@@ -241,6 +303,10 @@ export const SettingsToolbar = ({
         if (onSearch) {
             onSearch();
         } else if (el) {
+            showAlert(
+                `Symbol search (demo): ${raw}`,
+                'Wire "onSymbolSearch" to your chart to load data for this symbol.'
+            );
             el.focus();
             el.select();
             return;
@@ -309,6 +375,15 @@ export const SettingsToolbar = ({
                         </Button>
                     </Tooltip>
                 </SymbolToolbarCluster>
+
+                <IntervalToolbarCluster className="settings-interval-cluster">
+                    <IntervalSelect
+                        value={committedInterval}
+                        onChange={handleIntervalSelect}
+                        themeVariant={themeVariant}
+                    />
+                </IntervalToolbarCluster>
+
                 <ChartTypeSelectDropdown
                     className="settings-chart-type-dropdown"
                     value={selectedChartType || ChartType.Candlestick}
@@ -366,6 +441,14 @@ export const SettingsToolbar = ({
                 </Tooltip>
                 <Spacer className="settings-toolbar-spacer" />
             </SettingToolbarContent>
+
+            <AlertModal
+                isOpen={alert.isOpen}
+                onClose={closeAlert}
+                title={alert.title}
+                message={alert.message}
+                themeVariant={themeVariant}
+            />
         </SettingsToolbarContainer>
     );
 };

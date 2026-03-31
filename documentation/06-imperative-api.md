@@ -10,6 +10,8 @@ Obtain a handle with `useRef<TickUpHostHandle>()` (or `TickUpHostHandle`) and at
 | `updateShape(shapeId, newShape)` | Replace with full spec/instance or apply a `DrawingPatch` (see `isDrawingPatch`). |
 | `patchShape(shapeId, patch)` | `DrawingPatch` only: style, points, symbol/size for custom symbols. |
 | `deleteShape(shapeId)` | Remove by id. |
+| `deleteSelectedDrawing()` | Removes the currently selected shape from the stage. |
+| `updateSelectedShape(patch)` | Update properties (color, points, etc.) of the currently selected shape. |
 | `setDrawingsFromSpecs(specs)` | Replace stack from `DrawingSpec[]`. |
 
 Helpers exported from the package: `drawingFromSpec`, `applyDrawingPatch`, `isDrawingPatch`.
@@ -40,6 +42,9 @@ Resolve an index with `getViewInfo()?.intervals.findIndex(...)`. For time-based 
 | `setEngine(engine)` | Merge a **`TickUpChartEngine`** patch into live **`chartOptions`**. Use **`TickUpPrime`** (dark Prime plot), **`createTickUpPrimeEngine('light' \| 'dark')`** (Prime plot aligned to host theme), **`TickUpStandardEngine`**, or a custom **`{ id, getChartOptionsPatch }`**. Imports: **`tickup`** or **`tickup/full`**. Prefer **`getTickUpPrimeThemePatch`** in **`chartOptions`** when applying Prime so props and **`setEngine`** stay in sync — see [Prime engine & Pro roadmap](./15-prime-engine-and-pro-roadmap.md). |
 | `setInteractionMode(mode)` | Forwarded to the stage: same drawing modes as the package toolbar (`Mode` enum from **`tickup/full`**). |
 | `deleteSelectedDrawing()` | Removes the currently selected shape on the stage (no-op if nothing selected). |
+| `selectShape(id)` | Programmatically select a drawing by its ID. |
+| `unselectShape()` | Clear the current selection. |
+| `updateSelectedShape(patch)` | Modify the active selection properties. |
 
 ## Introspection
 
@@ -48,6 +53,8 @@ Resolve an index with `getViewInfo()?.intervals.findIndex(...)`. For time-based 
 | `getViewInfo()` | Intervals, drawings instances, visible time/price ranges, canvas size. On **`TickUpHost` / product refs**, this may be **`null`** until the inner stage is mounted — use optional chaining (`?.`) in `useEffect` or after layout. Prefer **`getVisibleRanges()`** when you only need the visible time/price snapshot (no intervals or drawings). |
 | `getDrawings(query?)` | `DrawingSnapshot[]` with optional `DrawingQuery` filter. |
 | `getDrawingById(id)` | Single snapshot or null. |
+| `getSelectedDrawing()` | Get the snapshot of the currently selected drawing. |
+| `getSelectedDrawingId()` | Get the unique ID of the selected drawing. |
 | `getDrawingInstances(query?)` | Live `IDrawingShape[]` for advanced use. |
 | `getChartContext()` | `ChartContextInfo`: symbol, chart type, theme, layout metrics, data window (`data.visibleTimeStart` / `visibleTimeEnd` / indices / price fields mirror **`getVisibleRanges()`**), drawing count, selection index, tick settings. May be `null` from the shell until the stage is ready. |
 
@@ -93,3 +100,18 @@ ref.current?.patchShape('some-id', {
 ```
 
 After `addShape`, read the new id via `getDrawings()` (last / highest `zIndex`) or pass an explicit `id` in `DrawingSpec`.
+
+## Example: programmatic selection and update
+
+```tsx
+// 1. Select a specific shape
+chartRef.current?.selectShape("trend-line-1");
+
+// 2. Modify whichever shape is currently selected (convenience)
+chartRef.current?.updateSelectedShape({
+    style: { lineColor: "#00ff00" }
+});
+
+// 3. Clear focus
+chartRef.current?.unselectShape();
+```

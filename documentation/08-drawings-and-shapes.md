@@ -49,15 +49,6 @@ Click the active tool again to return to default navigation (`Mode.none`).
 
 The shell uses the exported **`ShapePropertiesModal`** component wired to `onRequestShapeProperties` on the canvas; you can reuse it in custom hosts.
 
-## Programmatic creation (`DrawingSpec`)
-
-```ts
-type DrawingSpec = {
-  id?: string;
-  type: ShapeType;
-  points: DrawingPoint[]; // { time, price } in axis space
-  style?: DeepPartial<DrawingStyleOptions>;
-  symbol?: string;
   size?: number;
 };
 ```
@@ -72,26 +63,56 @@ chartRef.current?.addShape({
 });
 ```
 
-## Programmatic updates
+## Programmatic tools & drawing by code
 
-### Full replacement
+You can trigger any drawing tool programmatically (as if the user clicked the toolbar) using **`setInteractionMode(Mode)`**:
 
-`updateShape(id, fullSpecOrInstance)` replaces the shape when the second argument is **not** a patch.
+```tsx
+import { Mode } from 'tickup/full';
 
-### Partial patch (`DrawingPatch`)
+// Start the rectangle tool
+chartRef.current?.setInteractionMode(Mode.drawRectangle);
 
-```ts
-type DrawingPatch = {
-  style?: DeepPartial<DrawingStyleOptions>;
-  points?: DrawingPoint[];
-  symbol?: string;
-  size?: number;
-};
+// Cancel/return to navigation
+chartRef.current?.setInteractionMode(Mode.none);
 ```
 
-`patchShape(id, patch)` or `updateShape(id, patch)` when `isDrawingPatch(data)` is true.
+### Direct insertion
+Use **`addShape(DrawingSpec)`** to instantly place a shape on the chart without user interaction (e.g., loading saved annotations).
 
-Triangles and polylines receive special handling for point arrays inside `applyDrawingPatch`.
+## Programmatic selection and management
+
+In addition to UI interaction, you can fully control the selection state via the API:
+
+*   **`selectShape(id)`**: Highlights and selects a specific drawing by its ID.
+*   **`unselectShape()`**: Clears the current selection.
+*   **`getSelectedDrawing()`**: Returns the plain data snapshot of the currently active drawing (or `null`).
+*   **`getSelectedDrawingId()`**: Returns the ID of the selected drawing.
+
+```tsx
+const selected = chartRef.current?.getSelectedDrawing();
+if (selected) {
+    console.log("Editing shape of type:", selected.type);
+}
+```
+
+## Programmatic updates \& deletion
+
+### Specific shape (by ID)
+*   **`updateShape(id, data)`**: Full replacement.
+*   **`patchShape(id, patch)`**: Partial property update (color, width, points).
+*   **`deleteShape(id)`**: Remove the shape.
+
+### Selection-centric (Convenience)
+*   **`updateSelectedShape(patch)`**: Updates the properties of whichever shape is currently selected.
+*   **`deleteSelectedDrawing()`**: Removes the current selection from the chart.
+
+```tsx
+// Force the selected shape to be red
+chartRef.current?.updateSelectedShape({
+    style: { lineColor: '#ff0000' }
+});
+```
 
 ## Bulk replace
 

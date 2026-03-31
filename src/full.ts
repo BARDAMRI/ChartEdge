@@ -128,3 +128,5 @@ export {
 export type {ChartOptions} from './types/chartOptions';
 export type {DeepRequired} from './types/types';
 export {ChartTheme} from './types/types';
+export {RangeSelector} from './components/Toolbar/RangeSelector';
+export type {RangeKey} from './components/Toolbar/RangeSelector';

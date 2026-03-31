@@ -96,10 +96,11 @@ Public surfaces (e.g. **`TickUpHostProps`**, **`TickUpHostHandle`**, **`TickUpSt
 | `symbol` / `defaultSymbol` | Ticker; **Pulse** (no top bar) shows a **read-only symbol strip** when non-empty. |
 | `onSymbolChange` | Fired when the toolbar symbol field changes. |
 | `onSymbolSearch` | Enter / search button; return **`false`** or **reject** `Promise` on failure to **revert** to the last good symbol and sync via `onSymbolChange`. |
+| `onIntervalSearch` | Timeframe change interceptor; return **`false`** or **reject** to revert the UI on data failure. |
 | `onRefreshRequest` | Toolbar refresh. |
 | `productId` | On product components, locks layout (`pulse` \| `flow` \| `command` \| `desk` \| `prime`). |
 | `themeVariant` / `defaultThemeVariant` / `onThemeVariantChange` | Shell light/dark chrome on **`TickUpHost`** (see **documentation/05**). |
-| `ref` | **`TickUpHostHandle`**: `applyLiveData`, `addShape`, `patchShape`, `getViewInfo`, `getChartContext`, `fitVisibleRangeToData`, `nudgeVisibleTimeRangeToLatest`, `setEngine`, interval helpers, … |
+| `ref` | **`TickUpHostHandle`**: `applyLiveData`, `addShape`, `patchShape`, `selectShape`, `getSelectedDrawing`, `updateSelectedShape`, `getViewInfo`, `getChartContext`, `fitVisibleRangeToData`, `nudgeVisibleTimeRangeToLatest`, `setEngine`, interval helpers, … |
 
 Full tables: **[Props & chart options](./documentation/05-props-and-chart-options.md)** · **[Imperative API](./documentation/06-imperative-api.md)**.
 

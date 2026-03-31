@@ -5,6 +5,7 @@ export const TickUpStageContainer = styled.div<{
     $showTopBar: boolean;
     $showLeftBar: boolean;
     $showSymbolStrip: boolean;
+    $showRangeSelector: boolean;
 }>`
     position: relative;
     display: grid;
@@ -15,8 +16,11 @@ export const TickUpStageContainer = styled.div<{
     min-height: 0;
     overflow: hidden;
     box-sizing: border-box;
-    grid-template-rows: ${({$showTopBar, $showSymbolStrip}) =>
-        $showTopBar || $showSymbolStrip ? 'auto minmax(0, 1fr)' : '0px minmax(0, 1fr)'};
+    grid-template-rows: ${({$showTopBar, $showSymbolStrip, $showRangeSelector}) => {
+        const topText = ($showTopBar || $showSymbolStrip) ? 'auto' : '0px';
+        const bottomText = $showRangeSelector ? 'auto' : '0px';
+        return `${topText} minmax(0, 1fr) ${bottomText}`;
+    }};
     grid-template-columns: ${({$showLeftBar}) => ($showLeftBar ? 'auto minmax(0, 1fr)' : '0px minmax(0, 1fr)')};
 `;
 

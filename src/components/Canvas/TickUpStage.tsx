@@ -46,6 +46,7 @@ import {
 } from '../ShapePropertiesModal/applyShapeProperties';
 import { Toolbar } from '../Toolbar/Toolbar';
 import { SettingsToolbar } from '../Toolbar/SettingsToolbar';
+import { RangeSelector, RangeKey } from '../Toolbar/RangeSelector';
 import { IconGear } from "../Toolbar/icons";
 import { Mode, useMode } from '../../contexts/ModeContext';
 import type { LiveDataPlacement, LiveDataApplyResult } from "../../types/liveData";
@@ -63,6 +64,7 @@ import {
     captureChartRegionToPngDataUrl,
     type ChartSnapshotMeta,
 } from "../../utils/captureChartRegion";
+import { AlertModal } from '../Common/AlertModal';
 
 function escapeCsvCell(value: string): string {
     if (/[",\n\r]/.test(value)) {
@@ -79,10 +81,35 @@ function intervalsToCsv(rows: Interval[]): string {
     return [header, ...body].join('\r\n');
 }
 
+function isThenable(v: unknown): v is Promise<unknown> {
+    return v != null && typeof (v as Promise<unknown>).then === 'function';
+}
+
 
 function getIntervalSeconds(arr: Interval[], fallbackSeconds = 60): number {
     return getBarIntervalSeconds(arr, fallbackSeconds);
 }
+
+const SECONDS_PER_DAY = 86400;
+const SECONDS_PER_MONTH = SECONDS_PER_DAY * 30;
+
+const getRangeStartTime = (latestT: number, range: RangeKey): number => {
+    switch (range) {
+        case '1D': return latestT - SECONDS_PER_DAY;
+        case '5D': return latestT - SECONDS_PER_DAY * 5;
+        case '1M': return latestT - SECONDS_PER_MONTH;
+        case '3M': return latestT - SECONDS_PER_MONTH * 3;
+        case '6M': return latestT - SECONDS_PER_MONTH * 6;
+        case '1Y': return latestT - SECONDS_PER_DAY * 365;
+        case '5Y': return latestT - SECONDS_PER_DAY * 365 * 5;
+        case 'YTD': {
+            const date = new Date(latestT * 1000);
+            return new Date(date.getFullYear(), 0, 1).getTime() / 1000;
+        }
+        case 'All': return -1; // special
+        default: return latestT - SECONDS_PER_MONTH;
+    }
+};
 
 function findVisibleIndexRange(arr: Interval[], vrange: TimeRange, intervalSeconds: number): [number, number] {
     const n = arr?.length ?? 0;
@@ -140,13 +167,21 @@ export interface TickUpStageProps {
     defaultSymbol?: string;
     onSymbolChange?: (symbol: string) => void;
     onSymbolSearch?: (symbol: string) => void | boolean | Promise<void | boolean>;
+    /** Current interval (e.g. '5m') */
+    interval?: string;
+    /** Notified when user picks a timeframe button or code calls setInterval(...) */
+    onIntervalChange?: (tf: string) => void;
+    /** Current range (e.g. '1M') */
+    range?: RangeKey;
+    /** Notified when user picks a range button or code calls setRange(...) */
+    onRangeChange?: (range: RangeKey) => void;
+    /** Optional explicit initial range name if any. */
+    initialRange?: RangeKey;
     /** Sync with app chart theme for fullscreen modals */
     themeVariant?: ChartTheme;
-    /**
-     * Renders the TickUp mark inside the plot/histogram canvases (no extra layout height).
-     * When false, no in-chart branding is drawn.
-     */
     showBrandWatermark?: boolean;
+    /** Search/validation flow for interval changes (e.g. swap data feed). */
+    onIntervalSearch?: (tf: string) => void | boolean | Promise<void | boolean>;
 }
 
 export interface TickUpStageHandle {
@@ -187,6 +222,16 @@ export interface TickUpStageHandle {
     getDrawingById: (id: string) => DrawingSnapshot | null;
     /** Live shape instances matching the query (same references as chart state). */
     getDrawingInstances: (query?: DrawingQuery) => IDrawingShape[];
+    /** Get the snapshot of the currently selected drawing (if any). */
+    getSelectedDrawing: () => DrawingSnapshot | null;
+    /** Get the ID of the currently selected drawing (if any). */
+    getSelectedDrawingId: () => string | null;
+    /** Select a drawing by its unique ID. */
+    selectShape: (id: string) => void;
+    /** Clear any currently active drawing selection. */
+    unselectShape: () => void;
+    /** Update the properties of the currently selected drawing (shortcut for patchShape + getSelectedDrawingId). */
+    updateSelectedShape: (patch: DrawingPatch) => void;
     /** Layout, visible ranges, symbol, canvas metrics — for host analysis. */
     getChartContext: () => ChartContextInfo;
     getCanvasSize: () => { width: number; height: number; dpr: number };
@@ -217,6 +262,12 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
     defaultSymbol,
     onSymbolChange,
     onSymbolSearch,
+    interval,
+    onIntervalChange,
+    range,
+    onRangeChange,
+    initialRange,
+    onIntervalSearch,
     themeVariant = ChartTheme.dark,
     showBrandWatermark = true,
 }, ref) => {
@@ -234,12 +285,18 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
         range: Math.max(...intervalsArray.map(inter => inter?.h || 0)) - Math.min(...intervalsArray.map(inter => inter?.l || 0))
     });
     const [drawings, setDrawings] = useState<IDrawingShape[]>([]);
+    const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({
+        isOpen: false,
+        title: '',
+        message: ''
+    });
     const [shapePropsOpen, setShapePropsOpen] = useState(false);
     const [shapePropsIndex, setShapePropsIndex] = useState<number | null>(null);
     const canvasRef = useRef<ChartCanvasHandle | null>(null);
     const chartViewRef = useRef<HTMLDivElement | null>(null);
     const symbolInputRef = useRef<HTMLInputElement | null>(null);
     const followLatestRef = useRef<boolean>(false);
+
 
     const openShapeProperties = useCallback(
         (index: number) => {
@@ -307,6 +364,7 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
         const start = end - spanBars * intervalSeconds;
         const [startIndex, endIndex] = findVisibleIndexRange(intervals, { start, end }, intervalSeconds);
         setVisibleRange({ start, end, startIndex, endIndex });
+        setInternalRange(undefined);
     }, [intervals]);
 
     const handleExportDataCsv = useCallback(() => {
@@ -464,6 +522,41 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
             return { ...nextRange, startIndex, endIndex };
         });
     }
+
+    const [internalRange, setInternalRange] = useState<RangeKey | undefined>(initialRange);
+    const currentRange = range !== undefined ? range : internalRange;
+
+    const applyRangeLogic = useCallback((rangeKey: RangeKey) => {
+        if (!intervals.length) return;
+        if (rangeKey === 'All') {
+            handleFitVisibleRange();
+            return;
+        }
+        const lastBar = intervals[intervals.length - 1];
+        const lastT = lastBar.t;
+        const startT = getRangeStartTime(lastT, rangeKey);
+
+        const duration = lastT - startT;
+        // 2% padding
+        const rightOffset = duration * 0.02;
+
+        updateVisibleRange({ start: startT, end: lastT + rightOffset });
+        followLatestRef.current = true;
+    }, [intervals, handleFitVisibleRange]);
+
+    useEffect(() => {
+        if (range !== undefined) {
+            applyRangeLogic(range);
+        }
+    }, [range, applyRangeLogic]);
+
+    const handleRangeSelection = (rk: RangeKey) => {
+        if (range === undefined) {
+            setInternalRange(rk);
+            applyRangeLogic(rk);
+        }
+        onRangeChange?.(rk);
+    };
 
     useEffect(() => {
         setVisibleRange(prev => {
@@ -694,6 +787,29 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
         getDrawingInstances(query?: DrawingQuery) {
             return filterDrawingInstances(drawings, query);
         },
+        getSelectedDrawing() {
+            if (selectedIndex == null || selectedIndex < 0 || selectedIndex >= drawings.length) return null;
+            return shapeToSnapshot(drawings[selectedIndex], selectedIndex);
+        },
+        getSelectedDrawingId() {
+            if (selectedIndex == null || selectedIndex < 0 || selectedIndex >= drawings.length) return null;
+            return drawings[selectedIndex].id;
+        },
+        selectShape(id: string) {
+            const idx = drawings.findIndex(s => s.id === id);
+            if (idx === -1) return;
+            setSelectedIndex?.(idx);
+            canvasRef.current?.redrawCanvas?.();
+        },
+        unselectShape() {
+            setSelectedIndex?.(null);
+            canvasRef.current?.redrawCanvas?.();
+        },
+        updateSelectedShape(patch: DrawingPatch) {
+            if (selectedIndex == null || selectedIndex < 0 || selectedIndex >= drawings.length) return;
+            const shapeId = drawings[selectedIndex].id;
+            this.patchShape(shapeId, patch);
+        },
         getChartContext(): ChartContextInfo {
             const cs = canvasSizes ?? { width: 0, height: 0 };
             const canvas = canvasRef.current?.getCanvasSize() ?? { width: 0, height: 0, dpr: 1 };
@@ -758,6 +874,67 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
             setShapePropsIndex(null);
             canvasRef.current?.redrawCanvas?.();
         },
+        setInterval: (tf: string) => {
+            if (!onIntervalSearch) {
+                if (!onIntervalChange) {
+                    setAlertState({
+                        isOpen: true,
+                        title: 'No interval data handler',
+                        message: `Interval "${tf}" was requested, but no interval handler is connected. Wire "onIntervalChange" (or "onIntervalSearch") to load data for this timeframe.`,
+                    });
+                    return;
+                }
+                onIntervalChange(tf);
+                return;
+            }
+            try {
+                const outcome = onIntervalSearch(tf);
+                const applySuccess = () => onIntervalChange?.(tf);
+                if (isThenable(outcome)) {
+                    outcome.then(
+                        (v) => {
+                            if (v !== false) {
+                                applySuccess();
+                            }
+                        },
+                        (err) => {
+                            const msg = typeof err === 'string' ? err : (err as any)?.message || 'Failed to load data for the requested interval.';
+                            setAlertState({
+                                isOpen: true,
+                                title: 'Interval retrieval failed',
+                                message: msg,
+                            });
+                        }
+                    );
+                } else if (outcome !== false) {
+                    applySuccess();
+                }
+            } catch (err) {
+                const msg = typeof err === 'string' ? err : (err as any)?.message || 'Failed to load data for the requested interval.';
+                setAlertState({
+                    isOpen: true,
+                    title: 'Interval retrieval failed',
+                    message: msg,
+                });
+            }
+        },
+        setRange: (rk: RangeKey) => {
+            if (range !== undefined && !onRangeChange) {
+                setAlertState({
+                    isOpen: true,
+                    title: 'No range data handler',
+                    message: `Range "${String(rk)}" was requested while range is controlled. Wire "onRangeChange" so the host can load/update data for this range.`,
+                });
+                return;
+            }
+            handleRangeSelection(rk);
+        },
+        showAlert: (title: string, message: string) => {
+            setAlertState({ isOpen: true, title, message });
+        },
+        closeAlert: () => {
+            setAlertState(prev => ({ ...prev, isOpen: false }));
+        },
     }));
 
     const compactSymbolLabel = useMemo(() => {
@@ -776,6 +953,7 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
             $showTopBar={showTopBar}
             $showLeftBar={showLeftBar}
             $showSymbolStrip={showSymbolStrip}
+            $showRangeSelector={showTopBar}
         >
             {showTopBar && (
                 <TopBar className="top-toolbar-cell">
@@ -797,6 +975,9 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                         onRefresh={handleToolbarRefresh}
                         onToggleTheme={onToggleTheme}
                         themeVariant={themeVariant}
+                        interval={interval}
+                        onIntervalChange={onIntervalChange}
+                        onIntervalSearch={onIntervalSearch}
                         primeGlass={primeGlass}
                         primeGlassLight={primeGlassLight}
                     />
@@ -906,11 +1087,27 @@ export const TickUpStage = forwardRef<TickUpStageHandle, TickUpStageProps>(({
                 </CanvasAxisContainer>
             </ChartView>
 
+            {showTopBar && (
+                <RangeSelector
+                    onRangeChange={handleRangeSelection}
+                    currentRange={currentRange}
+                    isDark={chartOptions.base.theme === ChartTheme.dark}
+                />
+            )}
+
             <ShapePropertiesModal
                 isOpen={Boolean(shapeForPropertiesModal)}
                 shape={shapeForPropertiesModal}
                 onClose={closeShapeProperties}
                 onApply={handleApplyShapeProperties}
+                themeVariant={themeVariant}
+            />
+
+            <AlertModal
+                isOpen={alertState.isOpen}
+                onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+                title={alertState.title}
+                message={alertState.message}
                 themeVariant={themeVariant}
             />
         </TickUpStageContainer>

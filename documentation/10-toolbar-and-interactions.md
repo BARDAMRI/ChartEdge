@@ -21,6 +21,7 @@ Typical controls (some may hide on very narrow widths):
 |---------|--------|
 | **Symbol** field | Edit ticker; Enter / search button triggers `onSymbolSearch` if provided. |
 | **Search** | Focus/select symbol or run `onSymbolSearch`. If the handler returns **`false`** or a **rejected Promise**, the field reverts to the last good symbol and `onSymbolChange` runs with that value (see [Props & chart options](./05-props-and-chart-options.md)). |
+| **Interval** selector | Searchable, categorized dropdown (Minutes, Hours, Days, etc.). Triggers `onIntervalSearch` if provided. |
 | **Chart type** | Dropdown: Candlestick, Line, Area, Bar (menu is portaled for correct hit-testing). |
 | **Settings** | Opens [settings modal](./09-settings-modal.md). |
 | **Snapshot** | Captures chart region or main canvas to PNG (implementation may use `captureChartRegionToPngDataUrl`). |
@@ -28,6 +29,34 @@ Typical controls (some may hide on very narrow widths):
 | **Export** | CSV download of series. |
 | **Refresh** | `onRefreshRequest` callback. |
 | **Theme** | Toggles **shell** light/dark (**`GlobalStyle`**, settings modal chrome). Notify the app via **`onThemeVariantChange`** on **`TickUpHost`**; keep **`themeVariant`** controlled in sync. Plot styling still follows **`chartOptions`** — align **`base.theme`** (and use **`getTickUpPrimeThemePatch`** / **`createTickUpPrimeEngine`** for Prime) so grid, axes, and watermarks match. See [Props & chart options](./05-props-and-chart-options.md) and [Prime engine](./15-prime-engine-and-pro-roadmap.md). |
+
+## Interval selection & search flow
+
+The top bar features a searchable **Interval Selection Dropdown** that handles a large variety of timeframes categorized by duration (Short-term Intraday to Long-term Monthly).
+
+### `onIntervalSearch` (Async Data-Feed Replacement)
+
+When the user selects a new interval from the dropdown:
+
+1.  The chart enters a **searching state**.
+2.  If provided, the **`onIntervalSearch(newTf)`** handler is invoked.
+3.  The handler can perform asynchronous operations (e.g., fetching new historical data for the requested timeframe).
+4.  **Success**: If the handler returns `true` (or a Promise resolving to `true`), the UI commits to the new interval.
+5.  **Failure/Revert**: If the handler returns `false` or rejects, the UI **reverts** to the previous "committed" interval automatically, preventing the user from being stuck on an invalid data state.
+
+```tsx
+<TickUpHost
+  onIntervalSearch={async (tf) => {
+    try {
+        await myDataFeed.switchTo(tf);
+        return true; // Commit the UI change
+    } catch (e) {
+        showErrorToast(`Failed to load ${tf}`);
+        return false; // Revert the UI to the old timeframe
+    }
+  }}
+/>
+```
 
 ## Pan & zoom
 
